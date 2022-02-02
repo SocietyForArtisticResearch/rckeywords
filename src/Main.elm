@@ -114,11 +114,11 @@ view lst =
         viewKeyword (Keyword kw) =
             let
                 pixels =
-                    if kw.count > 10 then
+                    if kw.count > 12 then
                         20
 
                     else
-                        10 + kw.count
+                        12 + kw.count
             in
             Html.span
                 [ Attr.style "font-size" ((pixels |> String.fromInt) ++ "px")

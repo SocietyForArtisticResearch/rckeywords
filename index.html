@@ -6327,8 +6327,15 @@ var $author$project$Main$keywords = function (researchlist) {
 			researchlist));
 };
 var $elm$html$Html$p = _VirtualDom_node('p');
+var $elm$core$String$replace = F3(
+	function (before, after, string) {
+		return A2(
+			$elm$core$String$join,
+			after,
+			A2($elm$core$String$split, before, string));
+	});
 var $author$project$Main$searchLink = function (term) {
-	return 'https://www.researchcatalogue.net/portal/search-result?fulltext=&title=&autocomplete=&keyword=' + (term + '&portal=&statusprogress=0&statuspublished=0&includelimited=0&includeprivate=0&type_research=research&resulttype=research&format=html&limit=25&page=0');
+	return A3($elm$core$String$replace, ' ', '%20', 'https://www.researchcatalogue.net/portal/search-result?fulltext=&title=&autocomplete=&keyword=' + (term + '&portal=&statusprogress=0&statuspublished=0&includelimited=0&includeprivate=0&type_research=research&resulttype=research&format=html&limit=25&page=0'));
 };
 var $elm$html$Html$span = _VirtualDom_node('span');
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
@@ -6347,7 +6354,7 @@ var $author$project$Main$view = function (lst) {
 	};
 	var viewKeyword = function (_v0) {
 		var kw = _v0.a;
-		var pixels = (kw.count > 10) ? 20 : (10 + kw.count);
+		var pixels = (kw.count > 12) ? 20 : (12 + kw.count);
 		return A2(
 			$elm$html$Html$span,
 			_List_fromArray(

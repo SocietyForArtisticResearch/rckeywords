@@ -6265,31 +6265,72 @@ var $elm$html$Html$Attributes$href = function (url) {
 		'href',
 		_VirtualDom_noJavaScriptUri(url));
 };
-var $elm$core$Set$Set_elm_builtin = function (a) {
-	return {$: 'Set_elm_builtin', a: a};
+var $author$project$Main$KeywordSet = function (a) {
+	return {$: 'KeywordSet', a: a};
 };
-var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $elm$core$Set$insert = F2(
-	function (key, _v0) {
+var $author$project$Main$emptyKeywordSet = $author$project$Main$KeywordSet($elm$core$Dict$empty);
+var $author$project$Main$Keyword = function (a) {
+	return {$: 'Keyword', a: a};
+};
+var $author$project$Main$newKey = function (str) {
+	return $author$project$Main$Keyword(
+		{count: 1, name: str});
+};
+var $author$project$Main$use = function (_v0) {
+	var kw = _v0.a;
+	return $author$project$Main$Keyword(
+		_Utils_update(
+			kw,
+			{count: kw.count + 1}));
+};
+var $author$project$Main$insert = F2(
+	function (k, _v0) {
 		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+		var result = A2($elm$core$Dict$get, k, dict);
+		if (result.$ === 'Just') {
+			var kw = result.a.a;
+			return $author$project$Main$KeywordSet(
+				A3(
+					$elm$core$Dict$insert,
+					kw.name,
+					$author$project$Main$use(
+						$author$project$Main$Keyword(kw)),
+					dict));
+		} else {
+			return $author$project$Main$KeywordSet(
+				A3(
+					$elm$core$Dict$insert,
+					k,
+					$author$project$Main$newKey(k),
+					dict));
+		}
 	});
+var $author$project$Main$toList = function (_v0) {
+	var kwSet = _v0.a;
+	return A2(
+		$elm$core$List$map,
+		function (_v1) {
+			var keyword = _v1.b;
+			return keyword;
+		},
+		$elm$core$Dict$toList(kwSet));
+};
 var $author$project$Main$keywords = function (researchlist) {
-	return $elm$core$Set$toList(
+	return $author$project$Main$toList(
 		A3(
 			$elm$core$List$foldr,
 			F2(
 				function (research, acc) {
-					return A3($elm$core$List$foldr, $elm$core$Set$insert, acc, research.keywords);
+					return A3($elm$core$List$foldr, $author$project$Main$insert, acc, research.keywords);
 				}),
-			$elm$core$Set$empty,
+			$author$project$Main$emptyKeywordSet,
 			researchlist));
 };
 var $elm$html$Html$p = _VirtualDom_node('p');
 var $author$project$Main$searchLink = function (term) {
 	return 'https://www.researchcatalogue.net/portal/search-result?fulltext=&title=&autocomplete=&keyword=' + (term + '&portal=&statusprogress=0&statuspublished=0&includelimited=0&includeprivate=0&type_research=research&resulttype=research&format=html&limit=25&page=0');
 };
+var $elm$html$Html$span = _VirtualDom_node('span');
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
@@ -6304,19 +6345,41 @@ var $author$project$Main$view = function (lst) {
 					$elm$html$Html$text(research.title)
 				]));
 	};
-	var viewKeyword = function (keyword) {
+	var viewKeyword = function (_v0) {
+		var kw = _v0.a;
+		var pixels = (kw.count > 10) ? 20 : (10 + kw.count);
 		return A2(
-			$elm$html$Html$a,
+			$elm$html$Html$span,
 			_List_fromArray(
 				[
-					$elm$html$Html$Attributes$href(
-					$author$project$Main$searchLink(keyword)),
-					A2($elm$html$Html$Attributes$style, 'display', 'inline-block'),
-					A2($elm$html$Html$Attributes$style, 'padding', '1em')
+					A2(
+					$elm$html$Html$Attributes$style,
+					'font-size',
+					$elm$core$String$fromInt(pixels) + 'px')
 				]),
 			_List_fromArray(
 				[
-					$elm$html$Html$text(keyword)
+					A2(
+					$elm$html$Html$a,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$href(
+							$author$project$Main$searchLink(kw.name)),
+							A2($elm$html$Html$Attributes$style, 'display', 'inline-block'),
+							A2($elm$html$Html$Attributes$style, 'padding', '1em')
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(kw.name)
+						])),
+					A2(
+					$elm$html$Html$span,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							$elm$core$String$fromInt(kw.count))
+						]))
 				]));
 	};
 	var keywordLst = $author$project$Main$keywords(lst);

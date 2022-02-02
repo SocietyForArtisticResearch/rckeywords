@@ -4,6 +4,7 @@ import Browser
 import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as Attr
+import Html.Events as Events
 import Http
 import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
@@ -25,16 +26,19 @@ subscriptions _ =
 
 
 type alias Model =
-    List Research
+    { research : List Research
+    , query : String
+    }
 
 
 type Msg
     = GotResearch (Result Http.Error (List Research))
+    | ChangedQuery String
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( []
+    ( { research = [], query = "" }
     , Http.get { url = "research.json", expect = Http.expectJson GotResearch decodeResearch }
     )
 
@@ -60,6 +64,10 @@ type KeywordSet
 toList : KeywordSet -> List Keyword
 toList (KeywordSet kwSet) =
     Dict.toList kwSet |> List.map (\( _, keyword ) -> keyword)
+
+filter : String -> List Keyword -> List Keyword
+filter query lst =
+    lst |> List.filter (\(Keyword kw) -> String.contains query kw.name)
 
 
 emptyKeywordSet =
@@ -95,21 +103,25 @@ update msg model =
         GotResearch result ->
             case result of
                 Ok lst ->
-                    ( lst, Cmd.none )
+                    ( { model | research = lst }, Cmd.none )
 
                 Err err ->
                     let
                         _ =
                             Debug.log "whoops, error: " err
                     in
-                    ( [], Cmd.none )
+                    ( { model | research = [] }, Cmd.none )
+
+        ChangedQuery q ->
+            ({model | query = q }, Cmd.none)
 
 
 view : Model -> Html Msg
-view lst =
+view { research, query } =
     let
-        viewTitle research =
-            Html.p [] [ Html.text research.title ]
+        researchLst = research 
+        viewTitle r =
+            Html.p [] [ Html.text r.title ]
 
         viewKeyword (Keyword kw) =
             let
@@ -133,22 +145,25 @@ view lst =
                 ]
 
         keywordLst =
-            lst |> keywords
+            researchLst |> keywords |> filter query
 
         keywordCount =
             "there are: " ++ (List.length keywordLst |> String.fromInt) ++ " keywords."
     in
-    Html.div []
+    Html.div
+        [ Attr.style "font-family" "monospace"
+        ]
         [ Html.p [] [ Html.text "This was generated on February 2nd, 2022." ]
         , Html.div []
             [ Html.h1 [] [ Html.text "Keywords" ]
             , Html.p [] [ Html.text keywordCount ]
+            , Html.input [ Attr.placeholder "Search for keyword", Attr.value query, Events.onInput ChangedQuery ] []
             , Html.p [] <| List.map viewKeyword keywordLst
             ]
-        , Html.div []
-            [ Html.h1 [] [ Html.text "titles" ]
-            , Html.p [] <| List.map viewTitle lst
-            ]
+        -- , Html.div []
+        --     [ Html.h1 [] [ Html.text "titles" ]
+        --     , Html.p [] <| List.map viewTitle researchLst
+        --     ]
         ]
 
 

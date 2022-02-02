@@ -6221,7 +6221,7 @@ var $elm$http$Http$get = function (r) {
 };
 var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2(
-		_List_Nil,
+		{query: '', research: _List_Nil},
 		$elm$http$Http$get(
 			{
 				expect: A2($elm$http$Http$expectJson, $author$project$Main$GotResearch, $author$project$Main$decodeResearch),
@@ -6238,18 +6238,59 @@ var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Main$update = F2(
 	function (msg, model) {
-		var result = msg.a;
-		if (result.$ === 'Ok') {
-			var lst = result.a;
-			return _Utils_Tuple2(lst, $elm$core$Platform$Cmd$none);
+		if (msg.$ === 'GotResearch') {
+			var result = msg.a;
+			if (result.$ === 'Ok') {
+				var lst = result.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{research: lst}),
+					$elm$core$Platform$Cmd$none);
+			} else {
+				var err = result.a;
+				var _v2 = A2($elm$core$Debug$log, 'whoops, error: ', err);
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{research: _List_Nil}),
+					$elm$core$Platform$Cmd$none);
+			}
 		} else {
-			var err = result.a;
-			var _v2 = A2($elm$core$Debug$log, 'whoops, error: ', err);
-			return _Utils_Tuple2(_List_Nil, $elm$core$Platform$Cmd$none);
+			var q = msg.a;
+			return _Utils_Tuple2(
+				_Utils_update(
+					model,
+					{query: q}),
+				$elm$core$Platform$Cmd$none);
 		}
 	});
+var $author$project$Main$ChangedQuery = function (a) {
+	return {$: 'ChangedQuery', a: a};
+};
 var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$html$Html$div = _VirtualDom_node('div');
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var $author$project$Main$filter = F2(
+	function (query, lst) {
+		return A2(
+			$elm$core$List$filter,
+			function (_v0) {
+				var kw = _v0.a;
+				return A2($elm$core$String$contains, query, kw.name);
+			},
+			lst);
+	});
 var $elm$html$Html$h1 = _VirtualDom_node('h1');
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $elm$html$Html$Attributes$stringProperty = F2(
@@ -6265,6 +6306,7 @@ var $elm$html$Html$Attributes$href = function (url) {
 		'href',
 		_VirtualDom_noJavaScriptUri(url));
 };
+var $elm$html$Html$input = _VirtualDom_node('input');
 var $author$project$Main$KeywordSet = function (a) {
 	return {$: 'KeywordSet', a: a};
 };
@@ -6326,7 +6368,40 @@ var $author$project$Main$keywords = function (researchlist) {
 			$author$project$Main$emptyKeywordSet,
 			researchlist));
 };
+var $elm$html$Html$Events$alwaysStop = function (x) {
+	return _Utils_Tuple2(x, true);
+};
+var $elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
+	return {$: 'MayStopPropagation', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$stopPropagationOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
+	});
+var $elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+	});
+var $elm$html$Html$Events$targetValue = A2(
+	$elm$json$Json$Decode$at,
+	_List_fromArray(
+		['target', 'value']),
+	$elm$json$Json$Decode$string);
+var $elm$html$Html$Events$onInput = function (tagger) {
+	return A2(
+		$elm$html$Html$Events$stopPropagationOn,
+		'input',
+		A2(
+			$elm$json$Json$Decode$map,
+			$elm$html$Html$Events$alwaysStop,
+			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
+};
 var $elm$html$Html$p = _VirtualDom_node('p');
+var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
 var $elm$core$String$replace = F3(
 	function (before, after, string) {
 		return A2(
@@ -6342,18 +6417,21 @@ var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
-var $author$project$Main$view = function (lst) {
-	var viewTitle = function (research) {
+var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
+var $author$project$Main$view = function (_v0) {
+	var research = _v0.research;
+	var query = _v0.query;
+	var viewTitle = function (r) {
 		return A2(
 			$elm$html$Html$p,
 			_List_Nil,
 			_List_fromArray(
 				[
-					$elm$html$Html$text(research.title)
+					$elm$html$Html$text(r.title)
 				]));
 	};
-	var viewKeyword = function (_v0) {
-		var kw = _v0.a;
+	var viewKeyword = function (_v1) {
+		var kw = _v1.a;
 		var pixels = (kw.count > 12) ? 20 : (12 + kw.count);
 		return A2(
 			$elm$html$Html$span,
@@ -6389,12 +6467,19 @@ var $author$project$Main$view = function (lst) {
 						]))
 				]));
 	};
-	var keywordLst = $author$project$Main$keywords(lst);
+	var researchLst = research;
+	var keywordLst = A2(
+		$author$project$Main$filter,
+		query,
+		$author$project$Main$keywords(researchLst));
 	var keywordCount = 'there are: ' + ($elm$core$String$fromInt(
 		$elm$core$List$length(keywordLst)) + ' keywords.');
 	return A2(
 		$elm$html$Html$div,
-		_List_Nil,
+		_List_fromArray(
+			[
+				A2($elm$html$Html$Attributes$style, 'font-family', 'monospace')
+			]),
 		_List_fromArray(
 			[
 				A2(
@@ -6424,26 +6509,18 @@ var $author$project$Main$view = function (lst) {
 								$elm$html$Html$text(keywordCount)
 							])),
 						A2(
+						$elm$html$Html$input,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$placeholder('Search for keyword'),
+								$elm$html$Html$Attributes$value(query),
+								$elm$html$Html$Events$onInput($author$project$Main$ChangedQuery)
+							]),
+						_List_Nil),
+						A2(
 						$elm$html$Html$p,
 						_List_Nil,
 						A2($elm$core$List$map, viewKeyword, keywordLst))
-					])),
-				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$h1,
-						_List_Nil,
-						_List_fromArray(
-							[
-								$elm$html$Html$text('titles')
-							])),
-						A2(
-						$elm$html$Html$p,
-						_List_Nil,
-						A2($elm$core$List$map, viewTitle, lst))
 					]))
 			]));
 };

@@ -65,9 +65,10 @@ toList : KeywordSet -> List Keyword
 toList (KeywordSet kwSet) =
     Dict.toList kwSet |> List.map (\( _, keyword ) -> keyword)
 
+
 filter : String -> List Keyword -> List Keyword
 filter query lst =
-    lst |> List.filter (\(Keyword kw) -> String.contains query kw.name)
+    lst |> List.filter (\(Keyword kw) -> String.contains (query |> String.toLower) (kw.name |> String.toLower))
 
 
 emptyKeywordSet =
@@ -113,13 +114,15 @@ update msg model =
                     ( { model | research = [] }, Cmd.none )
 
         ChangedQuery q ->
-            ({model | query = q }, Cmd.none)
+            ( { model | query = q }, Cmd.none )
 
 
 view : Model -> Html Msg
 view { research, query } =
     let
-        researchLst = research 
+        researchLst =
+            research
+
         viewTitle r =
             Html.p [] [ Html.text r.title ]
 
@@ -160,6 +163,7 @@ view { research, query } =
             , Html.input [ Attr.placeholder "Search for keyword", Attr.value query, Events.onInput ChangedQuery ] []
             , Html.p [] <| List.map viewKeyword keywordLst
             ]
+
         -- , Html.div []
         --     [ Html.h1 [] [ Html.text "titles" ]
         --     , Html.p [] <| List.map viewTitle researchLst

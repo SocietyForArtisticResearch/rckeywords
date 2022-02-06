@@ -2,13 +2,12 @@ module Main exposing (..)
 
 import Browser
 import Dict exposing (Dict)
-import Html exposing (Html)
+import Html exposing (Html, span)
 import Html.Attributes as Attr
 import Html.Events as Events
 import Http
 import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
-import Set
 
 
 main =
@@ -27,34 +26,41 @@ subscriptions _ =
 
 type alias Model =
     { research : List Research
+    , keywordSet : KeywordSet
     , query : String
     }
+
+
+type Display
+    = Show
+    | Hide
 
 
 type Msg
     = GotResearch (Result Http.Error (List Research))
     | ChangedQuery String
+    | ClickedKeyword String
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { research = [], query = "" }
+    ( { research = [], keywordSet = emptyKeywordSet, query = "" }
     , Http.get { url = "research.json", expect = Http.expectJson GotResearch decodeResearch }
     )
 
 
+keywords : List Research -> KeywordSet
 keywords researchlist =
     List.foldr
         (\research acc ->
-            List.foldr insert acc research.keywords
+            List.foldr (insert research) acc research.keywords
         )
         emptyKeywordSet
         researchlist
-        |> toList
 
 
 type Keyword
-    = Keyword { count : Int, name : String }
+    = Keyword { refs : List Research, name : String, display : Display }
 
 
 type KeywordSet
@@ -71,40 +77,65 @@ filter query lst =
     lst |> List.filter (\(Keyword kw) -> String.contains (query |> String.toLower) (kw.name |> String.toLower))
 
 
+toggle : Keyword -> Keyword
+toggle (Keyword k) =
+    Keyword
+        { k
+            | display =
+                case k.display of
+                    Show ->
+                        Hide
+
+                    Hide ->
+                        Show
+        }
+
+
+showInSet : String -> KeywordSet -> KeywordSet
+showInSet key (KeywordSet set) =
+    KeywordSet (Dict.update key (Maybe.map toggle) set)
+
+
 emptyKeywordSet =
     KeywordSet Dict.empty
 
 
-use : Keyword -> Keyword
-use (Keyword kw) =
-    Keyword { kw | count = kw.count + 1 }
+use : Research -> Keyword -> Keyword
+use research (Keyword kw) =
+    Keyword { kw | refs = research :: kw.refs }
 
 
 newKey : String -> Keyword
 newKey str =
-    Keyword { count = 1, name = str }
+    Keyword { refs = [], name = str, display = Hide }
 
 
-insert : String -> KeywordSet -> KeywordSet
-insert k (KeywordSet dict) =
+insert : Research -> String -> KeywordSet -> KeywordSet
+insert research k (KeywordSet dict) =
     let
         result =
             Dict.get k dict
     in
     case result of
         Just (Keyword kw) ->
-            KeywordSet (Dict.insert kw.name (use (Keyword kw)) dict)
+            KeywordSet (Dict.insert kw.name (use research (Keyword kw)) dict)
 
         Nothing ->
             KeywordSet (Dict.insert k (newKey k) dict)
 
 
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotResearch result ->
             case result of
                 Ok lst ->
-                    ( { model | research = lst }, Cmd.none )
+                    ( { model
+                        | research = lst
+                        , keywordSet = lst |> keywords
+                      }
+                    , Cmd.none
+                    )
 
                 Err err ->
                     let
@@ -116,9 +147,22 @@ update msg model =
         ChangedQuery q ->
             ( { model | query = q }, Cmd.none )
 
+        ClickedKeyword k ->
+            let
+                newKeywords =
+                    model.keywordSet |> showInSet k
+            in
+            ( { model | keywordSet = newKeywords }, Cmd.none )
+
+
+inlineStyle =
+    [ Attr.style "display" "inline-block"
+    , Attr.style "padding" "1em"
+    ]
+
 
 view : Model -> Html Msg
-view { research, query } =
+view { research, query, keywordSet } =
     let
         researchLst =
             research
@@ -128,27 +172,53 @@ view { research, query } =
 
         viewKeyword (Keyword kw) =
             let
-                pixels =
-                    if kw.count > 12 then
-                        20
+                count =
+                    List.length kw.refs
 
-                    else
-                        12 + kw.count
+                pixels =
+                    case kw.display of
+                        Hide ->
+                            if count > 12 then
+                                20
+
+                            else
+                                12 + count
+
+                        Show ->
+                            40
+
+                refs =
+                    kw.refs |> List.foldr (\r acc -> r.keywords ++ acc) []
+
+                viewedRefs =
+                    case kw.display of
+                        Hide ->
+                            []
+
+                        Show ->
+                            [ Html.p [] <| List.map (\ref -> span (inlineStyle++[Events.onClick <| ClickedKeyword ref ]) [ Html.text ref ]) refs ]
             in
             Html.span
                 [ Attr.style "font-size" ((pixels |> String.fromInt) ++ "px")
                 ]
-                [ Html.a
-                    [ Attr.href (searchLink kw.name)
-                    , Attr.style "display" "inline-block"
-                    , Attr.style "padding" "1em"
-                    ]
+                ([ Html.span
+                    (Attr.href (searchLink kw.name) :: inlineStyle)
                     [ Html.text kw.name ]
-                , Html.span [] [ Html.text <| (kw.count |> String.fromInt) ]
-                ]
+                 , Html.span []
+                    [ Html.text <| (kw.refs |> List.length |> String.fromInt)
+                    ]
+                 , Html.input
+                    [ Attr.type_ "checkbox"
+                    , Attr.checked (kw.display == Show)
+                    , Events.onClick (ClickedKeyword kw.name)
+                    ]
+                    []
+                 ]
+                    ++ viewedRefs
+                )
 
         keywordLst =
-            researchLst |> keywords |> filter query
+            keywordSet |> toList |> filter query
 
         keywordCount =
             "there are: " ++ (List.length keywordLst |> String.fromInt) ++ " keywords."
@@ -161,7 +231,7 @@ view { research, query } =
             [ Html.h1 [] [ Html.text "Keywords" ]
             , Html.p [] [ Html.text keywordCount ]
             , Html.input [ Attr.placeholder "Search for keyword", Attr.value query, Events.onInput ChangedQuery ] []
-            , Html.p [] <| List.map viewKeyword keywordLst
+            , Html.p [] (List.map viewKeyword keywordLst)
             ]
 
         -- , Html.div []

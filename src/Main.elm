@@ -23,12 +23,12 @@ main =
 
 subscriptions : Model -> Sub Msg
 subscriptions m =
-    case m of 
-        Waiting -> Sub.none
+    case m of
+        Waiting ->
+            Sub.none
 
         Ready model ->
             Sub.map KeywordGraphMsg (KeywordGraph.subscriptions model.keywordGraph)
-    
 
 
 type Model
@@ -132,10 +132,70 @@ graph set =
             set |> toList
 
         labels =
-            lst |> List.map (\(Keyword k) -> k.name)
+            lst |> List.map getName
 
         edges =
             lst |> List.concatMap (edgesFromKeyword set)
+    in
+    Graph.fromNodeLabelsAndEdgePairs labels edges
+
+
+flip : (a -> b -> c) -> (b -> a -> c)
+flip f x y =
+    f y x
+
+
+graphFromKeyword : Int -> Keyword -> KeywordSet -> Graph.Graph String ()
+graphFromKeyword depth kw set =
+    let
+        insertStringUnique : String -> List String -> List String
+        insertStringUnique str lst =
+            if List.member str lst |> not then
+                str :: lst
+
+            else
+                lst
+
+        refsFromKeyword : Keyword -> List Keyword
+        refsFromKeyword (Keyword keyword) =
+            keyword.refs
+                |> List.concatMap
+                    (\research ->
+                        research.keywords
+                            |> List.foldl insertStringUnique []
+                            |> List.map (flip lookupString set)
+                    )
+                |> onlyTheJusts
+
+        helper n lst =
+            if n <= 0 then
+                lst
+
+            else
+                helper (n - 1)
+                    (List.concatMap refsFromKeyword lst
+                        |> List.foldl
+                            (\x acc ->
+                                if List.member x acc then
+                                    acc
+
+                                else
+                                    x :: acc
+                            )
+                            []
+                    )
+
+        limitedLst =
+            helper depth [ kw ]
+
+        labels =
+            limitedLst |> List.map getName
+
+        edges =
+            limitedLst |> List.concatMap (edgesFromKeyword set)
+
+        _ =
+            Debug.log ("edges are " ++ getName kw) edges
     in
     Graph.fromNodeLabelsAndEdgePairs labels edges
 
@@ -146,6 +206,11 @@ type Id
 
 type Keyword
     = Keyword { refs : List Research, name : String, display : Display, id : Id }
+
+
+getName : Keyword -> String
+getName (Keyword kw) =
+    kw.name
 
 
 getId (Keyword { id }) =
@@ -188,9 +253,18 @@ toggle (Keyword k) =
         }
 
 
+hide : Keyword -> Keyword
+hide (Keyword k) =
+    Keyword { k | display = Hide }
+
+
 showInSet : String -> KeywordSet -> KeywordSet
 showInSet key (KeywordSet set) =
-    KeywordSet { set | dict = Dict.update key (Maybe.map toggle) set.dict }
+    let
+        setAllHide =
+            Dict.map (\_ v -> hide v) set.dict
+    in
+    KeywordSet { set | dict = Dict.update key (Maybe.map toggle) setAllHide }
 
 
 emptyKeywordSet =
@@ -227,6 +301,11 @@ insert research k (KeywordSet { dict, currentId }) =
             KeywordSet { dict = Dict.insert k (newKey (currentId |> toInt) k) dict, currentId = newId }
 
 
+hasAtleast2Refs : Research -> Bool
+hasAtleast2Refs research =
+    List.length research.keywords > 2
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -238,7 +317,7 @@ update msg model =
                             lst |> keywords
 
                         ( graphModel, cmd ) =
-                            KeywordGraph.init (graph set)
+                            KeywordGraph.init Graph.empty
                     in
                     ( Ready
                         { query = ""
@@ -273,8 +352,28 @@ update msg model =
                     let
                         newKeywords =
                             m.keywordSet |> showInSet k
+
+                        mGraph =
+                            lookupString k m.keywordSet |> Maybe.map (\kw -> graphFromKeyword 1 kw m.keywordSet)
+
+                        localGraph =
+                            case mGraph of
+                                Nothing ->
+                                    Graph.empty
+
+                                Just grph ->
+                                    grph
+
+                        ( gModel, gMsg ) =
+                            KeywordGraph.init localGraph
                     in
-                    ( Ready { m | keywordSet = newKeywords }, Cmd.none )
+                    ( Ready
+                        { m
+                            | keywordSet = newKeywords
+                            , keywordGraph = gModel
+                        }
+                    , Cmd.map KeywordGraphMsg gMsg
+                    )
 
         KeywordGraphMsg kmsg ->
             case model of

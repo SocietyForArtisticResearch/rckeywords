@@ -7165,6 +7165,12 @@ var $author$project$Main$subscriptions = function (m) {
 var $author$project$Main$Ready = function (a) {
 	return {$: 'Ready', a: a};
 };
+var $elm_community$graph$Graph$Graph = function (a) {
+	return {$: 'Graph', a: a};
+};
+var $elm_community$intdict$IntDict$Empty = {$: 'Empty'};
+var $elm_community$intdict$IntDict$empty = $elm_community$intdict$IntDict$Empty;
+var $elm_community$graph$Graph$empty = $elm_community$graph$Graph$Graph($elm_community$intdict$IntDict$empty);
 var $elm$core$List$append = F2(
 	function (xs, ys) {
 		if (!ys.b) {
@@ -7249,6 +7255,10 @@ var $author$project$Main$edgesFromKeyword = F2(
 			},
 			toIds);
 	});
+var $author$project$Main$flip = F3(
+	function (f, x, y) {
+		return A2(f, y, x);
+	});
 var $elm_community$graph$Graph$Edge = F3(
 	function (from, to, label) {
 		return {from: from, label: label, to: to};
@@ -7257,15 +7267,10 @@ var $elm_community$graph$Graph$Node = F2(
 	function (id, label) {
 		return {id: id, label: label};
 	});
-var $elm_community$graph$Graph$Graph = function (a) {
-	return {$: 'Graph', a: a};
-};
 var $elm_community$graph$Graph$NodeContext = F3(
 	function (node, incoming, outgoing) {
 		return {incoming: incoming, node: node, outgoing: outgoing};
 	});
-var $elm_community$intdict$IntDict$Empty = {$: 'Empty'};
-var $elm_community$intdict$IntDict$empty = $elm_community$intdict$IntDict$Empty;
 var $elm_community$intdict$IntDict$Inner = function (a) {
 	return {$: 'Inner', a: a};
 };
@@ -7533,31 +7538,98 @@ var $elm_community$graph$Graph$fromNodeLabelsAndEdgePairs = F2(
 			edgePairs);
 		return A2($elm_community$graph$Graph$fromNodesAndEdges, nodes_, edges_);
 	});
-var $author$project$Main$toList = function (_v0) {
-	var dict = _v0.a.dict;
-	return A2(
-		$elm$core$List$map,
-		function (_v1) {
-			var keyword = _v1.b;
-			return keyword;
-		},
-		$elm$core$Dict$toList(dict));
+var $author$project$Main$getName = function (_v0) {
+	var kw = _v0.a;
+	return kw.name;
 };
-var $author$project$Main$graph = function (set) {
-	var lst = $author$project$Main$toList(set);
-	var labels = A2(
-		$elm$core$List$map,
-		function (_v0) {
-			var k = _v0.a;
-			return k.name;
-		},
-		lst);
-	var edges = A2(
-		$elm$core$List$concatMap,
-		$author$project$Main$edgesFromKeyword(set),
-		lst);
-	return A2($elm_community$graph$Graph$fromNodeLabelsAndEdgePairs, labels, edges);
-};
+var $elm$core$Debug$log = _Debug_log;
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
+	});
+var $elm$core$List$member = F2(
+	function (x, xs) {
+		return A2(
+			$elm$core$List$any,
+			function (a) {
+				return _Utils_eq(a, x);
+			},
+			xs);
+	});
+var $author$project$Main$graphFromKeyword = F3(
+	function (depth, kw, set) {
+		var insertStringUnique = F2(
+			function (str, lst) {
+				return (!A2($elm$core$List$member, str, lst)) ? A2($elm$core$List$cons, str, lst) : lst;
+			});
+		var refsFromKeyword = function (_v1) {
+			var keyword = _v1.a;
+			return $author$project$Main$onlyTheJusts(
+				A2(
+					$elm$core$List$concatMap,
+					function (research) {
+						return A2(
+							$elm$core$List$map,
+							A2($author$project$Main$flip, $author$project$Main$lookupString, set),
+							A3($elm$core$List$foldl, insertStringUnique, _List_Nil, research.keywords));
+					},
+					keyword.refs));
+		};
+		var helper = F2(
+			function (n, lst) {
+				helper:
+				while (true) {
+					if (n <= 0) {
+						return lst;
+					} else {
+						var $temp$n = n - 1,
+							$temp$lst = A3(
+							$elm$core$List$foldl,
+							F2(
+								function (x, acc) {
+									return A2($elm$core$List$member, x, acc) ? acc : A2($elm$core$List$cons, x, acc);
+								}),
+							_List_Nil,
+							A2($elm$core$List$concatMap, refsFromKeyword, lst));
+						n = $temp$n;
+						lst = $temp$lst;
+						continue helper;
+					}
+				}
+			});
+		var limitedLst = A2(
+			helper,
+			depth,
+			_List_fromArray(
+				[kw]));
+		var labels = A2($elm$core$List$map, $author$project$Main$getName, limitedLst);
+		var edges = A2(
+			$elm$core$List$concatMap,
+			$author$project$Main$edgesFromKeyword(set),
+			limitedLst);
+		var _v0 = A2(
+			$elm$core$Debug$log,
+			'edges are ' + $author$project$Main$getName(kw),
+			edges);
+		return A2($elm_community$graph$Graph$fromNodeLabelsAndEdgePairs, labels, edges);
+	});
 var $author$project$KeywordGraph$Init = function (a) {
 	return {$: 'Init', a: a};
 };
@@ -7618,7 +7690,6 @@ var $author$project$KeywordGraph$initNode = function (ctx) {
 		outgoing: ctx.outgoing
 	};
 };
-var $elm_community$graph$Graph$empty = $elm_community$graph$Graph$Graph($elm_community$intdict$IntDict$empty);
 var $elm$core$Maybe$andThen = F2(
 	function (callback, maybeValue) {
 		if (maybeValue.$ === 'Just') {
@@ -8044,10 +8115,35 @@ var $author$project$Main$keywords = function (researchlist) {
 		$author$project$Main$emptyKeywordSet,
 		researchlist);
 };
-var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Platform$Cmd$map = _Platform_map;
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Main$hide = function (_v0) {
+	var k = _v0.a;
+	return $author$project$Main$Keyword(
+		_Utils_update(
+			k,
+			{display: $author$project$Main$Hide}));
+};
+var $elm$core$Dict$map = F2(
+	function (func, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return $elm$core$Dict$RBEmpty_elm_builtin;
+		} else {
+			var color = dict.a;
+			var key = dict.b;
+			var value = dict.c;
+			var left = dict.d;
+			var right = dict.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				color,
+				key,
+				A2(func, key, value),
+				A2($elm$core$Dict$map, func, left),
+				A2($elm$core$Dict$map, func, right));
+		}
+	});
 var $author$project$Main$Show = {$: 'Show'};
 var $author$project$Main$toggle = function (_v0) {
 	var k = _v0.a;
@@ -8068,6 +8164,13 @@ var $author$project$Main$toggle = function (_v0) {
 var $author$project$Main$showInSet = F2(
 	function (key, _v0) {
 		var set = _v0.a;
+		var setAllHide = A2(
+			$elm$core$Dict$map,
+			F2(
+				function (_v1, v) {
+					return $author$project$Main$hide(v);
+				}),
+			set.dict);
 		return $author$project$Main$KeywordSet(
 			_Utils_update(
 				set,
@@ -8076,7 +8179,7 @@ var $author$project$Main$showInSet = F2(
 						$elm$core$Dict$update,
 						key,
 						$elm$core$Maybe$map($author$project$Main$toggle),
-						set.dict)
+						setAllHide)
 				}));
 	});
 var $author$project$KeywordGraph$Ready = function (a) {
@@ -8211,25 +8314,6 @@ var $elm_community$graph$Graph$nodes = A2(
 			function ($) {
 				return $.node;
 			})));
-var $elm$core$Dict$map = F2(
-	function (func, dict) {
-		if (dict.$ === 'RBEmpty_elm_builtin') {
-			return $elm$core$Dict$RBEmpty_elm_builtin;
-		} else {
-			var color = dict.a;
-			var key = dict.b;
-			var value = dict.c;
-			var left = dict.d;
-			var right = dict.e;
-			return A5(
-				$elm$core$Dict$RBNode_elm_builtin,
-				color,
-				key,
-				A2(func, key, value),
-				A2($elm$core$Dict$map, func, left),
-				A2($elm$core$Dict$map, func, right));
-		}
-	});
 var $gampleman$elm_visualization$Force$nTimes = F3(
 	function (fn, times, input) {
 		nTimes:
@@ -10807,8 +10891,7 @@ var $author$project$Main$update = F2(
 				if (result.$ === 'Ok') {
 					var lst = result.a;
 					var set = $author$project$Main$keywords(lst);
-					var _v2 = $author$project$KeywordGraph$init(
-						$author$project$Main$graph(set));
+					var _v2 = $author$project$KeywordGraph$init($elm_community$graph$Graph$empty);
 					var graphModel = _v2.a;
 					var cmd = _v2.b;
 					return _Utils_Tuple2(
@@ -10840,12 +10923,29 @@ var $author$project$Main$update = F2(
 				} else {
 					var m = model.a;
 					var newKeywords = A2($author$project$Main$showInSet, k, m.keywordSet);
+					var mGraph = A2(
+						$elm$core$Maybe$map,
+						function (kw) {
+							return A3($author$project$Main$graphFromKeyword, 1, kw, m.keywordSet);
+						},
+						A2($author$project$Main$lookupString, k, m.keywordSet));
+					var localGraph = function () {
+						if (mGraph.$ === 'Nothing') {
+							return $elm_community$graph$Graph$empty;
+						} else {
+							var grph = mGraph.a;
+							return grph;
+						}
+					}();
+					var _v6 = $author$project$KeywordGraph$init(localGraph);
+					var gModel = _v6.a;
+					var gMsg = _v6.b;
 					return _Utils_Tuple2(
 						$author$project$Main$Ready(
 							_Utils_update(
 								m,
-								{keywordSet: newKeywords})),
-						$elm$core$Platform$Cmd$none);
+								{keywordGraph: gModel, keywordSet: newKeywords})),
+						A2($elm$core$Platform$Cmd$map, $author$project$Main$KeywordGraphMsg, gMsg));
 				}
 			default:
 				var kmsg = msg.a;
@@ -10853,9 +10953,9 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2($author$project$Main$Waiting, $elm$core$Platform$Cmd$none);
 				} else {
 					var m = model.a;
-					var _v7 = A2($author$project$KeywordGraph$update, kmsg, m.keywordGraph);
-					var kmodel = _v7.a;
-					var kcmd = _v7.b;
+					var _v9 = A2($author$project$KeywordGraph$update, kmsg, m.keywordGraph);
+					var kmodel = _v9.a;
+					var kcmd = _v9.b;
 					return _Utils_Tuple2(
 						$author$project$Main$Ready(
 							_Utils_update(
@@ -10983,6 +11083,16 @@ var $author$project$Main$searchLink = function (term) {
 var $elm$html$Html$span = _VirtualDom_node('span');
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Main$toList = function (_v0) {
+	var dict = _v0.a.dict;
+	return A2(
+		$elm$core$List$map,
+		function (_v1) {
+			var keyword = _v1.b;
+			return keyword;
+		},
+		$elm$core$Dict$toList(dict));
+};
 var $elm$html$Html$Attributes$type_ = $elm$html$Html$Attributes$stringProperty('type');
 var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $elm_community$typed_svg$TypedSvg$Types$CursorMove = {$: 'CursorMove'};
@@ -10992,27 +11102,6 @@ var $elm_community$typed_svg$TypedSvg$Types$Paint = function (a) {
 var $elm_community$typed_svg$TypedSvg$Types$Percent = function (a) {
 	return {$: 'Percent', a: a};
 };
-var $elm_community$typed_svg$TypedSvg$Types$Px = function (a) {
-	return {$: 'Px', a: a};
-};
-var $avh4$elm_color$Color$RgbaSpace = F4(
-	function (a, b, c, d) {
-		return {$: 'RgbaSpace', a: a, b: b, c: c, d: d};
-	});
-var $avh4$elm_color$Color$scaleFrom255 = function (c) {
-	return c / 255;
-};
-var $avh4$elm_color$Color$rgb255 = F3(
-	function (r, g, b) {
-		return A4(
-			$avh4$elm_color$Color$RgbaSpace,
-			$avh4$elm_color$Color$scaleFrom255(r),
-			$avh4$elm_color$Color$scaleFrom255(g),
-			$avh4$elm_color$Color$scaleFrom255(b),
-			1.0);
-	});
-var $author$project$KeywordGraph$edgeColor = $elm_community$typed_svg$TypedSvg$Types$Paint(
-	A3($avh4$elm_color$Color$rgb255, 180, 180, 180));
 var $elm$virtual_dom$VirtualDom$attribute = F2(
 	function (key, value) {
 		return A2(
@@ -11021,171 +11110,6 @@ var $elm$virtual_dom$VirtualDom$attribute = F2(
 			_VirtualDom_noJavaScriptOrHtmlUri(value));
 	});
 var $elm_community$typed_svg$TypedSvg$Core$attribute = $elm$virtual_dom$VirtualDom$attribute;
-var $elm$core$String$concat = function (strings) {
-	return A2($elm$core$String$join, '', strings);
-};
-var $elm$core$String$fromFloat = _String_fromNumber;
-var $elm$core$Basics$round = _Basics_round;
-var $avh4$elm_color$Color$toCssString = function (_v0) {
-	var r = _v0.a;
-	var g = _v0.b;
-	var b = _v0.c;
-	var a = _v0.d;
-	var roundTo = function (x) {
-		return $elm$core$Basics$round(x * 1000) / 1000;
-	};
-	var pct = function (x) {
-		return $elm$core$Basics$round(x * 10000) / 100;
-	};
-	return $elm$core$String$concat(
-		_List_fromArray(
-			[
-				'rgba(',
-				$elm$core$String$fromFloat(
-				pct(r)),
-				'%,',
-				$elm$core$String$fromFloat(
-				pct(g)),
-				'%,',
-				$elm$core$String$fromFloat(
-				pct(b)),
-				'%,',
-				$elm$core$String$fromFloat(
-				roundTo(a)),
-				')'
-			]));
-};
-var $elm_community$typed_svg$TypedSvg$TypesToStrings$paintToString = function (paint) {
-	switch (paint.$) {
-		case 'Paint':
-			var color = paint.a;
-			return $avh4$elm_color$Color$toCssString(color);
-		case 'CSSVariable':
-			var string = paint.a;
-			return $elm$core$String$concat(
-				_List_fromArray(
-					['var(' + (string + ')')]));
-		case 'Reference':
-			var string = paint.a;
-			return $elm$core$String$concat(
-				_List_fromArray(
-					['url(#', string, ')']));
-		case 'ContextFill':
-			return 'context-fill';
-		case 'ContextStroke':
-			return 'context-stroke';
-		default:
-			return 'none';
-	}
-};
-var $elm_community$typed_svg$TypedSvg$Attributes$fill = A2(
-	$elm$core$Basics$composeL,
-	$elm_community$typed_svg$TypedSvg$Core$attribute('fill'),
-	$elm_community$typed_svg$TypedSvg$TypesToStrings$paintToString);
-var $elm_community$typed_svg$TypedSvg$Attributes$id = $elm_community$typed_svg$TypedSvg$Core$attribute('id');
-var $elm$virtual_dom$VirtualDom$nodeNS = function (tag) {
-	return _VirtualDom_nodeNS(
-		_VirtualDom_noScript(tag));
-};
-var $elm_community$typed_svg$TypedSvg$Core$node = $elm$virtual_dom$VirtualDom$nodeNS('http://www.w3.org/2000/svg');
-var $elm_community$typed_svg$TypedSvg$marker = $elm_community$typed_svg$TypedSvg$Core$node('marker');
-var $elm_community$typed_svg$TypedSvg$TypesToStrings$lengthToString = function (length) {
-	switch (length.$) {
-		case 'Cm':
-			var x = length.a;
-			return $elm$core$String$fromFloat(x) + 'cm';
-		case 'Em':
-			var x = length.a;
-			return $elm$core$String$fromFloat(x) + 'em';
-		case 'Ex':
-			var x = length.a;
-			return $elm$core$String$fromFloat(x) + 'ex';
-		case 'In':
-			var x = length.a;
-			return $elm$core$String$fromFloat(x) + 'in';
-		case 'Mm':
-			var x = length.a;
-			return $elm$core$String$fromFloat(x) + 'mm';
-		case 'Num':
-			var x = length.a;
-			return $elm$core$String$fromFloat(x);
-		case 'Pc':
-			var x = length.a;
-			return $elm$core$String$fromFloat(x) + 'pc';
-		case 'Percent':
-			var x = length.a;
-			return $elm$core$String$fromFloat(x) + '%';
-		case 'Pt':
-			var x = length.a;
-			return $elm$core$String$fromFloat(x) + 'pt';
-		case 'Px':
-			var x = length.a;
-			return $elm$core$String$fromFloat(x) + 'px';
-		default:
-			var x = length.a;
-			return $elm$core$String$fromFloat(x) + 'rem';
-	}
-};
-var $elm_community$typed_svg$TypedSvg$Attributes$markerHeight = function (mHeight) {
-	return A2(
-		$elm_community$typed_svg$TypedSvg$Core$attribute,
-		'markerHeight',
-		$elm_community$typed_svg$TypedSvg$TypesToStrings$lengthToString(mHeight));
-};
-var $elm_community$typed_svg$TypedSvg$Attributes$markerWidth = function (mWidth) {
-	return A2(
-		$elm_community$typed_svg$TypedSvg$Core$attribute,
-		'markerWidth',
-		$elm_community$typed_svg$TypedSvg$TypesToStrings$lengthToString(mWidth));
-};
-var $elm_community$typed_svg$TypedSvg$Attributes$orient = $elm_community$typed_svg$TypedSvg$Core$attribute('orient');
-var $elm_community$typed_svg$TypedSvg$Attributes$points = function (pts) {
-	var pointToString = function (_v0) {
-		var xx = _v0.a;
-		var yy = _v0.b;
-		return $elm$core$String$fromFloat(xx) + (', ' + $elm$core$String$fromFloat(yy));
-	};
-	return A2(
-		$elm_community$typed_svg$TypedSvg$Core$attribute,
-		'points',
-		A2(
-			$elm$core$String$join,
-			' ',
-			A2($elm$core$List$map, pointToString, pts)));
-};
-var $elm_community$typed_svg$TypedSvg$polygon = $elm_community$typed_svg$TypedSvg$Core$node('polygon');
-var $elm_community$typed_svg$TypedSvg$Attributes$refX = $elm_community$typed_svg$TypedSvg$Core$attribute('refX');
-var $elm_community$typed_svg$TypedSvg$Attributes$refY = $elm_community$typed_svg$TypedSvg$Core$attribute('refY');
-var $author$project$KeywordGraph$arrowhead = A2(
-	$elm_community$typed_svg$TypedSvg$marker,
-	_List_fromArray(
-		[
-			$elm_community$typed_svg$TypedSvg$Attributes$id('arrowhead'),
-			$elm_community$typed_svg$TypedSvg$Attributes$orient('auto'),
-			$elm_community$typed_svg$TypedSvg$Attributes$markerWidth(
-			$elm_community$typed_svg$TypedSvg$Types$Px(8.0)),
-			$elm_community$typed_svg$TypedSvg$Attributes$markerHeight(
-			$elm_community$typed_svg$TypedSvg$Types$Px(6.0)),
-			$elm_community$typed_svg$TypedSvg$Attributes$refX('29'),
-			$elm_community$typed_svg$TypedSvg$Attributes$refY('3')
-		]),
-	_List_fromArray(
-		[
-			A2(
-			$elm_community$typed_svg$TypedSvg$polygon,
-			_List_fromArray(
-				[
-					$elm_community$typed_svg$TypedSvg$Attributes$points(
-					_List_fromArray(
-						[
-							_Utils_Tuple2(0, 0),
-							_Utils_Tuple2(8, 3),
-							_Utils_Tuple2(0, 6)
-						])),
-					$elm_community$typed_svg$TypedSvg$Attributes$fill($author$project$KeywordGraph$edgeColor)
-				]),
-			_List_Nil)
-		]));
 var $elm_community$typed_svg$TypedSvg$Attributes$class = function (names) {
 	return A2(
 		$elm_community$typed_svg$TypedSvg$Core$attribute,
@@ -11237,7 +11161,6 @@ var $elm_community$typed_svg$TypedSvg$Attributes$cursor = function (csor) {
 		'cursor',
 		$elm_community$typed_svg$TypedSvg$TypesToStrings$cursorToString(csor));
 };
-var $elm_community$typed_svg$TypedSvg$defs = $elm_community$typed_svg$TypedSvg$Core$node('defs');
 var $gampleman$elm_visualization$Zoom$DoubleClicked = F2(
 	function (a, b) {
 		return {$: 'DoubleClicked', a: a, b: b};
@@ -11581,20 +11504,145 @@ var $gampleman$elm_visualization$Zoom$events = F2(
 						A2($gampleman$elm_visualization$Zoom$onGesture, zoom, tagger),
 						A2($gampleman$elm_visualization$Zoom$onTouch, zoom, tagger)))));
 	});
+var $elm$core$String$concat = function (strings) {
+	return A2($elm$core$String$join, '', strings);
+};
+var $elm$core$String$fromFloat = _String_fromNumber;
+var $elm$core$Basics$round = _Basics_round;
+var $avh4$elm_color$Color$toCssString = function (_v0) {
+	var r = _v0.a;
+	var g = _v0.b;
+	var b = _v0.c;
+	var a = _v0.d;
+	var roundTo = function (x) {
+		return $elm$core$Basics$round(x * 1000) / 1000;
+	};
+	var pct = function (x) {
+		return $elm$core$Basics$round(x * 10000) / 100;
+	};
+	return $elm$core$String$concat(
+		_List_fromArray(
+			[
+				'rgba(',
+				$elm$core$String$fromFloat(
+				pct(r)),
+				'%,',
+				$elm$core$String$fromFloat(
+				pct(g)),
+				'%,',
+				$elm$core$String$fromFloat(
+				pct(b)),
+				'%,',
+				$elm$core$String$fromFloat(
+				roundTo(a)),
+				')'
+			]));
+};
+var $elm_community$typed_svg$TypedSvg$TypesToStrings$paintToString = function (paint) {
+	switch (paint.$) {
+		case 'Paint':
+			var color = paint.a;
+			return $avh4$elm_color$Color$toCssString(color);
+		case 'CSSVariable':
+			var string = paint.a;
+			return $elm$core$String$concat(
+				_List_fromArray(
+					['var(' + (string + ')')]));
+		case 'Reference':
+			var string = paint.a;
+			return $elm$core$String$concat(
+				_List_fromArray(
+					['url(#', string, ')']));
+		case 'ContextFill':
+			return 'context-fill';
+		case 'ContextStroke':
+			return 'context-stroke';
+		default:
+			return 'none';
+	}
+};
+var $elm_community$typed_svg$TypedSvg$Attributes$fill = A2(
+	$elm$core$Basics$composeL,
+	$elm_community$typed_svg$TypedSvg$Core$attribute('fill'),
+	$elm_community$typed_svg$TypedSvg$TypesToStrings$paintToString);
+var $elm$virtual_dom$VirtualDom$nodeNS = function (tag) {
+	return _VirtualDom_nodeNS(
+		_VirtualDom_noScript(tag));
+};
+var $elm_community$typed_svg$TypedSvg$Core$node = $elm$virtual_dom$VirtualDom$nodeNS('http://www.w3.org/2000/svg');
 var $elm_community$typed_svg$TypedSvg$g = $elm_community$typed_svg$TypedSvg$Core$node('g');
+var $elm_community$typed_svg$TypedSvg$TypesToStrings$lengthToString = function (length) {
+	switch (length.$) {
+		case 'Cm':
+			var x = length.a;
+			return $elm$core$String$fromFloat(x) + 'cm';
+		case 'Em':
+			var x = length.a;
+			return $elm$core$String$fromFloat(x) + 'em';
+		case 'Ex':
+			var x = length.a;
+			return $elm$core$String$fromFloat(x) + 'ex';
+		case 'In':
+			var x = length.a;
+			return $elm$core$String$fromFloat(x) + 'in';
+		case 'Mm':
+			var x = length.a;
+			return $elm$core$String$fromFloat(x) + 'mm';
+		case 'Num':
+			var x = length.a;
+			return $elm$core$String$fromFloat(x);
+		case 'Pc':
+			var x = length.a;
+			return $elm$core$String$fromFloat(x) + 'pc';
+		case 'Percent':
+			var x = length.a;
+			return $elm$core$String$fromFloat(x) + '%';
+		case 'Pt':
+			var x = length.a;
+			return $elm$core$String$fromFloat(x) + 'pt';
+		case 'Px':
+			var x = length.a;
+			return $elm$core$String$fromFloat(x) + 'px';
+		default:
+			var x = length.a;
+			return $elm$core$String$fromFloat(x) + 'rem';
+	}
+};
 var $elm_community$typed_svg$TypedSvg$Attributes$height = function (length) {
 	return A2(
 		$elm_community$typed_svg$TypedSvg$Core$attribute,
 		'height',
 		$elm_community$typed_svg$TypedSvg$TypesToStrings$lengthToString(length));
 };
+var $elm_community$typed_svg$TypedSvg$Attributes$id = $elm_community$typed_svg$TypedSvg$Core$attribute('id');
 var $elm_community$typed_svg$TypedSvg$rect = $elm_community$typed_svg$TypedSvg$Core$node('rect');
+var $avh4$elm_color$Color$RgbaSpace = F4(
+	function (a, b, c, d) {
+		return {$: 'RgbaSpace', a: a, b: b, c: c, d: d};
+	});
+var $avh4$elm_color$Color$scaleFrom255 = function (c) {
+	return c / 255;
+};
+var $avh4$elm_color$Color$rgb255 = F3(
+	function (r, g, b) {
+		return A4(
+			$avh4$elm_color$Color$RgbaSpace,
+			$avh4$elm_color$Color$scaleFrom255(r),
+			$avh4$elm_color$Color$scaleFrom255(g),
+			$avh4$elm_color$Color$scaleFrom255(b),
+			1.0);
+	});
+var $author$project$KeywordGraph$edgeColor = $elm_community$typed_svg$TypedSvg$Types$Paint(
+	A3($avh4$elm_color$Color$rgb255, 180, 180, 180));
 var $elm_community$typed_svg$TypedSvg$line = $elm_community$typed_svg$TypedSvg$Core$node('line');
 var $elm_community$typed_svg$TypedSvg$Attributes$markerEnd = $elm_community$typed_svg$TypedSvg$Core$attribute('marker-end');
 var $elm_community$typed_svg$TypedSvg$Attributes$stroke = A2(
 	$elm$core$Basics$composeL,
 	$elm_community$typed_svg$TypedSvg$Core$attribute('stroke'),
 	$elm_community$typed_svg$TypedSvg$TypesToStrings$paintToString);
+var $elm_community$typed_svg$TypedSvg$Types$Px = function (a) {
+	return {$: 'Px', a: a};
+};
 var $elm_community$typed_svg$TypedSvg$Types$px = $elm_community$typed_svg$TypedSvg$Types$Px;
 var $elm_community$typed_svg$TypedSvg$Attributes$strokeWidth = function (length) {
 	return A2(
@@ -11840,7 +11888,7 @@ var $elm_community$typed_svg$TypedSvg$Attributes$textAnchor = function (anchorAl
 };
 var $elm_community$typed_svg$TypedSvg$text_ = $elm_community$typed_svg$TypedSvg$Core$node('text');
 var $elm_community$typed_svg$TypedSvg$title = $elm_community$typed_svg$TypedSvg$Core$node('title');
-var $avh4$elm_color$Color$white = A4($avh4$elm_color$Color$RgbaSpace, 255 / 255, 255 / 255, 255 / 255, 1.0);
+var $avh4$elm_color$Color$yellow = A4($avh4$elm_color$Color$RgbaSpace, 237 / 255, 212 / 255, 0 / 255, 1.0);
 var $author$project$KeywordGraph$nodeElement = function (node) {
 	return A2(
 		$elm_community$typed_svg$TypedSvg$g,
@@ -11857,9 +11905,9 @@ var $author$project$KeywordGraph$nodeElement = function (node) {
 				_List_fromArray(
 					[
 						$elm_community$typed_svg$TypedSvg$Attributes$InPx$r(20),
-						$elm_community$typed_svg$TypedSvg$Attributes$InPx$strokeWidth(1),
+						$elm_community$typed_svg$TypedSvg$Attributes$InPx$strokeWidth(3),
 						$elm_community$typed_svg$TypedSvg$Attributes$fill(
-						$elm_community$typed_svg$TypedSvg$Types$Paint($avh4$elm_color$Color$white)),
+						$elm_community$typed_svg$TypedSvg$Types$Paint($avh4$elm_color$Color$yellow)),
 						$elm_community$typed_svg$TypedSvg$Attributes$stroke(
 						$elm_community$typed_svg$TypedSvg$Types$Paint($avh4$elm_color$Color$black)),
 						$elm_community$typed_svg$TypedSvg$Attributes$cursor($elm_community$typed_svg$TypedSvg$Types$CursorPointer),
@@ -11980,7 +12028,7 @@ var $author$project$KeywordGraph$view = function (model) {
 		_List_fromArray(
 			[
 				A2($elm$html$Html$Attributes$style, 'width', '80%'),
-				A2($elm$html$Html$Attributes$style, 'height', '400px'),
+				A2($elm$html$Html$Attributes$style, 'height', '800px'),
 				A2($elm$html$Html$Attributes$style, 'margin', '50px auto'),
 				A2($elm$html$Html$Attributes$style, 'border', '2px solid rgba(0, 0, 0, 0.85)')
 			]),
@@ -11998,11 +12046,6 @@ var $author$project$KeywordGraph$view = function (model) {
 					]),
 				_List_fromArray(
 					[
-						A2(
-						$elm_community$typed_svg$TypedSvg$defs,
-						_List_Nil,
-						_List_fromArray(
-							[$author$project$KeywordGraph$arrowhead])),
 						A2(
 						$elm_community$typed_svg$TypedSvg$rect,
 						_Utils_ap(

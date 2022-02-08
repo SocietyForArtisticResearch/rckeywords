@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Browser
 import Dict exposing (Dict)
-import Element
+import Element exposing (Element)
 import Element.Region as Region
 import Graph
 import Html exposing (Html, a, span)
@@ -450,6 +450,11 @@ inlineStyle =
     ]
 
 
+viewResearch : Research -> Element Msg
+viewResearch research =
+    expositionLink research
+
+
 view : Model -> Html Msg
 view m =
     case m of
@@ -467,7 +472,7 @@ view m =
                 viewKeyword (Keyword kw) =
                     let
                         count =
-                            List.length kw.refs
+                            List.length kw.refs + 1
 
                         pixels =
                             case kw.display of
@@ -492,7 +497,7 @@ view m =
                                 (Attr.href (searchLink kw.name) :: inlineStyle)
                                 [ Html.text kw.name ]
                             , Html.span []
-                                [ Html.text <| (kw.refs |> List.length |> String.fromInt)
+                                [ Html.text <| (kw.refs |> List.length |> (+) 1 |> String.fromInt)
                                 ]
                             , Html.input
                                 [ Attr.type_ "checkbox"
@@ -516,12 +521,13 @@ view m =
             in
             Element.layout [] <|
                 Element.row [ Element.width Element.fill, Element.height <| Element.px height ]
-                    [ Element.el [Element.width Element.fill ] <| Element.html <|
-                        Html.div
-                            [ Attr.style "font-family" "monospace"
-                            , Attr.style "font-size" "10px"
-                            ]
-                            [ Html.map KeywordGraphMsg (KeywordGraph.view model.keywordGraph) ]
+                    [ Element.el [ Element.width Element.fill ] <|
+                        Element.html <|
+                            Html.div
+                                [ Attr.style "font-family" "monospace"
+                                , Attr.style "font-size" "10px"
+                                ]
+                                [ Html.map KeywordGraphMsg (KeywordGraph.view model.keywordGraph) ]
                     , Element.column [ Element.width Element.fill, Element.scrollbarY, Element.height <| Element.px height ]
                         [ Element.el [] (Element.text "This was generated on February 2nd, 2022.")
                         , Element.el [ Region.heading 1 ] <| Element.text "Keywords"
@@ -602,6 +608,18 @@ entry =
             |> JDE.andMap (Json.Decode.map statusFromString (field "status" string))
             |> JDE.andMap (maybe (field "published" string))
         )
+
+
+expositionLink : Research -> Element Msg
+expositionLink research =
+    let
+        url =
+            "https://www.researchcatalogue.net/profile/show-exposition?exposition=" ++ String.fromInt research.id
+    in
+    Element.link []
+        { url = url
+        , label = Element.text research.title
+        }
 
 
 searchLink : String -> String

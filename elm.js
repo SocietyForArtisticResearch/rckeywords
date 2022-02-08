@@ -18046,7 +18046,7 @@ var $author$project$Main$view = function (m) {
 					}),
 				_List_Nil,
 				kw.refs);
-			var count = $elm$core$List$length(kw.refs);
+			var count = $elm$core$List$length(kw.refs) + 1;
 			var pixels = function () {
 				var _v2 = kw.display;
 				if (_v2.$ === 'Hide') {
@@ -18085,7 +18085,7 @@ var $author$project$Main$view = function (m) {
 								[
 									$elm$html$Html$text(
 									$elm$core$String$fromInt(
-										$elm$core$List$length(kw.refs)))
+										1 + $elm$core$List$length(kw.refs)))
 								])),
 							A2(
 							$elm$html$Html$input,

@@ -550,9 +550,9 @@ nodeElement node =
     g [ class [ "node" ] ]
         [ circle
            [ r 20
-            , strokeWidth 3
+            , strokeWidth 1
             , fill (Paint Color.yellow)
-            , stroke (Paint Color.black)
+            , stroke (Paint Color.gray)
             , cursor CursorPointer
 
             -- The coordinates are initialized and updated by `Force.simulation`

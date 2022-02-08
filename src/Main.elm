@@ -2,6 +2,8 @@ module Main exposing (..)
 
 import Browser
 import Dict exposing (Dict)
+import Element
+import Element.Region as Region
 import Graph
 import Html exposing (Html, a, span)
 import Html.Attributes as Attr
@@ -24,21 +26,45 @@ main =
 subscriptions : Model -> Sub Msg
 subscriptions m =
     case m of
-        Waiting ->
+        Waiting _ ->
             Sub.none
 
         Ready model ->
             Sub.map KeywordGraphMsg (KeywordGraph.subscriptions model.keywordGraph)
 
 
+type WindowSize
+    = WindowSize { width : Int, height : Int }
+
+
+type alias Flags =
+    { height : Int
+    , width : Int
+    }
+
+
 type Model
-    = Waiting
-    | Ready
-        { research : List Research
-        , keywordSet : KeywordSet
-        , query : String
-        , keywordGraph : KeywordGraph.Model
-        }
+    = Waiting WindowSize
+    | Ready InitializedModel
+
+
+getWindowSize : Model -> WindowSize
+getWindowSize model =
+    case model of
+        Waiting windowSize ->
+            windowSize
+
+        Ready initModel ->
+            initModel.windowSize
+
+
+type alias InitializedModel =
+    { research : List Research
+    , keywordSet : KeywordSet
+    , query : String
+    , keywordGraph : KeywordGraph.Model
+    , windowSize : WindowSize
+    }
 
 
 type Display
@@ -53,9 +79,9 @@ type Msg
     | KeywordGraphMsg KeywordGraph.Msg
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( Waiting
+init : Flags -> ( Model, Cmd Msg )
+init flags =
+    ( Waiting (WindowSize { width = flags.width, height = flags.height })
     , Http.get { url = "research.json", expect = Http.expectJson GotResearch decodeResearch }
     )
 
@@ -73,6 +99,11 @@ keywords researchlist =
 getKeywordId : Keyword -> Id
 getKeywordId (Keyword { id }) =
     id
+
+
+setKeywordId : Int -> Keyword -> Keyword
+setKeywordId id (Keyword k) =
+    Keyword { k | id = Id id }
 
 
 
@@ -192,7 +223,7 @@ graphFromKeyword depth kw set =
             limitedLst |> List.map getName
 
         edges =
-            limitedLst |> List.concatMap (edgesFromKeyword set)
+            limitedLst |> List.indexedMap setKeywordId |> List.concatMap (edgesFromKeyword set)
 
         _ =
             Debug.log ("edges are " ++ getName kw) edges
@@ -261,10 +292,18 @@ hide (Keyword k) =
 showInSet : String -> KeywordSet -> KeywordSet
 showInSet key (KeywordSet set) =
     let
-        setAllHide =
-            Dict.map (\_ v -> hide v) set.dict
+        newSet =
+            Dict.map
+                (\k v ->
+                    if k == key then
+                        toggle v
+
+                    else
+                        hide v
+                )
+                set.dict
     in
-    KeywordSet { set | dict = Dict.update key (Maybe.map toggle) setAllHide }
+    KeywordSet { set | dict = newSet }
 
 
 emptyKeywordSet =
@@ -308,84 +347,101 @@ hasAtleast2Refs research =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    case model of
+        Waiting screensize ->
+            case msg of
+                GotResearch result ->
+                    updateWithResult result model
+
+                _ ->
+                    ( Waiting screensize, Cmd.none )
+
+        Ready initializedModel ->
+            let
+                ( newInitializedModel, cmd ) =
+                    updateInitialized msg initializedModel
+            in
+            ( Ready newInitializedModel, cmd )
+
+
+updateInitialized : Msg -> InitializedModel -> ( InitializedModel, Cmd Msg )
+updateInitialized msg model =
     case msg of
-        GotResearch result ->
-            case result of
-                Ok lst ->
-                    let
-                        set =
-                            lst |> keywords
-
-                        ( graphModel, cmd ) =
-                            KeywordGraph.init Graph.empty
-                    in
-                    ( Ready
-                        { query = ""
-                        , keywordGraph = graphModel
-                        , research = lst
-                        , keywordSet = set
-                        }
-                    , Cmd.map KeywordGraphMsg cmd
-                    )
-
-                Err err ->
-                    let
-                        _ =
-                            Debug.log "whoops, error: " err
-                    in
-                    ( Waiting, Cmd.none )
-
         ChangedQuery q ->
-            case model of
-                Waiting ->
-                    ( Waiting, Cmd.none )
-
-                Ready m ->
-                    ( Ready { m | query = q }, Cmd.none )
+            ( { model | query = q }, Cmd.none )
 
         ClickedKeyword k ->
-            case model of
-                Waiting ->
-                    ( Waiting, Cmd.none )
+            let
+                newKeywords =
+                    model.keywordSet |> showInSet k
 
-                Ready m ->
-                    let
-                        newKeywords =
-                            m.keywordSet |> showInSet k
+                mGraph =
+                    lookupString k model.keywordSet |> Maybe.map (\kw -> graphFromKeyword 1 kw model.keywordSet)
 
-                        mGraph =
-                            lookupString k m.keywordSet |> Maybe.map (\kw -> graphFromKeyword 1 kw m.keywordSet)
+                localGraph =
+                    case mGraph of
+                        Nothing ->
+                            Graph.empty
 
-                        localGraph =
-                            case mGraph of
-                                Nothing ->
-                                    Graph.empty
+                        Just grph ->
+                            grph
 
-                                Just grph ->
-                                    grph
-
-                        ( gModel, gMsg ) =
-                            KeywordGraph.init localGraph
-                    in
-                    ( Ready
-                        { m
-                            | keywordSet = newKeywords
-                            , keywordGraph = gModel
-                        }
-                    , Cmd.map KeywordGraphMsg gMsg
-                    )
+                ( gModel, gMsg ) =
+                    KeywordGraph.init localGraph
+            in
+            ( { model
+                | keywordSet = newKeywords
+                , keywordGraph = gModel
+              }
+            , Cmd.map KeywordGraphMsg gMsg
+            )
 
         KeywordGraphMsg kmsg ->
-            case model of
-                Waiting ->
-                    ( Waiting, Cmd.none )
+            let
+                ( kmodel, kcmd ) =
+                    KeywordGraph.update kmsg model.keywordGraph
+            in
+            ( { model | keywordGraph = kmodel }, Cmd.map KeywordGraphMsg kcmd )
 
-                Ready m ->
-                    let
-                        ( kmodel, kcmd ) =
-                            KeywordGraph.update kmsg m.keywordGraph
-                    in
-                    ( Ready { m | keywordGraph = kmodel }, Cmd.map KeywordGraphMsg kcmd )
+        _ ->
+            let
+                _ =
+                    Debug.log "impossible msg" msg
+            in
+            ( model, Cmd.none )
+
+
+updateWithResult : Result Http.Error (List Research) -> Model -> ( Model, Cmd Msg )
+updateWithResult result model =
+    let
+        window =
+            getWindowSize model
+    in
+    case result of
+        Ok lst ->
+            let
+                set =
+                    lst |> keywords
+
+                ( graphModel, cmd ) =
+                    KeywordGraph.init Graph.empty
+            in
+            ( Ready
+                { query = ""
+                , keywordGraph = graphModel
+                , research = lst
+                , keywordSet = set
+                , windowSize = window
+                }
+            , Cmd.map KeywordGraphMsg cmd
+            )
+
+        Err err ->
+            let
+                _ =
+                    Debug.log "whoops, error: " err
+            in
+            ( Waiting window, Cmd.none )
 
 
 inlineStyle =
@@ -397,7 +453,7 @@ inlineStyle =
 view : Model -> Html Msg
 view m =
     case m of
-        Waiting ->
+        Waiting dim ->
             Html.p [] [ Html.text "waiting" ]
 
         Ready model ->
@@ -427,57 +483,53 @@ view m =
 
                         refs =
                             kw.refs |> List.foldr (\r acc -> r.keywords ++ acc) []
-
-                        viewedRefs =
-                            case kw.display of
-                                Hide ->
-                                    []
-
-                                Show ->
-                                    [ Html.p [] <| List.map (\ref -> span (inlineStyle ++ [ Events.onClick <| ClickedKeyword ref ]) [ Html.text ref ]) refs ]
                     in
-                    Html.span
-                        [ Attr.style "font-size" ((pixels |> String.fromInt) ++ "px")
-                        ]
-                        ([ Html.span
-                            (Attr.href (searchLink kw.name) :: inlineStyle)
-                            [ Html.text kw.name ]
-                         , Html.span []
-                            [ Html.text <| (kw.refs |> List.length |> String.fromInt)
+                    Element.html <|
+                        Html.span
+                            [ Attr.style "font-size" ((pixels |> String.fromInt) ++ "px")
                             ]
-                         , Html.input
-                            [ Attr.type_ "checkbox"
-                            , Attr.checked (kw.display == Show)
-                            , Events.onClick (ClickedKeyword kw.name)
+                            [ Html.a
+                                (Attr.href (searchLink kw.name) :: inlineStyle)
+                                [ Html.text kw.name ]
+                            , Html.span []
+                                [ Html.text <| (kw.refs |> List.length |> String.fromInt)
+                                ]
+                            , Html.input
+                                [ Attr.type_ "checkbox"
+                                , Attr.checked (kw.display == Show)
+                                , Events.onClick (ClickedKeyword kw.name)
+                                ]
+                                []
                             ]
-                            []
-                         ]
-                            ++ viewedRefs
-                        )
 
                 keywordLst =
                     model.keywordSet |> toList |> filter model.query
 
                 keywordCount =
                     "there are: " ++ (List.length keywordLst |> String.fromInt) ++ " keywords."
-            in
-            Html.div
-                [ Attr.style "font-family" "monospace"
-                ]
-                [ Html.map KeywordGraphMsg (KeywordGraph.view model.keywordGraph)
-                , Html.p [] [ Html.text "This was generated on February 2nd, 2022." ]
-                , Html.div []
-                    [ Html.h1 [] [ Html.text "Keywords" ]
-                    , Html.p [] [ Html.text keywordCount ]
-                    , Html.input [ Attr.placeholder "Search for keyword", Attr.value model.query, Events.onInput ChangedQuery ] []
-                    , Html.p [] (List.map viewKeyword keywordLst)
-                    ]
 
-                -- , Html.div []
-                --     [ Html.h1 [] [ Html.text "titles" ]
-                --     , Html.p [] <| List.map viewTitle researchLst
-                --     ]
-                ]
+                width =
+                    getWindowSize m |> (\(WindowSize ws) -> ws.width)
+
+                height =
+                    getWindowSize m |> (\(WindowSize ws) -> ws.height)
+            in
+            Element.layout [] <|
+                Element.row [ Element.width Element.fill, Element.height <| Element.px height ]
+                    [ Element.el [Element.width Element.fill ] <| Element.html <|
+                        Html.div
+                            [ Attr.style "font-family" "monospace"
+                            , Attr.style "font-size" "10px"
+                            ]
+                            [ Html.map KeywordGraphMsg (KeywordGraph.view model.keywordGraph) ]
+                    , Element.column [ Element.width Element.fill, Element.scrollbarY, Element.height <| Element.px height ]
+                        [ Element.el [] (Element.text "This was generated on February 2nd, 2022.")
+                        , Element.el [ Region.heading 1 ] <| Element.text "Keywords"
+                        , Element.el [] <| Element.text keywordCount
+                        , Element.html <| Html.input [ Attr.placeholder "Search for keyword", Attr.value model.query, Events.onInput ChangedQuery ] []
+                        , Element.wrappedRow [] <| List.map viewKeyword keywordLst
+                        ]
+                    ]
 
 
 type alias Research =

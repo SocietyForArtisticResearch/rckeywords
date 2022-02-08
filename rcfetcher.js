@@ -1,4 +1,4 @@
-/* these can be replaced with any advanced searches */
+/* This should be run in while browser is in www.researchcatalogue.net */
 
 let url = "https://www.researchcatalogue.net/portal/search-result?fulltext=&title=&autocomplete=&keyword=&portal=&statusprogress=0&statusprogress=1&statuspublished=0&statuspublished=1&includelimited=0&includelimited=1&includeprivate=0&type_research=research&resulttype=research&format=json&limit=250&page="
 

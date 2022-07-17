@@ -6,9 +6,11 @@ import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
 import Http
+import Iso8601
 import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
 import Set
+import Time
 
 
 main =
@@ -152,11 +154,15 @@ view { research, query } =
 
         keywordCount =
             "there are: " ++ (List.length keywordLst |> String.fromInt) ++ " keywords."
+
+        lastDate =
+            findLastDate researchLst |> Iso8601.fromTime |> String.split "T" |> List.head |> Maybe.withDefault "?"
     in
     Html.div
         [ Attr.style "font-family" "monospace"
+        , Attr.style "padding" "2em"
         ]
-        [ Html.p [] [ Html.text "This was generated on February 2nd, 2022." ]
+        [ Html.p [] [ Html.text ("This was generated on: " ++ lastDate) ]
         , Html.div []
             [ Html.h1 [] [ Html.text "Keywords" ]
             , Html.p [] [ Html.text keywordCount ]
@@ -181,6 +187,38 @@ type alias Research =
     , publicationStatus : PublicationStatus -- should be string?
     , publication : Maybe String
     }
+
+
+dateFromString : String -> Maybe Time.Posix
+dateFromString str =
+    let
+        result =
+            str |> String.split "/" |> List.reverse |> String.join "-" |> Iso8601.toTime
+    in
+    case result of
+        Ok time ->
+            Just time
+
+        Err err ->
+            let
+                _ =
+                    Debug.log "time error" err
+            in
+            Nothing
+
+findLastDate : List Research -> Time.Posix 
+findLastDate lst =
+    let 
+        onlyJust : List (Maybe a) -> List a
+        onlyJust mlst =
+            case mlst of
+                Just x :: xs -> x ::onlyJust xs
+
+                Nothing :: xs -> onlyJust xs
+
+                [] -> []
+    in 
+    lst |> List.map (\r -> r.publication |> Maybe.andThen dateFromString) |> onlyJust |>  List.sortBy Time.posixToMillis |> List.reverse |> List.head |> Maybe.withDefault (Time.millisToPosix 0)
 
 
 type PublicationStatus

@@ -13,6 +13,7 @@ import Set
 import Time
 
 
+main : Program () Model Msg
 main =
     Browser.element
         { init = init
@@ -41,10 +42,11 @@ type Msg
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { research = [], query = "" }
-    , Http.get { url = "research.json", expect = Http.expectJson GotResearch decodeResearch }
+    , Http.get { url = "internal_research.json", expect = Http.expectJson GotResearch decodeResearch }
     )
 
 
+keywords : List Research -> List Keyword
 keywords researchlist =
     List.foldr
         (\research acc ->
@@ -73,6 +75,7 @@ filter query lst =
     lst |> List.filter (\(Keyword kw) -> String.contains (query |> String.toLower) (kw.name |> String.toLower))
 
 
+emptyKeywordSet : KeywordSet
 emptyKeywordSet =
     KeywordSet Dict.empty
 
@@ -101,6 +104,16 @@ insert k (KeywordSet dict) =
             KeywordSet (Dict.insert k (newKey k) dict)
 
 
+type Title
+    = Title String
+
+
+titles : List Research -> List Title
+titles =
+    List.map (.title >> Title)
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotResearch result ->
@@ -132,7 +145,7 @@ view { research, query } =
             let
                 pixels =
                     if kw.count > 12 then
-                        20
+                        12 + kw.count
 
                     else
                         12 + kw.count
@@ -206,19 +219,29 @@ dateFromString str =
             in
             Nothing
 
-findLastDate : List Research -> Time.Posix 
+
+findLastDate : List Research -> Time.Posix
 findLastDate lst =
-    let 
+    let
         onlyJust : List (Maybe a) -> List a
         onlyJust mlst =
             case mlst of
-                Just x :: xs -> x ::onlyJust xs
+                (Just x) :: xs ->
+                    x :: onlyJust xs
 
-                Nothing :: xs -> onlyJust xs
+                Nothing :: xs ->
+                    onlyJust xs
 
-                [] -> []
-    in 
-    lst |> List.map (\r -> r.publication |> Maybe.andThen dateFromString) |> onlyJust |>  List.sortBy Time.posixToMillis |> List.reverse |> List.head |> Maybe.withDefault (Time.millisToPosix 0)
+                [] ->
+                    []
+    in
+    lst
+        |> List.map (\r -> r.publication |> Maybe.andThen dateFromString)
+        |> onlyJust
+        |> List.sortBy Time.posixToMillis
+        |> List.reverse
+        |> List.head
+        |> Maybe.withDefault (Time.millisToPosix 0)
 
 
 type PublicationStatus

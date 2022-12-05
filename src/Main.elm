@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Browser
 import Dict exposing (Dict)
-import Element exposing (Element, fill, fillPortion, height, px, width, paddingXY, padding)
+import Element exposing (Element, fill, fillPortion, height, padding, paddingXY, px, width)
 import Element.Font
 import Element.Region
 import Html exposing (Html)
@@ -174,7 +174,7 @@ viewResearch research =
     Element.column [ width fill, Element.centerX ]
         [ Maybe.map2 img research.thumbnail (research.abstract |> Maybe.map shortAbstract) |> Maybe.withDefault Element.none
         , Element.link [ width fill ] <|
-            { label = Element.paragraph [ Element.Font.family [ Element.Font.typeface "PT Sans" ], Element.Region.heading 1, padding 25,width fill ] [ Element.text research.title ]
+            { label = Element.paragraph [ Element.Font.family [ Element.Font.typeface "PT Sans" ], Element.Region.heading 1, padding 25, width fill ] [ Element.text research.title ]
             , url = research.defaultPage
             }
         , Element.paragraph [ padding 25, Element.Font.light, Element.Font.color <| Element.rgb 0.33 0.33 0.33 ]
@@ -197,23 +197,42 @@ shortAbstract abstract =
 splitInColumns : Int -> List a -> List (List a)
 splitInColumns n lst =
     let
-        chunk =
-            case List.length lst // n of
-                0 ->
-                    1
+        size =
+            List.length lst
 
-                x ->
-                    x
+        chunkSize =
+            size // n
 
-        auxe l =
-            case l of
+        remain =
+            modBy n size
+
+        columnLengths =
+            List.repeat n chunkSize
+
+        distribute : Int -> List Int -> List Int
+        distribute x ls =
+            case ls of
                 [] ->
                     []
 
-                xs ->
-                    List.take chunk xs :: auxe (List.drop chunk xs)
+                lss ->
+                    (List.take x ls |> List.map ((+) 1)) ++ List.drop x ls
+
+        finalLengths =
+            distribute remain columnLengths
+
+        auxe lengths l =
+            case ( l, lengths ) of
+                ( _, [] ) ->
+                    []
+
+                ( [], _ ) ->
+                    []
+
+                ( xs, currentLength :: restLengths ) ->
+                    List.take currentLength xs :: auxe restLengths (List.drop currentLength xs)
     in
-    auxe lst
+    auxe finalLengths lst
 
 
 viewList : Model -> Html Msg
@@ -233,15 +252,10 @@ viewList model =
 
         researchColumn lst =
             Element.column [ Element.alignTop, width fill, Element.paddingXY 10 10 ]
-                ((Element.text <| String.fromInt <| List.length <| filtered)
-                    :: List.map viewResearch lst
-                )
+                (List.map viewResearch lst)
 
         cls =
-            splitInColumns 3 filtered
-
-        _ =
-            Debug.log "n=" (List.length cls)
+            splitInColumns 3 (filtered |> List.take 64)
     in
     Element.layout [ Element.Font.family [ Element.Font.typeface "Helvetica Neue" ] ] <|
         Element.row [ width fill, height fill ]

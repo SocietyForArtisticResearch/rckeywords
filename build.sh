@@ -1,3 +1,6 @@
 #!/bin/sh
 
-elm make src/Main.elm --output=build/elm.js
+rm internal_research.json
+wget keywords.sarconference2016.net/internal_research.json
+elm make src/Main.elm --output=build/main.js
+http-server

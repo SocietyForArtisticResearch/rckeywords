@@ -4,7 +4,7 @@ This is something to test alternative layouts of RC content.
 
 # Requirements
 
-* [http-server]
+* [http-server](https://www.npmjs.com/package/http-server)
 * [elm](https://guide.elm-lang.org/install/elm.html)
 
 # Building
@@ -12,7 +12,7 @@ This is something to test alternative layouts of RC content.
 In a terminal, run 
 
 ```bash
-    sh build.sh
+sh build.sh
 ```
 
 this will also copy the latest RC export JSON.
@@ -40,13 +40,12 @@ Note they are not exactly the same thing, so it may be that if some field is mis
 
 __Views:__
 
-The main view of all expositions:
-
+The main view of all expositions, dividing it into columns
+```elm 
+viewList : Model -> Html Msg
 ```
-elm viewList : Model -> Html Msg
-```
 
-The display of a single research:
+The display of a single research item, the thumbnail, title and abstract:
 ```elm 
 viewResearch : Research -> Element Msg
 ```

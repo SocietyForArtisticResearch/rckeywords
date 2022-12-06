@@ -9,7 +9,13 @@ This is something to test alternative layouts of RC content.
 
 # Building
 
-In a terminal, run sh build.sh, this will also copy the latest RC export JSON.
+In a terminal, run 
+
+```bash
+    sh build.sh
+```
+
+this will also copy the latest RC export JSON.
 Note that a build will work for 24 hours, because of the timeout on image links.
 
 # Changing
@@ -18,11 +24,17 @@ The main code can be found in src/Main.elm. The important functions for how it l
 
 __Structure:__
 
-```elm entry : Decoder Research```
+```elm 
+entry : Decoder Research
+```
+
 this is the translator, it takes the data from the RC and turns it into:
 
-```elm type alias Research```
-This is the shape of the data as it exists in the program 
+```elm 
+type alias Research
+```
+
+this is the shape of the data as it exists in the program 
 
 Note they are not exactly the same thing, so it may be that if some field is missing in the Research type, it can be added by adjusting both the Research type and the Decoder.
 
@@ -30,9 +42,13 @@ __Views:__
 
 The main view of all expositions:
 
-```elm viewList : Model -> Html Msg```
+```
+elm viewList : Model -> Html Msg
+```
 
 The display of a single research:
-```elm viewResearch : Research -> Element Msg```
+```elm 
+viewResearch : Research -> Element Msg
+```
 
 

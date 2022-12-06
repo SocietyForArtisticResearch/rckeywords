@@ -5,6 +5,7 @@ This is something to test alternative layouts of RC content.
 # Requirements
 
 * [http-server](https://www.npmjs.com/package/http-server)
+(you will need to install npm first)
 * [elm](https://guide.elm-lang.org/install/elm.html)
 
 # Building

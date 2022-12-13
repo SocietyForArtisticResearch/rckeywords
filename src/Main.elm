@@ -3,6 +3,7 @@ module Main exposing (..)
 import Browser
 import Dict exposing (Dict)
 import Element exposing (Element, fill, fillPortion, height, padding, paddingXY, px, width)
+import Element.Border as Border
 import Element.Font
 import Element.Region
 import Html exposing (Html)
@@ -19,7 +20,7 @@ import Set
 import Time
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
     Browser.element
         { init = init
@@ -37,6 +38,7 @@ subscriptions _ =
 type alias Model =
     { research : List Research
     , query : String
+    , screenDimensions : { w : Int, h : Int }
     }
 
 
@@ -46,9 +48,15 @@ type Msg
     | ChangedQuery String
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( { research = [], query = "" }
+type alias Flags =
+    { width : Int
+    , height : Int
+    }
+
+
+init : Flags -> ( Model, Cmd Msg )
+init { width, height } =
+    ( { research = [], query = "", screenDimensions = { w = width, h = height } }
     , Http.get { url = "internal_research.json", expect = Http.expectJson GotResearch decodeResearch }
     )
 
@@ -147,10 +155,10 @@ image src description =
     Element.html <|
         Html.img
             [ Attr.src src
-            , Attr.style "object-fit" "fill"
+            , Attr.style "object-fit" "cover"
             , Attr.alt <| description
             , Attr.attribute "width" "100%"
-            , Attr.attribute "height" "100%"
+            , Attr.attribute "height" "200px"
             , Attr.property "loading" <| JE.string "lazy"
             ]
             []
@@ -163,7 +171,7 @@ viewResearch research =
             Element.link [ width fill ]
                 { url = research.defaultPage
                 , label =
-                    Element.el [ Element.centerX, width fill, Element.height fill, Element.paddingXY 0 25 ] <| image src desc
+                    Element.el [ Element.centerX, width fill, Element.height fill, Element.paddingXY 0 5 ] <| image src desc
                 }
 
         short =
@@ -171,13 +179,26 @@ viewResearch research =
                 |> Maybe.withDefault "no abstract"
                 |> shortAbstract
     in
-    Element.column [ width fill, Element.centerX ]
+    Element.column [ Border.width 1, Border.solid, Border.color (Element.rgb 0 0 0), width fill, height (px 400), Element.centerX ]
         [ Maybe.map2 img research.thumbnail (research.abstract |> Maybe.map shortAbstract) |> Maybe.withDefault Element.none
         , Element.link [ width fill ] <|
-            { label = Element.paragraph [ Element.Font.family [ Element.Font.typeface "PT Sans" ], Element.Region.heading 1, padding 25, width fill ] [ Element.text research.title ]
+            { label =
+                Element.paragraph
+                    [ Element.Font.family [ Element.Font.typeface "Open Sans" ]
+                    , Element.Font.size 16
+                    , Element.Region.heading 1
+                    , padding 5
+                    , width fill
+                    ]
+                    [ Element.text research.title ]
             , url = research.defaultPage
             }
-        , Element.paragraph [ padding 25, Element.Font.light, Element.Font.color <| Element.rgb 0.33 0.33 0.33 ]
+        , Element.paragraph
+            [ padding 5
+            , Element.Font.size 15
+            , Element.Font.light
+            , Element.Font.color <| Element.rgb 0.33 0.33 0.33
+            ]
             [ Element.text
                 short
             ]
@@ -235,7 +256,31 @@ splitInColumns n lst =
     auxe finalLengths lst
 
 
-viewList : Model -> Html Msg
+unfold : (state -> Maybe ( state, item )) -> state -> List item
+unfold f start =
+    case f start of
+        Just ( state2, item ) ->
+            item :: unfold f state2
+
+        Nothing ->
+            []
+
+
+makeRowsOfN : Int -> List a -> List (List a)
+makeRowsOfN rowSize lst =
+    let
+        f input =
+            case List.take rowSize input of
+                [] ->
+                    Nothing
+
+                some ->
+                    Just ( some, List.drop rowSize input )
+    in
+    unfold f lst
+
+
+viewList : Model -> Element Msg
 viewList model =
     let
         filtered =
@@ -251,20 +296,25 @@ viewList model =
                 model.research
 
         researchColumn lst =
-            Element.column [ Element.alignTop, width fill, Element.paddingXY 10 10 ]
+            Element.column [ Element.spacing 5, Element.alignTop, width fill, Element.paddingXY 5 5 ]
                 (List.map viewResearch lst)
 
         cls =
-            splitInColumns 3 (filtered |> List.take 64)
+            splitInColumns 4 (List.take 16 filtered)
     in
-    Element.layout [ Element.Font.family [ Element.Font.typeface "Helvetica Neue" ] ] <|
-        Element.row [ width fill, height fill ]
-            (cls |> List.map researchColumn)
+    Element.row []
+        (cls |> List.map researchColumn)
 
 
 view : Model -> Html Msg
 view model =
-    viewList model
+    Element.layout
+        [ width (Element.px model.screenDimensions.w)
+        , Element.Font.family [ Element.Font.typeface "Helvetica Neue" ]
+        ]
+    <|
+        viewList
+            model
 
 
 viewKeywords : Model -> Html Msg

@@ -1,30 +1,172 @@
-<!DOCTYPE HTML>
-<html>
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Research Catalogue - an international database for artistic research</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="rc_front_page_files/548ffb3bbb9446da1d700dc22f2aa82f.css">
+    <script src="rc_front_page_files/jquery-new.min.js"></script>
+    <script type="text/javascript">
+        jQueryNew = $.noConflict(false);
+    </script>
+    <script type="text/javascript" src="rc_front_page_files/4b06ba9da5e559e1261abd478b3939fd.js"></script>
+    <script type="text/javascript" src="build/main.js"></script>
+    <style>
+        #container-main {
+            width: 90%;
+        }
 
-<head>
-	<meta charset="UTF-8">
-	<title>Main</title>
-	<style>
-		body {
-			padding: 0;
-			margin: 0;
-		}
-	</style>
-	<script type="text/javascript" src="build/main.js"></script>
+        #elm {
+            width : 100%;
+        }
+    </style>
 </head>
-
 <body>
-
-	<pre id="elm"></pre>
+<div id="container-main">
+    <div id="header">
+        <a id="menuicon-pages">
+            <svg class="menu-icon" onclick="openMenu($('#page-menu-list'))" viewBox="0 0 16 16">
+                <rect x="1" y="3" fill="#333" width="14" height="2"></rect>
+                <rect x="1" y="7" fill="#333" width="14" height="2"></rect>
+                <rect x="1" y="11" fill="#333" width="14" height="2"></rect>
+            </svg>
+        </a>
+        <div class="page-menu styly-menu left-aligned" id="page-menu-list">
+            <ul>
+                <li><a href="https://www.researchcatalogue.net/">Home</a></li>
+                <li><a href="https://www.researchcatalogue.net/portal/institutions">Institutional Portals</a></li>
+                <li><a href="https://www.researchcatalogue.net/portal/journals">Journals</a></li>
+                <li><a href="https://www.researchcatalogue.net/portal/projects">Projects</a></li>
+                <li><a href="https://www.researchcatalogue.net/portal/researchers?publicObjects=1">Researchers</a></li>
+            </ul>
+        </div>
+        <h1 id="header-title">
+            <a href="https://www.researchcatalogue.net/">Research Catalogue</a>
+                    </h1>
+        <div style="float: right;" class="hide-on-mobile">
+            <a href="https://www.researchcatalogue.net/portal/about" class="about-links">About</a>
+            <a href="https://guide.researchcatalogue.net/" class="about-links">Help</a>
+        </div>
+        <h2 id="header-description" class="hide-on-mobile">
+            an international database for artistic research
+        </h2>
+        <div id="header-search">
+            <form action="/portal/search-result" method="get">
+                <input id="header-search-input" data-autocomplete="1" class="ui-autocomplete-input" autocomplete="nope" data-autocomplete-options="{&quot;url&quot;:&quot;/portal/search&quot;,&quot;property&quot;:&quot;title&quot;}" placeholder="Search" name="fulltext" type="input">
+            </form>
+            <a id="header-search-advanced" href="https://www.researchcatalogue.net/portal/advanced-search" onclick="advancedSearchDialog('');return false">advanced search            </a>
+        </div>
+        <div class="desktop-menu">
+            <div id="main-tabs">
+                <a class="main-tab" href="https://www.researchcatalogue.net/">Home</a>
+                <a class="main-tab" href="https://www.researchcatalogue.net/portal/institutions">Institutional Portals</a>
+                <a class="main-tab" href="https://www.researchcatalogue.net/portal/journals">Journals</a>
+                <a class="main-tab" href="https://www.researchcatalogue.net/portal/projects">Projects</a>
+                <a class="main-tab" href="https://www.researchcatalogue.net/portal/researchers?publicObjects=1">Researchers</a>
+                                                    <div class="login-section">
+                        <a href="https://www.researchcatalogue.net/portal/login" class="button">login</a>
+                        <a href="https://www.researchcatalogue.net/portal/register" class="button">register</a>
+                    </div>
+                            </div>
+        </div>
+    </div>
+    <pre id="elm"></pre>
 
 
 	<script>
-		var app = Elm.Main.init({ node: document.getElementById("elm") });
+        let element = document.getElementById("elm");
+        let h = element.clientHeight;
+        let w = element.clientWidth;
+        console.log("w & h :",[w,h]);
+		var app = Elm.Main.init({ node: document.getElementById("elm"), flags: {width: w, height: h} });
 		if (document.getElementById("elm")) {
 			document.getElementById("elm").innerText = 'This is a headless program, meaning there is nothing to show here.\\n\\nI started the program anyway though, and you can access it as `app` in the developer console.';
 		}
 	</script>
 
-</body>
+    <div id="footer">
+        <footer>
+            <div id="footer-content">
+                <div id="footer-content-lists">
+                    <ul class="footer-list">
+                        <li>
+                            <strong>Organisation</strong>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://www.researchcatalogue.net/portal/members" target="_blank">Institutional Members</a>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://societyforartisticresearch.org/" target="_blank">Society for Artistic Research</a>
+                        </li>
+                    </ul>
+                    <ul class="footer-list">
+                        <li>
+                            <strong>Legal</strong>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://www.researchcatalogue.net/portal/copyright-concerns">Copyright Concerns</a>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://www.researchcatalogue.net/portal/copyright">Copyright Infringement</a>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://www.researchcatalogue.net/portal/privacy">Privacy</a>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://www.researchcatalogue.net/portal/terms">Terms of Use</a>
+                        </li>
+                    </ul>
+                    <ul class="footer-list">
+                        <li>
+                            <strong>Help</strong>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://guide.researchcatalogue.net/" target="_blank">Guide</a>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://www.researchcatalogue.net/view/273532/1685164" target="_blank">Video Tutorials</a>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://www.researchcatalogue.net/RC%20Quick%20Start%20Guide.pdf" target="_blank">Quick Start</a>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://forum.researchcatalogue.net/" target="_blank">Forum</a>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://www.researchcatalogue.net/portal/faq">FAQ</a>
+                        </li>
+                    </ul>
+                    <ul class="footer-list">
+                        <li>
+                            <strong>Development</strong>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://www.researchcatalogue.net/portal/technical-information">Technical Information</a>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://societyforartisticresearch.github.io/rcblogpublic/" target="_blank">Current RC
+                                Developments</a>
+                        </li>
+                    </ul>
+                    <ul class="footer-list">
+                        <li>
+                            <strong>Contact</strong>
+                        </li>
+                        <li>
+                            <a class="footer-link" href="https://www.researchcatalogue.net/portal/contact">Support</a>
+                        </li>
+                    </ul>
+                </div>
+                <p class="hosting">
+                    <span>The Research Catalogue server is operated at</span><br>
+                    <a href="https://www.kth.se/en" target="_blank">
+                        KTH's IT-department<br>
+                        <img class="hosting-logo" alt="KTH logo" src="rc_front_page_files/kth.svg" width="45" height="45">
+                    </a>
+                </p>
+            </div>
+        </footer>
+    </div>
+</div>
 
-</html>
+
+<ul class="ui-autocomplete ui-front ui-menu ui-widget ui-widget-content" id="ui-id-1" tabindex="0" style="display: none;"></ul><span role="status" aria-live="assertive" aria-relevant="additions" class="ui-helper-hidden-accessible"></span></body></html>

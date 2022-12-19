@@ -179,7 +179,15 @@ viewResearch research =
                 |> Maybe.withDefault "no abstract"
                 |> shortAbstract
     in
-    Element.column [ Border.width 1, Border.solid, Border.color (Element.rgb 0 0 0), width fill, height (px 400), Element.centerX ]
+    Element.column
+        [ -- [ Border.width 0
+          -- , Border.solid
+          -- , Border.color (Element.rgb 0 0 0)
+          width fill
+        , height (px 400)
+        , Element.centerX
+        , Element.clip
+        ]
         [ Maybe.map2 img research.thumbnail (research.abstract |> Maybe.map shortAbstract) |> Maybe.withDefault Element.none
         , Element.link [ width fill ] <|
             { label =
@@ -193,6 +201,18 @@ viewResearch research =
                     [ Element.text research.title ]
             , url = research.defaultPage
             }
+        , Element.link [ width fill ] <|
+            { label =
+                Element.paragraph
+                    [ Element.Font.family [ Element.Font.typeface "Open Sans" ]
+                    , Element.Font.size 16
+                    , Element.Region.heading 1
+                    , padding 5
+                    , width fill
+                    ]
+                    [ Element.text <| authorAsString research.author ]
+            , url = authorUrl research.author
+            }
         , Element.paragraph
             [ padding 5
             , Element.Font.size 15
@@ -205,9 +225,20 @@ viewResearch research =
         ]
 
 
+listAndThen : (a -> List b) -> List a -> List b
+listAndThen f lst =
+    lst |> List.map f |> List.concat
+
+
 shortAbstract : String -> String
 shortAbstract abstract =
-    case String.split "." abstract of
+    let
+        splitted =
+            abstract
+                |> String.split "."
+                |> listAndThen (String.split "?")
+    in
+    case splitted of
         head :: _ ->
             head ++ "."
 
@@ -299,11 +330,17 @@ viewList model =
             Element.column [ Element.spacing 5, Element.alignTop, width fill, Element.paddingXY 5 5 ]
                 (List.map viewResearch lst)
 
-        cls =
-            splitInColumns 4 (List.take 16 filtered)
+        researchInProgress =
+            List.filter (\r -> r.publicationStatus == InProgress) model.research
+
+        published =
+            List.filter (\r -> r.publicationStatus == Published) filtered
     in
     Element.row []
-        (cls |> List.map researchColumn)
+        [ published |> List.take 16 |> researchColumn
+        , published |> List.drop 16 |> List.take 16 |> researchColumn
+        , published |> List.drop 32 |> List.take 16 |> researchColumn
+        ]
 
 
 view : Model -> Html Msg
@@ -375,12 +412,26 @@ viewKeywords { research, query } =
         ]
 
 
+type Author
+    = Author { id : Int, name : String }
+
+
+authorAsString : Author -> String
+authorAsString (Author a) =
+    a.name
+
+
+authorUrl : Author -> String
+authorUrl (Author a) =
+    "https://www.researchcatalogue.net/profile/?person=" ++ String.fromInt a.id
+
+
 type alias Research =
     { id : Int
     , title : String
     , keywords : List String
     , created : String
-    , author : String
+    , author : Author
     , issueId : Maybe Int
     , publicationStatus : PublicationStatus -- should be string?
     , publication : Maybe String
@@ -477,6 +528,17 @@ entry =
 
                 _ ->
                     Undecided
+
+        author : Decoder Author
+        author =
+            let
+                makeAuthor id name =
+                    Author { id = id, name = name }
+            in
+            Json.Decode.map2
+                makeAuthor
+                (Json.Decode.field "id" Json.Decode.int)
+                (Json.Decode.field "name" Json.Decode.string)
     in
     Json.Decode.map researchPublicationStatus <|
         (Json.Decode.succeed
@@ -485,7 +547,7 @@ entry =
             |> JDE.andMap (field "title" string)
             |> JDE.andMap (field "keywords" (Json.Decode.list string))
             |> JDE.andMap (field "created" string)
-            |> JDE.andMap (field "author" <| field "name" string)
+            |> JDE.andMap (field "author" author)
             |> JDE.andMap (maybe (field "issue" <| field "id" int))
             |> JDE.andMap (Json.Decode.map statusFromString (field "status" string))
             |> JDE.andMap (maybe (field "published" string))

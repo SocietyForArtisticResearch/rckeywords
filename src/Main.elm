@@ -158,7 +158,7 @@ image src description =
             , Attr.style "object-fit" "cover"
             , Attr.alt <| description
             , Attr.attribute "width" "100%"
-            , Attr.attribute "height" "200px"
+            , Attr.attribute "height" "250px"
             , Attr.property "loading" <| JE.string "lazy"
             ]
             []
@@ -171,7 +171,14 @@ viewResearch research =
             Element.link [ width fill ]
                 { url = research.defaultPage
                 , label =
-                    Element.el [ Element.centerX, width fill, Element.height fill, Element.paddingXY 0 5 ] <| image src desc
+                    Element.el
+                        [ Element.centerX
+                        , width fill
+                        , Element.height fill
+                        , Element.paddingXY 0 5
+                        ]
+                    <|
+                        image src desc
                 }
 
         short =
@@ -205,10 +212,12 @@ viewResearch research =
             { label =
                 Element.paragraph
                     [ Element.Font.family [ Element.Font.typeface "Open Sans" ]
-                    , Element.Font.size 16
-                    , Element.Region.heading 1
+                    , Element.Font.size 12
+                    , Element.Font.regular
+                    , Element.Region.heading 2
                     , padding 5
                     , width fill
+                    , Element.htmlAttribute (Attr.attribute "style" "text-transform: unset")
                     ]
                     [ Element.text <| authorAsString research.author ]
             , url = authorUrl research.author
@@ -523,7 +532,7 @@ entry =
                 "published" ->
                     Published
 
-                "in progress" ->
+                "progress" ->
                     InProgress
 
                 _ ->

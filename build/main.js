@@ -5467,7 +5467,7 @@ var $author$project$Main$entry = function () {
 		switch (statusString) {
 			case 'published':
 				return $author$project$Main$Published;
-			case 'in progress':
+			case 'progress':
 				return $author$project$Main$InProgress;
 			default:
 				return $author$project$Main$Undecided;
@@ -12618,6 +12618,7 @@ var $elm$core$List$take = F2(
 	function (n, list) {
 		return A3($elm$core$List$takeFast, 0, n, list);
 	});
+var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $author$project$Main$authorAsString = function (_v0) {
 	var a = _v0.a;
 	return a.name;
@@ -12676,8 +12677,8 @@ var $elm$core$Basics$composeL = F3(
 			f(x));
 	});
 var $mdgriffith$elm_ui$Element$Region$heading = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Describe, $mdgriffith$elm_ui$Internal$Model$Heading);
+var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
 var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
-var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $elm$core$Basics$always = F2(
 	function (a, _v0) {
 		return a;
@@ -12705,7 +12706,7 @@ var $author$project$Main$image = F2(
 						A2($elm$html$Html$Attributes$style, 'object-fit', 'cover'),
 						$elm$html$Html$Attributes$alt(description),
 						A2($elm$html$Html$Attributes$attribute, 'width', '100%'),
-						A2($elm$html$Html$Attributes$attribute, 'height', '200px'),
+						A2($elm$html$Html$Attributes$attribute, 'height', '250px'),
 						A2(
 						$elm$html$Html$Attributes$property,
 						'loading',
@@ -12801,6 +12802,7 @@ var $mdgriffith$elm_ui$Element$paragraph = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
+var $mdgriffith$elm_ui$Element$Font$regular = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textNormalWeight);
 var $mdgriffith$elm_ui$Element$rgb = F3(
 	function (r, g, b) {
 		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, r, g, b, 1);
@@ -12922,10 +12924,13 @@ var $author$project$Main$viewResearch = function (research) {
 									[
 										$mdgriffith$elm_ui$Element$Font$typeface('Open Sans')
 									])),
-								$mdgriffith$elm_ui$Element$Font$size(16),
-								$mdgriffith$elm_ui$Element$Region$heading(1),
+								$mdgriffith$elm_ui$Element$Font$size(12),
+								$mdgriffith$elm_ui$Element$Font$regular,
+								$mdgriffith$elm_ui$Element$Region$heading(2),
 								$mdgriffith$elm_ui$Element$padding(5),
-								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$htmlAttribute(
+								A2($elm$html$Html$Attributes$attribute, 'style', 'text-transform: unset'))
 							]),
 						_List_fromArray(
 							[

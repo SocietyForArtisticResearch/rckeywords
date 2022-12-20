@@ -52,3 +52,14 @@ viewResearch : Research -> Element Msg
 ```
 
 
+# Changes to RC Front
+
+```CSS
+#container-main {
+    width: 90%;
+}
+
+#elm {
+    width : 100%;
+}
+```

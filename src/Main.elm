@@ -2,8 +2,7 @@ module Main exposing (..)
 
 import Browser
 import Dict exposing (Dict)
-import Element exposing (Element, fill, fillPortion, height, padding, paddingXY, px, width)
-import Element.Border as Border
+import Element exposing (Element, fill, height, padding, px, width)
 import Element.Font
 import Element.Region
 import Html exposing (Html)
@@ -16,7 +15,6 @@ import Json.Decode.Extra as JDE
 import Json.Encode as JE
 import Random
 import Random.List exposing (shuffle)
-import Set
 import Time
 
 

@@ -33,10 +33,22 @@ subscriptions _ =
     Sub.none
 
 
+type Sorting
+    = ByUse
+    | Alphabetical
+
+
+type View
+    = KeywordsView
+    | ListView
+
+
 type alias Model =
     { research : List Research
     , query : String
     , screenDimensions : { w : Int, h : Int }
+    , sorting : Sorting
+    , view : View
     }
 
 
@@ -44,6 +56,7 @@ type Msg
     = GotResearch (Result Http.Error (List Research))
     | Randomized (List Research)
     | ChangedQuery String
+    | SetSorting String
 
 
 type alias Flags =
@@ -54,7 +67,12 @@ type alias Flags =
 
 init : Flags -> ( Model, Cmd Msg )
 init { width, height } =
-    ( { research = [], query = "", screenDimensions = { w = width, h = height } }
+    ( { research = []
+      , query = ""
+      , screenDimensions = { w = width, h = height }
+      , sorting = ByUse
+      , view = KeywordsView
+      }
     , Http.get { url = "internal_research.json", expect = Http.expectJson GotResearch decodeResearch }
     )
 
@@ -146,6 +164,17 @@ update msg model =
 
         Randomized lst ->
             ( { model | research = lst }, Cmd.none )
+
+        SetSorting sort ->
+            case sort of
+                "ByUse" ->
+                    ({ model | sorting = ByUse }, Cmd.none)
+
+                "Alphabetical" ->
+                    ({ model | sorting = Alphabetical }, Cmd.none)
+
+                _ ->
+                    ({ model | sorting = Alphabetical }, Cmd.none)
 
 
 image : String -> String -> Element msg
@@ -357,15 +386,27 @@ view model =
         , Element.Font.family [ Element.Font.typeface "Helvetica Neue" ]
         ]
     <|
-        viewList
-            model
+        case model.view of
+            ListView ->
+                viewList model
+
+            KeywordsView ->
+                Element.html (viewKeywords model)
+
+
+toggleSorting : Model -> Html Msg
+toggleSorting model =
+    Html.select [ Events.onInput SetSorting ]
+        [ Html.option [ Attr.value "ByUse" ] [ Html.text "By Use" ]
+        , Html.option [ Attr.value "Alphabetical" ] [ Html.text "Alphabetical" ]
+        ]
 
 
 viewKeywords : Model -> Html Msg
-viewKeywords { research, query } =
+viewKeywords model =
     let
         researchLst =
-            research
+            model.research
 
         viewTitle r =
             Html.p [] [ Html.text r.title ]
@@ -392,7 +433,7 @@ viewKeywords { research, query } =
                 ]
 
         keywordLst =
-            researchLst |> keywords |> filter query
+            researchLst |> keywords |> filter model.query
 
         keywordCount =
             "there are: " ++ (List.length keywordLst |> String.fromInt) ++ " keywords."
@@ -408,7 +449,7 @@ viewKeywords { research, query } =
         , Html.div []
             [ Html.h1 [] [ Html.text "Keywords" ]
             , Html.p [] [ Html.text keywordCount ]
-            , Html.input [ Attr.placeholder "Search for keyword", Attr.value query, Events.onInput ChangedQuery ] []
+            , Html.input [ Attr.placeholder "Search for keyword", Attr.value model.query, Events.onInput ChangedQuery ] []
             , Html.p [] <| List.map viewKeyword keywordLst
             ]
 

@@ -448,6 +448,7 @@ viewKeywords model =
         [ Html.p [] [ Html.text ("This was generated on: " ++ lastDate) ]
         , Html.div []
             [ Html.h1 [] [ Html.text "Keywords" ]
+            , toggleSorting model
             , Html.p [] [ Html.text keywordCount ]
             , Html.input [ Attr.placeholder "Search for keyword", Attr.value model.query, Events.onInput ChangedQuery ] []
             , Html.p [] <| List.map viewKeyword keywordLst

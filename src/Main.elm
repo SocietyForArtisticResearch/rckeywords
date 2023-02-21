@@ -3,19 +3,32 @@ module Main exposing (..)
 import Browser
 import Dict exposing (Dict)
 import Element exposing (Element, fill, height, padding, px, width)
+import Element.Border
 import Element.Font
+import Element.Input
 import Element.Region
 import Html exposing (Html)
-import Html.Attributes as Attr
+import Html.Attributes as Attr exposing (style)
 import Html.Events as Events
 import Http
 import Iso8601
 import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
 import Json.Encode as JE
+import RCStyles
 import Random
 import Random.List exposing (shuffle)
+import String exposing (split)
 import Time
+
+
+type alias ExpositionID =
+    Int
+
+
+ofString : String -> Maybe ExpositionID
+ofString x =
+    String.toInt x
 
 
 main : Program Flags Model Msg
@@ -41,6 +54,7 @@ type Sorting
 type View
     = KeywordsView
     | ListView
+    | ScreenView
 
 
 type alias Model =
@@ -49,6 +63,7 @@ type alias Model =
     , screenDimensions : { w : Int, h : Int }
     , sorting : Sorting
     , view : View
+    , numberOfResults : Int
     }
 
 
@@ -57,6 +72,9 @@ type Msg
     | Randomized (List Research)
     | ChangedQuery String
     | SetSorting String
+    | SwitchView String
+    | LoadMore
+    | NoScreenshot ExpositionID
 
 
 type alias Flags =
@@ -71,7 +89,8 @@ init { width, height } =
       , query = ""
       , screenDimensions = { w = width, h = height }
       , sorting = ByUse
-      , view = KeywordsView
+      , view = ScreenView
+      , numberOfResults = 8
       }
     , Http.get { url = "internal_research.json", expect = Http.expectJson GotResearch decodeResearch }
     )
@@ -166,15 +185,47 @@ update msg model =
             ( { model | research = lst }, Cmd.none )
 
         SetSorting sort ->
+            let
+                _ =
+                    Debug.log "what" sort
+            in
             case sort of
                 "ByUse" ->
-                    ({ model | sorting = ByUse }, Cmd.none)
+                    ( { model | sorting = ByUse }, Cmd.none )
 
                 "Alphabetical" ->
-                    ({ model | sorting = Alphabetical }, Cmd.none)
+                    ( { model | sorting = Alphabetical }, Cmd.none )
 
                 _ ->
-                    ({ model | sorting = Alphabetical }, Cmd.none)
+                    ( { model | sorting = Alphabetical }, Cmd.none )
+
+        SwitchView str ->
+            let
+                v =
+                    case str of
+                        "KeywordsView" ->
+                            KeywordsView
+
+                        "ListView" ->
+                            ListView
+
+                        "ScreenView" ->
+                            ScreenView
+
+                        _ ->
+                            ListView
+            in
+            ( { model | view = v }, Cmd.none )
+
+        LoadMore ->
+            ( { model | numberOfResults = model.numberOfResults + 16 }, Cmd.none )
+
+        NoScreenshot id ->
+            let
+                _ =
+                    Debug.log "no screenshot for" id
+            in
+            ( model, Cmd.none )
 
 
 image : String -> String -> Element msg
@@ -226,7 +277,7 @@ viewResearch research =
         , Element.link [ width fill ] <|
             { label =
                 Element.paragraph
-                    [ Element.Font.family [ Element.Font.typeface "Open Sans" ]
+                    [ Element.Font.family [ Element.Font.typeface "Open Sans", Element.Font.sansSerif ]
                     , Element.Font.size 16
                     , Element.Region.heading 1
                     , padding 5
@@ -238,7 +289,7 @@ viewResearch research =
         , Element.link [ width fill ] <|
             { label =
                 Element.paragraph
-                    [ Element.Font.family [ Element.Font.typeface "Open Sans" ]
+                    [ Element.Font.family [ Element.Font.typeface "Open Sans", Element.Font.sansSerif ]
                     , Element.Font.size 12
                     , Element.Font.regular
                     , Element.Region.heading 2
@@ -372,26 +423,59 @@ viewList model =
         published =
             List.filter (\r -> r.publicationStatus == Published) filtered
     in
-    Element.row []
-        [ published |> List.take 16 |> researchColumn
-        , published |> List.drop 16 |> List.take 16 |> researchColumn
-        , published |> List.drop 32 |> List.take 16 |> researchColumn
+    Element.column [ Element.spacingXY 0 25, Element.paddingXY 0 25 ]
+        [ Element.row
+            []
+            [ published |> List.take model.numberOfResults |> researchColumn
+            , published |> List.drop (model.numberOfResults * 2) |> List.take model.numberOfResults |> researchColumn
+            , published |> List.drop (model.numberOfResults * 3) |> List.take model.numberOfResults |> researchColumn
+            ]
+        , Element.column [ width fill ]
+            [ Element.Input.button
+                (Element.centerX :: List.map Element.htmlAttribute RCStyles.rcButtonStyle)
+                { onPress = Just LoadMore
+                , label = Element.el [ Element.centerX, Element.Font.size 18 ] <| Element.text "LOAD MORE"
+                }
+            ]
         ]
+
+
+viewSwitch : Model -> Element Msg
+viewSwitch model =
+    Element.html <|
+        Html.div []
+            [ Html.select [ Events.onInput SwitchView ]
+                [ Html.option [ Attr.value "KeywordsView", Attr.selected (model.view == KeywordsView) ] [ Html.text "keywords" ]
+                , Html.option [ Attr.value "ListView", Attr.selected (model.view == ListView) ] [ Html.text "list view" ]
+                , Html.option [ Attr.value "ScreenView", Attr.selected (model.view == ScreenView) ] [ Html.text "screen view" ]
+                ]
+            ]
 
 
 view : Model -> Html Msg
 view model =
+    let
+        body =
+            case model.view of
+                ListView ->
+                    viewList model
+
+                KeywordsView ->
+                    Element.html (viewKeywords model)
+
+                ScreenView ->
+                    Element.html (viewScreenshots model)
+    in
     Element.layout
         [ width (Element.px model.screenDimensions.w)
-        , Element.Font.family [ Element.Font.typeface "Helvetica Neue" ]
+        , Element.Font.family [ Element.Font.typeface "Helvetica Neue", Element.Font.sansSerif ]
+        , Element.paddingEach { top = 50, left = 15, bottom = 25, right = 15 }
         ]
     <|
-        case model.view of
-            ListView ->
-                viewList model
-
-            KeywordsView ->
-                Element.html (viewKeywords model)
+        Element.column [ width fill ]
+            [ Element.el [ Element.alignRight ] <| viewSwitch model
+            , body
+            ]
 
 
 toggleSorting : Model -> Html Msg
@@ -421,19 +505,28 @@ viewKeywords model =
                         12 + kw.count
             in
             Html.span
-                [ Attr.style "font-size" ((pixels |> String.fromInt) ++ "px")
+                [-- Attr.style "font-size" ((pixels |> String.fromInt) ++ "px")
                 ]
                 [ Html.a
                     [ Attr.href (searchLink kw.name)
                     , Attr.style "display" "inline-block"
                     , Attr.style "padding" "1em"
+                    , Attr.style "font-size" "1em"
                     ]
                     [ Html.text kw.name ]
-                , Html.span [] [ Html.text <| (kw.count |> String.fromInt) ]
+                , Html.span [ Attr.style "font-size" "1em" ] [ Html.text <| (kw.count |> String.fromInt) ]
                 ]
 
+        sortf =
+            case model.sorting of
+                ByUse ->
+                    List.sortBy (\(Keyword k) -> k.count)
+
+                Alphabetical ->
+                    List.sortBy (\(Keyword k) -> k.name)
+
         keywordLst =
-            researchLst |> keywords |> filter model.query
+            researchLst |> keywords |> filter model.query |> sortf |> List.reverse
 
         keywordCount =
             "there are: " ++ (List.length keywordLst |> String.fromInt) ++ " keywords."
@@ -442,8 +535,10 @@ viewKeywords model =
             findLastDate researchLst |> Iso8601.fromTime |> String.split "T" |> List.head |> Maybe.withDefault "?"
     in
     Html.div
-        [ Attr.style "font-family" "monospace"
+        [ Attr.style "font-family" "Helvetica-Neue"
         , Attr.style "padding" "2em"
+        , Attr.style "width" "100%"
+        , Attr.style "text-align" "justify"
         ]
         [ Html.p [] [ Html.text ("This was generated on: " ++ lastDate) ]
         , Html.div []
@@ -451,7 +546,7 @@ viewKeywords model =
             , toggleSorting model
             , Html.p [] [ Html.text keywordCount ]
             , Html.input [ Attr.placeholder "Search for keyword", Attr.value model.query, Events.onInput ChangedQuery ] []
-            , Html.p [] <| List.map viewKeyword keywordLst
+            , Html.div [ Attr.style "white-space" "normal" ] <| List.map viewKeyword keywordLst
             ]
 
         -- , Html.div []
@@ -476,7 +571,7 @@ authorUrl (Author a) =
 
 
 type alias Research =
-    { id : Int
+    { id : ExpositionID
     , title : String
     , keywords : List String
     , created : String
@@ -609,3 +704,56 @@ entry =
 searchLink : String -> String
 searchLink term =
     "https://www.researchcatalogue.net/portal/search-result?fulltext=&title=&autocomplete=&keyword=" ++ term ++ "&portal=&statusprogress=0&statuspublished=0&includelimited=0&includeprivate=0&type_research=research&resulttype=research&format=html&limit=25&page=0" |> String.replace " " "%20"
+
+
+imageWithErrorHandling : ExpositionID -> Html Msg
+imageWithErrorHandling id =
+    let
+        urlFromId i =
+            String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
+    in
+    Html.p []
+        [ Html.img
+            [ Attr.src (urlFromId id)
+            , Events.on "error" <| Json.Decode.succeed (NoScreenshot id)
+            , Attr.style "width" "100%"
+            , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt id
+            , Attr.attribute "loading" "lazy"
+            ]
+            []
+        ]
+
+
+splitGroupsOf : Int -> List a -> List (List a)
+splitGroupsOf n lst =
+    case lst of
+        [] ->
+            []
+
+        _ ->
+            let
+                first =
+                    List.take n lst
+
+                rest =
+                    List.drop n lst
+            in
+            first :: splitGroupsOf n rest
+
+
+viewScreenshots : Model -> Html Msg
+viewScreenshots model =
+    let
+        groups =
+            model.research |> splitGroupsOf 6
+
+        viewGroup group = 
+            Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> exp.id |> imageWithErrorHandling) group)
+    in
+    Html.div
+        [ ]
+        [ Html.h1 [] [ Html.text "Visual" ]
+        , Html.br [] []
+        , Html.div []
+            (List.map viewGroup groups)
+        ]

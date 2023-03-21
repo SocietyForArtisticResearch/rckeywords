@@ -14847,30 +14847,10 @@ var $author$project$Main$lazyImageWithErrorHandling = F2(
 							urlFromId(research.id)),
 							$elm$html$Html$Attributes$alt(
 							'this is a screenshot of exposition: ' + $elm$core$String$fromInt(research.id)),
-							A2($elm$html$Html$Attributes$attribute, 'width', width),
-							A2($elm$html$Html$Attributes$attribute, 'height', height)
+							A2($elm$html$Html$Attributes$style, 'width', width),
+							A2($elm$html$Html$Attributes$style, 'height', height)
 						]),
-					_List_fromArray(
-						[
-							A3(
-							$elm$html$Html$node,
-							'svg',
-							_List_fromArray(
-								[
-									A2($elm$html$Html$Attributes$attribute, 'slot', 'placeholder')
-								]),
-							_List_fromArray(
-								[
-									A3(
-									$elm$html$Html$node,
-									'use',
-									_List_fromArray(
-										[
-											A2($elm$html$Html$Attributes$attribute, 'xlink:href', '#placeholder-svg')
-										]),
-									_List_Nil)
-								]))
-						]))
+					_List_Nil)
 				]));
 	});
 var $author$project$Main$splitGroupsOf = F2(

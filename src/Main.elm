@@ -741,14 +741,10 @@ lazyImageWithErrorHandling dimensions research =
         [ Html.node "lazy-image"
             [ Attr.attribute "src" (urlFromId research.id)
             , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt research.id
-            , Attr.attribute "width" (width)
-            , Attr.attribute "height" (height)
+            , Attr.style "width" (width)
+            , Attr.style "height" (height)
             ]
-            [ Html.node
-                "svg"
-                [ Attr.attribute "slot" "placeholder" ]
-                [ Html.node "use" [ Attr.attribute "xlink:href" "#placeholder-svg" ] [] ]
-            ]
+          []
         ]
 
 

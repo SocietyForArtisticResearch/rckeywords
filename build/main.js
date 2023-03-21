@@ -14818,7 +14818,7 @@ var $elm$html$Html$node = $elm$virtual_dom$VirtualDom$node;
 var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
 var $author$project$Main$lazyImageWithErrorHandling = F2(
 	function (dimensions, research) {
-		var width = $elm$core$String$fromInt((dimensions.w / 4) | 0) + 'px';
+		var width = $elm$core$String$fromInt(((dimensions.w / 4) | 0) - 40) + 'px';
 		var urlFromId = function (i) {
 			return function (fileName) {
 				return '/screenshots/' + (fileName + '.jpeg');
@@ -14845,8 +14845,6 @@ var $author$project$Main$lazyImageWithErrorHandling = F2(
 							$elm$html$Html$Attributes$attribute,
 							'src',
 							urlFromId(research.id)),
-							$elm$html$Html$Attributes$alt(
-							'this is a screenshot of exposition: ' + $elm$core$String$fromInt(research.id)),
 							A2($elm$html$Html$Attributes$style, 'width', width),
 							A2($elm$html$Html$Attributes$style, 'height', height)
 						]),

@@ -721,7 +721,6 @@ imageWithErrorHandling research =
         [ Html.img
             [ Attr.attribute "src" (urlFromId research.id)
             , Events.on "error" <| Json.Decode.succeed (NoScreenshot research.id)
-            , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt research.id
             ]
             []
         ]
@@ -733,14 +732,14 @@ lazyImageWithErrorHandling dimensions research =
         urlFromId i =
             String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
 
-        width = (dimensions.w // 4 |> String.fromInt) ++ "px"
+        width = (dimensions.w // 4 - 40 |> String.fromInt) ++ "px"
 
         height = (dimensions.h // 3 |> String.fromInt) ++ "px"
     in
     Html.a [ Attr.href research.defaultPage, Attr.title (getName research.author ++ " - " ++ research.title) ]
         [ Html.node "lazy-image"
             [ Attr.attribute "src" (urlFromId research.id)
-            , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt research.id
+            -- , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt research.id
             , Attr.style "width" (width)
             , Attr.style "height" (height)
             ]

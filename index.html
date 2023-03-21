@@ -1,13 +1,17 @@
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="en">
+
+<head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>Research Catalogue - an international database for artistic research</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" type="text/css" href="rc_front_page_files/548ffb3bbb9446da1d700dc22f2aa82f.css">
+    <link rel="stylesheet" type="text/css" href="rc_front_page_files/548ffb3bbb9446da1d700dc22f2aa82f.css">
     <script src="rc_front_page_files/jquery-new.min.js"></script>
     <script type="text/javascript">
         jQueryNew = $.noConflict(false);
     </script>
+    <script async type="module" src="/node_modules/@power-elements/lazy-image/lazy-image.js"></script>
+
     <script type="text/javascript" src="rc_front_page_files/4b06ba9da5e559e1261abd478b3939fd.js"></script>
     <script type="text/javascript" src="build/main.js"></script>
     <style>
@@ -16,7 +20,7 @@
         }
 
         #elm {
-            width : 100%;
+            width: 100%;
         }
 
         /*
@@ -31,12 +35,21 @@
             text-decoration:underline !important;
         }
         */
-        
+        /* html {
+            --lazy-image-width: 100%;
+            --lazy-image-height: 100%;;
+        }
+
+        lazy-image {
+            width: var(--lazy-image-width);
+            height: var(--lazy-image-height);
+        } */
     </style>
 </head>
+
 <body>
-<div id="container-main">
-    <!-- <div id="header">
+    <div id="container-main">
+        <!-- <div id="header">
         <a id="menuicon-pages">
             <svg class="menu-icon" onclick="openMenu($('#page-menu-list'))" viewBox="0 0 16 16">
                 <rect x="1" y="3" fill="#333" width="14" height="2"></rect>
@@ -83,21 +96,23 @@
                             </div>
         </div>
     </div> -->
-    <pre id="elm"></pre>
+        <pre id="elm"></pre>
 
 
-	<script>
-        let element = document.getElementById("elm");
-        let h = element.clientHeight;
-        let w = element.clientWidth;
-        console.log("w & h :",[w,h]);
-		var app = Elm.Main.init({ node: document.getElementById("elm"), flags: {width: w, height: h} });
-		if (document.getElementById("elm")) {
-			document.getElementById("elm").innerText = 'This is a headless program, meaning there is nothing to show here.\\n\\nI started the program anyway though, and you can access it as `app` in the developer console.';
-		}
-	</script>
+        <script>
+            let element = document.getElementById("elm");
 
-    <!-- <div id="footer">
+            let w = window.innerWidth;
+            let h = window.innerHeight;
+
+            console.log("w & h :", [w, h]);
+            var app = Elm.Main.init({ node: document.getElementById("elm"), flags: { width: w, height: h } });
+            if (document.getElementById("elm")) {
+                document.getElementById("elm").innerText = 'This is a headless program, meaning there is nothing to show here.\\n\\nI started the program anyway though, and you can access it as `app` in the developer console.';
+            }
+        </script>
+
+        <!-- <div id="footer">
         <footer>
             <div id="footer-content">
                 <div id="footer-content-lists">
@@ -180,7 +195,12 @@
             </div>
         </footer>
     </div> -->
-</div>
+    </div>
 
 
-<ul class="ui-autocomplete ui-front ui-menu ui-widget ui-widget-content" id="ui-id-1" tabindex="0" style="display: none;"></ul><span role="status" aria-live="assertive" aria-relevant="additions" class="ui-helper-hidden-accessible"></span></body></html>
+    <ul class="ui-autocomplete ui-front ui-menu ui-widget ui-widget-content" id="ui-id-1" tabindex="0"
+        style="display: none;"></ul><span role="status" aria-live="assertive" aria-relevant="additions"
+        class="ui-helper-hidden-accessible"></span>
+</body>
+
+</html>

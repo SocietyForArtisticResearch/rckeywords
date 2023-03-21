@@ -6810,11 +6810,6 @@ var $author$project$Main$update = F2(
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
-var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
-	return {$: 'AlignX', a: a};
-};
-var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
-var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
 var $mdgriffith$elm_ui$Internal$Model$Unkeyed = function (a) {
 	return {$: 'Unkeyed', a: a};
 };
@@ -14173,6 +14168,9 @@ var $mdgriffith$elm_ui$Element$Input$button = F2(
 				_List_fromArray(
 					[label])));
 	});
+var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
+	return {$: 'AlignX', a: a};
+};
 var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
 var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
 var $elm$core$List$drop = F2(
@@ -14812,40 +14810,69 @@ var $author$project$Main$viewList = function (model) {
 			]));
 };
 var $elm$html$Html$br = _VirtualDom_node('br');
-var $author$project$Main$NoScreenshot = function (a) {
-	return {$: 'NoScreenshot', a: a};
+var $author$project$Main$getName = function (_v0) {
+	var author = _v0.a;
+	return author.name;
 };
-var $author$project$Main$imageWithErrorHandling = function (id) {
-	var urlFromId = function (i) {
-		return function (fileName) {
-			return '/screenshots/' + (fileName + '.jpeg');
-		}(
-			$elm$core$String$fromInt(i));
-	};
-	return A2(
-		$elm$html$Html$p,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$img,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$src(
-						urlFromId(id)),
-						A2(
-						$elm$html$Html$Events$on,
-						'error',
-						$elm$json$Json$Decode$succeed(
-							$author$project$Main$NoScreenshot(id))),
-						A2($elm$html$Html$Attributes$style, 'width', '100%'),
-						$elm$html$Html$Attributes$alt(
-						'this is a screenshot of exposition: ' + $elm$core$String$fromInt(id)),
-						A2($elm$html$Html$Attributes$attribute, 'loading', 'lazy')
-					]),
-				_List_Nil)
-			]));
-};
+var $elm$html$Html$node = $elm$virtual_dom$VirtualDom$node;
+var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
+var $author$project$Main$lazyImageWithErrorHandling = F2(
+	function (dimensions, research) {
+		var width = $elm$core$String$fromInt((dimensions.w / 4) | 0) + 'px';
+		var urlFromId = function (i) {
+			return function (fileName) {
+				return '/screenshots/' + (fileName + '.jpeg');
+			}(
+				$elm$core$String$fromInt(i));
+		};
+		var height = $elm$core$String$fromInt((dimensions.h / 3) | 0) + 'px';
+		return A2(
+			$elm$html$Html$a,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$href(research.defaultPage),
+					$elm$html$Html$Attributes$title(
+					$author$project$Main$getName(research.author) + (' - ' + research.title))
+				]),
+			_List_fromArray(
+				[
+					A3(
+					$elm$html$Html$node,
+					'lazy-image',
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$Attributes$attribute,
+							'src',
+							urlFromId(research.id)),
+							$elm$html$Html$Attributes$alt(
+							'this is a screenshot of exposition: ' + $elm$core$String$fromInt(research.id)),
+							A2($elm$html$Html$Attributes$attribute, 'width', width),
+							A2($elm$html$Html$Attributes$attribute, 'height', height)
+						]),
+					_List_fromArray(
+						[
+							A3(
+							$elm$html$Html$node,
+							'svg',
+							_List_fromArray(
+								[
+									A2($elm$html$Html$Attributes$attribute, 'slot', 'placeholder')
+								]),
+							_List_fromArray(
+								[
+									A3(
+									$elm$html$Html$node,
+									'use',
+									_List_fromArray(
+										[
+											A2($elm$html$Html$Attributes$attribute, 'xlink:href', '#placeholder-svg')
+										]),
+									_List_Nil)
+								]))
+						]))
+				]));
+	});
 var $author$project$Main$splitGroupsOf = F2(
 	function (n, lst) {
 		if (!lst.b) {
@@ -14870,11 +14897,11 @@ var $author$project$Main$viewScreenshots = function (model) {
 			A2(
 				$elm$core$List$map,
 				function (exp) {
-					return $author$project$Main$imageWithErrorHandling(exp.id);
+					return A2($author$project$Main$lazyImageWithErrorHandling, model.screenDimensions, exp);
 				},
 				group));
 	};
-	var groups = A2($author$project$Main$splitGroupsOf, 6, model.research);
+	var groups = A2($author$project$Main$splitGroupsOf, 4, model.research);
 	return A2(
 		$elm$html$Html$div,
 		_List_Nil,
@@ -14991,8 +15018,7 @@ var $author$project$Main$view = function (model) {
 				[
 					A2(
 					$mdgriffith$elm_ui$Element$el,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$alignRight]),
+					_List_Nil,
 					$author$project$Main$viewSwitch(model)),
 					body
 				])));

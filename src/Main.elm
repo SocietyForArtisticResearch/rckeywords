@@ -473,7 +473,7 @@ view model =
         ]
     <|
         Element.column [ width fill ]
-            [ Element.el [ Element.alignRight ] <| viewSwitch model
+            [ Element.el [] <| viewSwitch model
             , body
             ]
 
@@ -706,21 +706,49 @@ searchLink term =
     "https://www.researchcatalogue.net/portal/search-result?fulltext=&title=&autocomplete=&keyword=" ++ term ++ "&portal=&statusprogress=0&statuspublished=0&includelimited=0&includeprivate=0&type_research=research&resulttype=research&format=html&limit=25&page=0" |> String.replace " " "%20"
 
 
-imageWithErrorHandling : ExpositionID -> Html Msg
-imageWithErrorHandling id =
+getName : Author -> String
+getName (Author author) =
+    author.name
+
+
+imageWithErrorHandling : Research -> Html Msg
+imageWithErrorHandling research =
     let
         urlFromId i =
             String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
     in
-    Html.p []
+    Html.a [ Attr.href research.defaultPage, Attr.title (getName research.author ++ " - " ++ research.title) ]
         [ Html.img
-            [ Attr.src (urlFromId id)
-            , Events.on "error" <| Json.Decode.succeed (NoScreenshot id)
-            , Attr.style "width" "100%"
-            , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt id
-            , Attr.attribute "loading" "lazy"
+            [ Attr.attribute "src" (urlFromId research.id)
+            , Events.on "error" <| Json.Decode.succeed (NoScreenshot research.id)
+            , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt research.id
             ]
             []
+        ]
+
+
+lazyImageWithErrorHandling : { w : Int , h : Int }-> Research -> Html Msg
+lazyImageWithErrorHandling dimensions research =
+    let
+        urlFromId i =
+            String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
+
+        width = (dimensions.w // 4 |> String.fromInt) ++ "px"
+
+        height = (dimensions.h // 3 |> String.fromInt) ++ "px"
+    in
+    Html.a [ Attr.href research.defaultPage, Attr.title (getName research.author ++ " - " ++ research.title) ]
+        [ Html.node "lazy-image"
+            [ Attr.attribute "src" (urlFromId research.id)
+            , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt research.id
+            , Attr.attribute "width" (width)
+            , Attr.attribute "height" (height)
+            ]
+            [ Html.node
+                "svg"
+                [ Attr.attribute "slot" "placeholder" ]
+                [ Html.node "use" [ Attr.attribute "xlink:href" "#placeholder-svg" ] [] ]
+            ]
         ]
 
 
@@ -745,13 +773,13 @@ viewScreenshots : Model -> Html Msg
 viewScreenshots model =
     let
         groups =
-            model.research |> splitGroupsOf 6
+            model.research |> splitGroupsOf 4
 
-        viewGroup group = 
-            Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> exp.id |> imageWithErrorHandling) group)
+        viewGroup group =
+            Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling model.screenDimensions exp) group)
     in
     Html.div
-        [ ]
+        []
         [ Html.h1 [] [ Html.text "Visual" ]
         , Html.br [] []
         , Html.div []

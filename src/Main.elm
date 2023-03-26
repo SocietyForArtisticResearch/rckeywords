@@ -467,8 +467,8 @@ view model =
                     Element.html (viewScreenshots model)
     in
     Element.layout
-        [ width (Element.px model.screenDimensions.w)
-        , Element.Font.family [ Element.Font.typeface "Helvetica Neue", Element.Font.sansSerif ]
+        [ --width (Element.px model.screenDimensions.w)
+          Element.Font.family [ Element.Font.typeface "Helvetica Neue", Element.Font.sansSerif ]
         , Element.paddingEach { top = 50, left = 15, bottom = 25, right = 15 }
         ]
     <|
@@ -726,24 +726,27 @@ imageWithErrorHandling research =
         ]
 
 
-lazyImageWithErrorHandling : { w : Int , h : Int }-> Research -> Html Msg
+lazyImageWithErrorHandling : { w : Int, h : Int } -> Research -> Html Msg
 lazyImageWithErrorHandling dimensions research =
     let
         urlFromId i =
             String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
 
-        width = (dimensions.w // 4 - 40 |> String.fromInt) ++ "px"
+        width =
+            (dimensions.w // 4 - 40 |> String.fromInt) ++ "px"
 
-        height = (dimensions.h // 3 |> String.fromInt) ++ "px"
+        height =
+            (dimensions.h // 3 |> String.fromInt) ++ "px"
     in
     Html.a [ Attr.href research.defaultPage, Attr.title (getName research.author ++ " - " ++ research.title) ]
         [ Html.node "lazy-image"
             [ Attr.attribute "src" (urlFromId research.id)
+
             -- , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt research.id
-            , Attr.style "width" (width)
-            , Attr.style "height" (height)
+            , Attr.style "width" width
+            , Attr.style "height" height
             ]
-          []
+            []
         ]
 
 

@@ -46,22 +46,32 @@ subscriptions _ =
     Sub.none
 
 
-type Sorting
+type KeywordSorting
     = ByUse
     | Alphabetical
+
+
+type ScreenOrder
+    = Random
+    | OldestFirst
+    | NewestFirst
+
+
+
+-- | Portal
 
 
 type View
     = KeywordsView
     | ListView
-    | ScreenView
+    | ScreenView ScreenOrder
 
 
 type alias Model =
     { research : List Research
     , query : String
     , screenDimensions : { w : Int, h : Int }
-    , sorting : Sorting
+    , sorting : KeywordSorting
     , view : View
     , numberOfResults : Int
     }
@@ -75,6 +85,7 @@ type Msg
     | SwitchView String
     | LoadMore
     | NoScreenshot ExpositionID
+    | ChangeScreenOrder String
 
 
 type alias Flags =
@@ -89,7 +100,7 @@ init { width, height } =
       , query = ""
       , screenDimensions = { w = width, h = height }
       , sorting = ByUse
-      , view = ScreenView
+      , view = ScreenView Random
       , numberOfResults = 8
       }
     , Http.get { url = "internal_research.json", expect = Http.expectJson GotResearch decodeResearch }
@@ -163,6 +174,11 @@ titles =
     List.map (.title >> Title)
 
 
+shuffleResearch : Model -> ( Model, Cmd Msg )
+shuffleResearch model =
+    ( { model | research = [] }, Random.generate Randomized (shuffle model.research) )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -210,7 +226,7 @@ update msg model =
                             ListView
 
                         "ScreenView" ->
-                            ScreenView
+                            ScreenView Random
 
                         _ ->
                             ListView
@@ -227,17 +243,48 @@ update msg model =
             in
             ( model, Cmd.none )
 
+        ChangeScreenOrder order ->
+            case order of
+                "random" ->
+                    shuffleResearch { model | view = ScreenView Random }
+
+                "oldest" ->
+                    let
+                        fsort r =
+                            r.created |> String.split "/" |> List.reverse |> String.join "/"
+                    in
+                    ( { model
+                        | view = ScreenView OldestFirst
+                        , research = List.sortBy fsort model.research
+                      }
+                    , Cmd.none
+                    )
+
+                "newest" ->
+                    let
+                        fsort r =
+                            r.created |> String.split "/" |> List.reverse |> String.join "/"
+                    in
+                    ( { model
+                        | view = ScreenView NewestFirst
+                        , research = List.sortBy fsort model.research |> List.reverse
+                      }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    shuffleResearch { model | view = ScreenView Random }
+
 
 image : String -> String -> Element msg
 image src description =
     Element.html <|
-        Html.img
-            [ Attr.src src
-            , Attr.style "object-fit" "cover"
+        Html.node "lazy-image"
+            [ Attr.attribute "src" src
             , Attr.alt <| description
             , Attr.attribute "width" "100%"
             , Attr.attribute "height" "250px"
-            , Attr.property "loading" <| JE.string "lazy"
+            , Attr.class "cover"
             ]
             []
 
@@ -447,9 +494,37 @@ viewSwitch model =
             [ Html.select [ Events.onInput SwitchView ]
                 [ Html.option [ Attr.value "KeywordsView", Attr.selected (model.view == KeywordsView) ] [ Html.text "keywords" ]
                 , Html.option [ Attr.value "ListView", Attr.selected (model.view == ListView) ] [ Html.text "list view" ]
-                , Html.option [ Attr.value "ScreenView", Attr.selected (model.view == ScreenView) ] [ Html.text "screen view" ]
+                , Html.option
+                    [ Attr.value "ScreenView"
+                    , Attr.selected
+                        (case model.view of
+                            ScreenView _ ->
+                                True
+
+                            _ ->
+                                False
+                        )
+                    ]
+                    [ Html.text "screen view" ]
                 ]
             ]
+
+
+screenViewOrderSwitch : Model -> Element Msg
+screenViewOrderSwitch model =
+    case model.view of
+        ScreenView sorting ->
+            Element.html <|
+                Html.div []
+                    [ Html.select [ Events.onInput ChangeScreenOrder ]
+                        [ Html.option [ Attr.value "random", Attr.selected (sorting == Random) ] [ Html.text "Random" ]
+                        , Html.option [ Attr.value "oldest", Attr.selected (sorting == OldestFirst) ] [ Html.text "Old First" ]
+                        , Html.option [ Attr.value "newest", Attr.selected (sorting == NewestFirst) ] [ Html.text "New first" ]
+                        ]
+                    ]
+
+        _ ->
+            Element.none
 
 
 view : Model -> Html Msg
@@ -463,8 +538,11 @@ view model =
                 KeywordsView ->
                     Element.html (viewKeywords model)
 
-                ScreenView ->
-                    Element.html (viewScreenshots model)
+                ScreenView sorting ->
+                    Element.column []
+                        [ screenViewOrderSwitch model
+                        , Element.html (viewScreenshots model sorting)
+                        ]
     in
     Element.layout
         [ --width (Element.px model.screenDimensions.w)
@@ -738,7 +816,7 @@ lazyImageWithErrorHandling dimensions research =
         height =
             (dimensions.h // 3 |> String.fromInt) ++ "px"
     in
-    Html.a [ Attr.href research.defaultPage, Attr.title (getName research.author ++ " - " ++ research.title) ]
+    Html.a [ Attr.href research.defaultPage, Attr.title (getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
         [ Html.node "lazy-image"
             [ Attr.attribute "src" (urlFromId research.id)
 
@@ -767,8 +845,8 @@ splitGroupsOf n lst =
             first :: splitGroupsOf n rest
 
 
-viewScreenshots : Model -> Html Msg
-viewScreenshots model =
+viewScreenshots : Model -> ScreenOrder -> Html Msg
+viewScreenshots model order =
     let
         groups =
             model.research |> splitGroupsOf 4

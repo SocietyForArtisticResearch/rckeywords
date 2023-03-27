@@ -5538,7 +5538,10 @@ var $author$project$Main$ByUse = {$: 'ByUse'};
 var $author$project$Main$GotResearch = function (a) {
 	return {$: 'GotResearch', a: a};
 };
-var $author$project$Main$ScreenView = {$: 'ScreenView'};
+var $author$project$Main$Random = {$: 'Random'};
+var $author$project$Main$ScreenView = function (a) {
+	return {$: 'ScreenView', a: a};
+};
 var $author$project$Main$Author = function (a) {
 	return {$: 'Author', a: a};
 };
@@ -6473,7 +6476,7 @@ var $author$project$Main$init = function (_v0) {
 			research: _List_Nil,
 			screenDimensions: {h: height, w: width},
 			sorting: $author$project$Main$ByUse,
-			view: $author$project$Main$ScreenView
+			view: $author$project$Main$ScreenView($author$project$Main$Random)
 		},
 		$elm$http$Http$get(
 			{
@@ -6489,6 +6492,8 @@ var $author$project$Main$subscriptions = function (_v0) {
 var $author$project$Main$Alphabetical = {$: 'Alphabetical'};
 var $author$project$Main$KeywordsView = {$: 'KeywordsView'};
 var $author$project$Main$ListView = {$: 'ListView'};
+var $author$project$Main$NewestFirst = {$: 'NewestFirst'};
+var $author$project$Main$OldestFirst = {$: 'OldestFirst'};
 var $author$project$Main$Randomized = function (a) {
 	return {$: 'Randomized', a: a};
 };
@@ -6718,6 +6723,16 @@ var $elm_community$random_extra$Random$List$shuffle = function (list) {
 		},
 		$elm$random$Random$independentSeed);
 };
+var $author$project$Main$shuffleResearch = function (model) {
+	return _Utils_Tuple2(
+		_Utils_update(
+			model,
+			{research: _List_Nil}),
+		A2(
+			$elm$random$Random$generate,
+			$author$project$Main$Randomized,
+			$elm_community$random_extra$Random$List$shuffle(model.research)));
+};
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -6788,7 +6803,7 @@ var $author$project$Main$update = F2(
 						case 'ListView':
 							return $author$project$Main$ListView;
 						case 'ScreenView':
-							return $author$project$Main$ScreenView;
+							return $author$project$Main$ScreenView($author$project$Main$Random);
 						default:
 							return $author$project$Main$ListView;
 					}
@@ -6804,10 +6819,61 @@ var $author$project$Main$update = F2(
 						model,
 						{numberOfResults: model.numberOfResults + 16}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'NoScreenshot':
 				var id = msg.a;
 				var _v6 = A2($elm$core$Debug$log, 'no screenshot for', id);
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+			default:
+				var order = msg.a;
+				switch (order) {
+					case 'random':
+						return $author$project$Main$shuffleResearch(
+							_Utils_update(
+								model,
+								{
+									view: $author$project$Main$ScreenView($author$project$Main$Random)
+								}));
+					case 'oldest':
+						var fsort = function (r) {
+							return A2(
+								$elm$core$String$join,
+								'/',
+								$elm$core$List$reverse(
+									A2($elm$core$String$split, '/', r.created)));
+						};
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									research: A2($elm$core$List$sortBy, fsort, model.research),
+									view: $author$project$Main$ScreenView($author$project$Main$OldestFirst)
+								}),
+							$elm$core$Platform$Cmd$none);
+					case 'newest':
+						var fsort = function (r) {
+							return A2(
+								$elm$core$String$join,
+								'/',
+								$elm$core$List$reverse(
+									A2($elm$core$String$split, '/', r.created)));
+						};
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									research: $elm$core$List$reverse(
+										A2($elm$core$List$sortBy, fsort, model.research)),
+									view: $author$project$Main$ScreenView($author$project$Main$NewestFirst)
+								}),
+							$elm$core$Platform$Cmd$none);
+					default:
+						return $author$project$Main$shuffleResearch(
+							_Utils_update(
+								model,
+								{
+									view: $author$project$Main$ScreenView($author$project$Main$Random)
+								}));
+				}
 		}
 	});
 var $mdgriffith$elm_ui$Internal$Model$Unkeyed = function (a) {
@@ -12646,6 +12712,115 @@ var $mdgriffith$elm_ui$Element$paddingEach = function (_v0) {
 	}
 };
 var $mdgriffith$elm_ui$Element$Font$sansSerif = $mdgriffith$elm_ui$Internal$Model$SansSerif;
+var $author$project$Main$ChangeScreenOrder = function (a) {
+	return {$: 'ChangeScreenOrder', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Model$Empty = {$: 'Empty'};
+var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
+var $elm$html$Html$Events$alwaysStop = function (x) {
+	return _Utils_Tuple2(x, true);
+};
+var $elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
+	return {$: 'MayStopPropagation', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$stopPropagationOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
+	});
+var $elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+	});
+var $elm$html$Html$Events$targetValue = A2(
+	$elm$json$Json$Decode$at,
+	_List_fromArray(
+		['target', 'value']),
+	$elm$json$Json$Decode$string);
+var $elm$html$Html$Events$onInput = function (tagger) {
+	return A2(
+		$elm$html$Html$Events$stopPropagationOn,
+		'input',
+		A2(
+			$elm$json$Json$Decode$map,
+			$elm$html$Html$Events$alwaysStop,
+			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
+};
+var $elm$html$Html$option = _VirtualDom_node('option');
+var $elm$html$Html$select = _VirtualDom_node('select');
+var $elm$json$Json$Encode$bool = _Json_wrap;
+var $elm$html$Html$Attributes$boolProperty = F2(
+	function (key, bool) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$bool(bool));
+	});
+var $elm$html$Html$Attributes$selected = $elm$html$Html$Attributes$boolProperty('selected');
+var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
+var $author$project$Main$screenViewOrderSwitch = function (model) {
+	var _v0 = model.view;
+	if (_v0.$ === 'ScreenView') {
+		var sorting = _v0.a;
+		return $mdgriffith$elm_ui$Element$html(
+			A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$select,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onInput($author$project$Main$ChangeScreenOrder)
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('random'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(sorting, $author$project$Main$Random))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Random')
+									])),
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('oldest'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(sorting, $author$project$Main$OldestFirst))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Old First')
+									])),
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('newest'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(sorting, $author$project$Main$NewestFirst))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('New first')
+									]))
+							]))
+					])));
+	} else {
+		return $mdgriffith$elm_ui$Element$none;
+	}
+};
 var $mdgriffith$elm_ui$Element$Font$typeface = $mdgriffith$elm_ui$Internal$Model$Typeface;
 var $author$project$Main$ChangedQuery = function (a) {
 	return {$: 'ChangedQuery', a: a};
@@ -13791,38 +13966,6 @@ var $author$project$Main$keywords = function (researchlist) {
 			$author$project$Main$emptyKeywordSet,
 			researchlist));
 };
-var $elm$html$Html$Events$alwaysStop = function (x) {
-	return _Utils_Tuple2(x, true);
-};
-var $elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
-	return {$: 'MayStopPropagation', a: a};
-};
-var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
-var $elm$html$Html$Events$stopPropagationOn = F2(
-	function (event, decoder) {
-		return A2(
-			$elm$virtual_dom$VirtualDom$on,
-			event,
-			$elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
-	});
-var $elm$json$Json$Decode$at = F2(
-	function (fields, decoder) {
-		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
-	});
-var $elm$html$Html$Events$targetValue = A2(
-	$elm$json$Json$Decode$at,
-	_List_fromArray(
-		['target', 'value']),
-	$elm$json$Json$Decode$string);
-var $elm$html$Html$Events$onInput = function (tagger) {
-	return A2(
-		$elm$html$Html$Events$stopPropagationOn,
-		'input',
-		A2(
-			$elm$json$Json$Decode$map,
-			$elm$html$Html$Events$alwaysStop,
-			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
-};
 var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
 var $elm$core$String$replace = F3(
 	function (before, after, string) {
@@ -13840,9 +13983,6 @@ var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $author$project$Main$SetSorting = function (a) {
 	return {$: 'SetSorting', a: a};
 };
-var $elm$html$Html$option = _VirtualDom_node('option');
-var $elm$html$Html$select = _VirtualDom_node('select');
-var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$Main$toggleSorting = function (model) {
 	return A2(
 		$elm$html$Html$select,
@@ -14020,14 +14160,6 @@ var $mdgriffith$elm_ui$Internal$Model$Button = {$: 'Button'};
 var $mdgriffith$elm_ui$Internal$Model$Describe = function (a) {
 	return {$: 'Describe', a: a};
 };
-var $elm$json$Json$Encode$bool = _Json_wrap;
-var $elm$html$Html$Attributes$boolProperty = F2(
-	function (key, bool) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$bool(bool));
-	});
 var $elm$html$Html$Attributes$disabled = $elm$html$Html$Attributes$boolProperty('disabled');
 var $mdgriffith$elm_ui$Element$Input$enter = 'Enter';
 var $mdgriffith$elm_ui$Internal$Model$NoAttribute = {$: 'NoAttribute'};
@@ -14462,30 +14594,20 @@ var $mdgriffith$elm_ui$Internal$Model$Heading = function (a) {
 };
 var $mdgriffith$elm_ui$Element$Region$heading = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Describe, $mdgriffith$elm_ui$Internal$Model$Heading);
 var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
-var $elm$html$Html$img = _VirtualDom_node('img');
-var $elm$html$Html$Attributes$property = $elm$virtual_dom$VirtualDom$property;
-var $elm$html$Html$Attributes$src = function (url) {
-	return A2(
-		$elm$html$Html$Attributes$stringProperty,
-		'src',
-		_VirtualDom_noJavaScriptOrHtmlUri(url));
-};
+var $elm$html$Html$node = $elm$virtual_dom$VirtualDom$node;
 var $author$project$Main$image = F2(
 	function (src, description) {
 		return $mdgriffith$elm_ui$Element$html(
-			A2(
-				$elm$html$Html$img,
+			A3(
+				$elm$html$Html$node,
+				'lazy-image',
 				_List_fromArray(
 					[
-						$elm$html$Html$Attributes$src(src),
-						A2($elm$html$Html$Attributes$style, 'object-fit', 'cover'),
+						A2($elm$html$Html$Attributes$attribute, 'src', src),
 						$elm$html$Html$Attributes$alt(description),
 						A2($elm$html$Html$Attributes$attribute, 'width', '100%'),
 						A2($elm$html$Html$Attributes$attribute, 'height', '250px'),
-						A2(
-						$elm$html$Html$Attributes$property,
-						'loading',
-						$elm$json$Json$Encode$string('lazy'))
+						$elm$html$Html$Attributes$class('cover')
 					]),
 				_List_Nil));
 	});
@@ -14537,8 +14659,6 @@ var $elm$core$Maybe$map2 = F3(
 			}
 		}
 	});
-var $mdgriffith$elm_ui$Internal$Model$Empty = {$: 'Empty'};
-var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
 var $mdgriffith$elm_ui$Element$padding = function (x) {
 	var f = x;
 	return A2(
@@ -14814,7 +14934,6 @@ var $author$project$Main$getName = function (_v0) {
 	var author = _v0.a;
 	return author.name;
 };
-var $elm$html$Html$node = $elm$virtual_dom$VirtualDom$node;
 var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
 var $author$project$Main$lazyImageWithErrorHandling = F2(
 	function (dimensions, research) {
@@ -14832,7 +14951,7 @@ var $author$project$Main$lazyImageWithErrorHandling = F2(
 				[
 					$elm$html$Html$Attributes$href(research.defaultPage),
 					$elm$html$Html$Attributes$title(
-					$author$project$Main$getName(research.author) + (' - ' + research.title))
+					$author$project$Main$getName(research.author) + (' - ' + (research.title + (' - ' + research.created))))
 				]),
 			_List_fromArray(
 				[
@@ -14864,45 +14983,45 @@ var $author$project$Main$splitGroupsOf = F2(
 				A2($author$project$Main$splitGroupsOf, n, rest));
 		}
 	});
-var $author$project$Main$viewScreenshots = function (model) {
-	var viewGroup = function (group) {
-		return A2(
-			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$style, 'display', 'flex')
-				]),
-			A2(
-				$elm$core$List$map,
-				function (exp) {
-					return A2($author$project$Main$lazyImageWithErrorHandling, model.screenDimensions, exp);
-				},
-				group));
-	};
-	var groups = A2($author$project$Main$splitGroupsOf, 4, model.research);
-	return A2(
-		$elm$html$Html$div,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$h1,
-				_List_Nil,
+var $author$project$Main$viewScreenshots = F2(
+	function (model, order) {
+		var viewGroup = function (group) {
+			return A2(
+				$elm$html$Html$div,
 				_List_fromArray(
 					[
-						$elm$html$Html$text('Visual')
-					])),
-				A2($elm$html$Html$br, _List_Nil, _List_Nil),
+						A2($elm$html$Html$Attributes$style, 'display', 'flex')
+					]),
 				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				A2($elm$core$List$map, viewGroup, groups))
-			]));
-};
+					$elm$core$List$map,
+					function (exp) {
+						return A2($author$project$Main$lazyImageWithErrorHandling, model.screenDimensions, exp);
+					},
+					group));
+		};
+		var groups = A2($author$project$Main$splitGroupsOf, 4, model.research);
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$h1,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Visual')
+						])),
+					A2($elm$html$Html$br, _List_Nil, _List_Nil),
+					A2(
+					$elm$html$Html$div,
+					_List_Nil,
+					A2($elm$core$List$map, viewGroup, groups))
+				]));
+	});
 var $author$project$Main$SwitchView = function (a) {
 	return {$: 'SwitchView', a: a};
 };
-var $elm$html$Html$Attributes$selected = $elm$html$Html$Attributes$boolProperty('selected');
 var $author$project$Main$viewSwitch = function (model) {
 	return $mdgriffith$elm_ui$Element$html(
 		A2(
@@ -14948,7 +15067,14 @@ var $author$project$Main$viewSwitch = function (model) {
 								[
 									$elm$html$Html$Attributes$value('ScreenView'),
 									$elm$html$Html$Attributes$selected(
-									_Utils_eq(model.view, $author$project$Main$ScreenView))
+									function () {
+										var _v0 = model.view;
+										if (_v0.$ === 'ScreenView') {
+											return true;
+										} else {
+											return false;
+										}
+									}())
 								]),
 							_List_fromArray(
 								[
@@ -14967,8 +15093,16 @@ var $author$project$Main$view = function (model) {
 				return $mdgriffith$elm_ui$Element$html(
 					$author$project$Main$viewKeywords(model));
 			default:
-				return $mdgriffith$elm_ui$Element$html(
-					$author$project$Main$viewScreenshots(model));
+				var sorting = _v0.a;
+				return A2(
+					$mdgriffith$elm_ui$Element$column,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$author$project$Main$screenViewOrderSwitch(model),
+							$mdgriffith$elm_ui$Element$html(
+							A2($author$project$Main$viewScreenshots, model, sorting))
+						]));
 		}
 	}();
 	return A2(

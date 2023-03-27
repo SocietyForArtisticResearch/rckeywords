@@ -5539,9 +5539,7 @@ var $author$project$Main$GotResearch = function (a) {
 	return {$: 'GotResearch', a: a};
 };
 var $author$project$Main$Random = {$: 'Random'};
-var $author$project$Main$ScreenView = function (a) {
-	return {$: 'ScreenView', a: a};
-};
+var $author$project$Main$ScreenView = {$: 'ScreenView'};
 var $author$project$Main$Author = function (a) {
 	return {$: 'Author', a: a};
 };
@@ -6474,9 +6472,10 @@ var $author$project$Main$init = function (_v0) {
 			numberOfResults: 8,
 			query: '',
 			research: _List_Nil,
+			researchSorting: $author$project$Main$Random,
 			screenDimensions: {h: height, w: width},
 			sorting: $author$project$Main$ByUse,
-			view: $author$project$Main$ScreenView($author$project$Main$Random)
+			view: $author$project$Main$ScreenView
 		},
 		$elm$http$Http$get(
 			{
@@ -6803,7 +6802,7 @@ var $author$project$Main$update = F2(
 						case 'ListView':
 							return $author$project$Main$ListView;
 						case 'ScreenView':
-							return $author$project$Main$ScreenView($author$project$Main$Random);
+							return $author$project$Main$ScreenView;
 						default:
 							return $author$project$Main$ListView;
 					}
@@ -6830,9 +6829,7 @@ var $author$project$Main$update = F2(
 						return $author$project$Main$shuffleResearch(
 							_Utils_update(
 								model,
-								{
-									view: $author$project$Main$ScreenView($author$project$Main$Random)
-								}));
+								{researchSorting: $author$project$Main$Random}));
 					case 'oldest':
 						var fsort = function (r) {
 							return A2(
@@ -6846,7 +6843,7 @@ var $author$project$Main$update = F2(
 								model,
 								{
 									research: A2($elm$core$List$sortBy, fsort, model.research),
-									view: $author$project$Main$ScreenView($author$project$Main$OldestFirst)
+									researchSorting: $author$project$Main$OldestFirst
 								}),
 							$elm$core$Platform$Cmd$none);
 					case 'newest':
@@ -6863,16 +6860,14 @@ var $author$project$Main$update = F2(
 								{
 									research: $elm$core$List$reverse(
 										A2($elm$core$List$sortBy, fsort, model.research)),
-									view: $author$project$Main$ScreenView($author$project$Main$NewestFirst)
+									researchSorting: $author$project$Main$NewestFirst
 								}),
 							$elm$core$Platform$Cmd$none);
 					default:
 						return $author$project$Main$shuffleResearch(
 							_Utils_update(
 								model,
-								{
-									view: $author$project$Main$ScreenView($author$project$Main$Random)
-								}));
+								{researchSorting: $author$project$Main$Random}));
 				}
 		}
 	});
@@ -12715,8 +12710,6 @@ var $mdgriffith$elm_ui$Element$Font$sansSerif = $mdgriffith$elm_ui$Internal$Mode
 var $author$project$Main$ChangeScreenOrder = function (a) {
 	return {$: 'ChangeScreenOrder', a: a};
 };
-var $mdgriffith$elm_ui$Internal$Model$Empty = {$: 'Empty'};
-var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
 var $elm$html$Html$Events$alwaysStop = function (x) {
 	return _Utils_Tuple2(x, true);
 };
@@ -12762,64 +12755,58 @@ var $elm$html$Html$Attributes$boolProperty = F2(
 var $elm$html$Html$Attributes$selected = $elm$html$Html$Attributes$boolProperty('selected');
 var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$Main$screenViewOrderSwitch = function (model) {
-	var _v0 = model.view;
-	if (_v0.$ === 'ScreenView') {
-		var sorting = _v0.a;
-		return $mdgriffith$elm_ui$Element$html(
-			A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$select,
-						_List_fromArray(
-							[
-								$elm$html$Html$Events$onInput($author$project$Main$ChangeScreenOrder)
-							]),
-						_List_fromArray(
-							[
-								A2(
-								$elm$html$Html$option,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$value('random'),
-										$elm$html$Html$Attributes$selected(
-										_Utils_eq(sorting, $author$project$Main$Random))
-									]),
-								_List_fromArray(
-									[
-										$elm$html$Html$text('Random')
-									])),
-								A2(
-								$elm$html$Html$option,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$value('oldest'),
-										$elm$html$Html$Attributes$selected(
-										_Utils_eq(sorting, $author$project$Main$OldestFirst))
-									]),
-								_List_fromArray(
-									[
-										$elm$html$Html$text('Old First')
-									])),
-								A2(
-								$elm$html$Html$option,
-								_List_fromArray(
-									[
-										$elm$html$Html$Attributes$value('newest'),
-										$elm$html$Html$Attributes$selected(
-										_Utils_eq(sorting, $author$project$Main$NewestFirst))
-									]),
-								_List_fromArray(
-									[
-										$elm$html$Html$text('New first')
-									]))
-							]))
-					])));
-	} else {
-		return $mdgriffith$elm_ui$Element$none;
-	}
+	return $mdgriffith$elm_ui$Element$html(
+		A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$select,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onInput($author$project$Main$ChangeScreenOrder)
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$option,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$value('random'),
+									$elm$html$Html$Attributes$selected(
+									_Utils_eq(model.researchSorting, $author$project$Main$Random))
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Random')
+								])),
+							A2(
+							$elm$html$Html$option,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$value('oldest'),
+									$elm$html$Html$Attributes$selected(
+									_Utils_eq(model.researchSorting, $author$project$Main$OldestFirst))
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Old First')
+								])),
+							A2(
+							$elm$html$Html$option,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$value('newest'),
+									$elm$html$Html$Attributes$selected(
+									_Utils_eq(model.researchSorting, $author$project$Main$NewestFirst))
+								]),
+							_List_fromArray(
+								[
+									$elm$html$Html$text('New first')
+								]))
+						]))
+				])));
 };
 var $mdgriffith$elm_ui$Element$Font$typeface = $mdgriffith$elm_ui$Internal$Model$Typeface;
 var $author$project$Main$ChangedQuery = function (a) {
@@ -14659,6 +14646,8 @@ var $elm$core$Maybe$map2 = F3(
 			}
 		}
 	});
+var $mdgriffith$elm_ui$Internal$Model$Empty = {$: 'Empty'};
+var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
 var $mdgriffith$elm_ui$Element$padding = function (x) {
 	var f = x;
 	return A2(
@@ -14983,42 +14972,41 @@ var $author$project$Main$splitGroupsOf = F2(
 				A2($author$project$Main$splitGroupsOf, n, rest));
 		}
 	});
-var $author$project$Main$viewScreenshots = F2(
-	function (model, order) {
-		var viewGroup = function (group) {
-			return A2(
-				$elm$html$Html$div,
-				_List_fromArray(
-					[
-						A2($elm$html$Html$Attributes$style, 'display', 'flex')
-					]),
-				A2(
-					$elm$core$List$map,
-					function (exp) {
-						return A2($author$project$Main$lazyImageWithErrorHandling, model.screenDimensions, exp);
-					},
-					group));
-		};
-		var groups = A2($author$project$Main$splitGroupsOf, 4, model.research);
+var $author$project$Main$viewScreenshots = function (model) {
+	var viewGroup = function (group) {
 		return A2(
 			$elm$html$Html$div,
-			_List_Nil,
 			_List_fromArray(
 				[
-					A2(
-					$elm$html$Html$h1,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$elm$html$Html$text('Visual')
-						])),
-					A2($elm$html$Html$br, _List_Nil, _List_Nil),
-					A2(
-					$elm$html$Html$div,
-					_List_Nil,
-					A2($elm$core$List$map, viewGroup, groups))
-				]));
-	});
+					A2($elm$html$Html$Attributes$style, 'display', 'flex')
+				]),
+			A2(
+				$elm$core$List$map,
+				function (exp) {
+					return A2($author$project$Main$lazyImageWithErrorHandling, model.screenDimensions, exp);
+				},
+				group));
+	};
+	var groups = A2($author$project$Main$splitGroupsOf, 4, model.research);
+	return A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$h1,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Visual')
+					])),
+				A2($elm$html$Html$br, _List_Nil, _List_Nil),
+				A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				A2($elm$core$List$map, viewGroup, groups))
+			]));
+};
 var $author$project$Main$SwitchView = function (a) {
 	return {$: 'SwitchView', a: a};
 };
@@ -15067,14 +15055,7 @@ var $author$project$Main$viewSwitch = function (model) {
 								[
 									$elm$html$Html$Attributes$value('ScreenView'),
 									$elm$html$Html$Attributes$selected(
-									function () {
-										var _v0 = model.view;
-										if (_v0.$ === 'ScreenView') {
-											return true;
-										} else {
-											return false;
-										}
-									}())
+									_Utils_eq(model.view, $author$project$Main$ScreenView))
 								]),
 							_List_fromArray(
 								[
@@ -15088,12 +15069,18 @@ var $author$project$Main$view = function (model) {
 		var _v0 = model.view;
 		switch (_v0.$) {
 			case 'ListView':
-				return $author$project$Main$viewList(model);
+				return A2(
+					$mdgriffith$elm_ui$Element$column,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$author$project$Main$screenViewOrderSwitch(model),
+							$author$project$Main$viewList(model)
+						]));
 			case 'KeywordsView':
 				return $mdgriffith$elm_ui$Element$html(
 					$author$project$Main$viewKeywords(model));
 			default:
-				var sorting = _v0.a;
 				return A2(
 					$mdgriffith$elm_ui$Element$column,
 					_List_Nil,
@@ -15101,7 +15088,7 @@ var $author$project$Main$view = function (model) {
 						[
 							$author$project$Main$screenViewOrderSwitch(model),
 							$mdgriffith$elm_ui$Element$html(
-							A2($author$project$Main$viewScreenshots, model, sorting))
+							$author$project$Main$viewScreenshots(model))
 						]));
 		}
 	}();

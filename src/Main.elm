@@ -22,6 +22,11 @@ import String exposing (split)
 import Time
 
 
+
+-- TODO:
+-- move sorting to main model, since it also applies to list.
+
+
 type alias ExpositionID =
     Int
 
@@ -64,7 +69,7 @@ type ScreenOrder
 type View
     = KeywordsView
     | ListView
-    | ScreenView ScreenOrder
+    | ScreenView
 
 
 type alias Model =
@@ -74,6 +79,7 @@ type alias Model =
     , sorting : KeywordSorting
     , view : View
     , numberOfResults : Int
+    , researchSorting : ScreenOrder
     }
 
 
@@ -100,8 +106,9 @@ init { width, height } =
       , query = ""
       , screenDimensions = { w = width, h = height }
       , sorting = ByUse
-      , view = ScreenView Random
+      , view = ScreenView
       , numberOfResults = 8
+      , researchSorting = Random
       }
     , Http.get { url = "internal_research.json", expect = Http.expectJson GotResearch decodeResearch }
     )
@@ -226,7 +233,7 @@ update msg model =
                             ListView
 
                         "ScreenView" ->
-                            ScreenView Random
+                            ScreenView
 
                         _ ->
                             ListView
@@ -246,7 +253,7 @@ update msg model =
         ChangeScreenOrder order ->
             case order of
                 "random" ->
-                    shuffleResearch { model | view = ScreenView Random }
+                    shuffleResearch { model | researchSorting = Random }
 
                 "oldest" ->
                     let
@@ -254,7 +261,7 @@ update msg model =
                             r.created |> String.split "/" |> List.reverse |> String.join "/"
                     in
                     ( { model
-                        | view = ScreenView OldestFirst
+                        | researchSorting = OldestFirst
                         , research = List.sortBy fsort model.research
                       }
                     , Cmd.none
@@ -266,14 +273,14 @@ update msg model =
                             r.created |> String.split "/" |> List.reverse |> String.join "/"
                     in
                     ( { model
-                        | view = ScreenView NewestFirst
+                        | researchSorting = NewestFirst
                         , research = List.sortBy fsort model.research |> List.reverse
                       }
                     , Cmd.none
                     )
 
                 _ ->
-                    shuffleResearch { model | view = ScreenView Random }
+                    shuffleResearch { model | researchSorting = Random }
 
 
 image : String -> String -> Element msg
@@ -497,13 +504,7 @@ viewSwitch model =
                 , Html.option
                     [ Attr.value "ScreenView"
                     , Attr.selected
-                        (case model.view of
-                            ScreenView _ ->
-                                True
-
-                            _ ->
-                                False
-                        )
+                        (model.view == ScreenView)
                     ]
                     [ Html.text "screen view" ]
                 ]
@@ -512,19 +513,14 @@ viewSwitch model =
 
 screenViewOrderSwitch : Model -> Element Msg
 screenViewOrderSwitch model =
-    case model.view of
-        ScreenView sorting ->
-            Element.html <|
-                Html.div []
-                    [ Html.select [ Events.onInput ChangeScreenOrder ]
-                        [ Html.option [ Attr.value "random", Attr.selected (sorting == Random) ] [ Html.text "Random" ]
-                        , Html.option [ Attr.value "oldest", Attr.selected (sorting == OldestFirst) ] [ Html.text "Old First" ]
-                        , Html.option [ Attr.value "newest", Attr.selected (sorting == NewestFirst) ] [ Html.text "New first" ]
-                        ]
-                    ]
-
-        _ ->
-            Element.none
+    Element.html <|
+        Html.div []
+            [ Html.select [ Events.onInput ChangeScreenOrder ]
+                [ Html.option [ Attr.value "random", Attr.selected (model.researchSorting == Random) ] [ Html.text "Random" ]
+                , Html.option [ Attr.value "oldest", Attr.selected (model.researchSorting == OldestFirst) ] [ Html.text "Old First" ]
+                , Html.option [ Attr.value "newest", Attr.selected (model.researchSorting == NewestFirst) ] [ Html.text "New first" ]
+                ]
+            ]
 
 
 view : Model -> Html Msg
@@ -533,15 +529,19 @@ view model =
         body =
             case model.view of
                 ListView ->
-                    viewList model
+                    Element.column []
+                            [ screenViewOrderSwitch model
+                            , viewList model
+                            ]
+                    
 
                 KeywordsView ->
                     Element.html (viewKeywords model)
 
-                ScreenView sorting ->
+                ScreenView ->
                     Element.column []
                         [ screenViewOrderSwitch model
-                        , Element.html (viewScreenshots model sorting)
+                        , Element.html (viewScreenshots model)
                         ]
     in
     Element.layout
@@ -845,8 +845,8 @@ splitGroupsOf n lst =
             first :: splitGroupsOf n rest
 
 
-viewScreenshots : Model -> ScreenOrder -> Html Msg
-viewScreenshots model order =
+viewScreenshots : Model -> Html Msg
+viewScreenshots model =
     let
         groups =
             model.research |> splitGroupsOf 4

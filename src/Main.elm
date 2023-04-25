@@ -234,13 +234,13 @@ update msg model =
             let
                 v =
                     case str of
-                        "KeywordsView" ->
+                        "keywords" ->
                             KeywordsView
 
-                        "ListView" ->
+                        "list" ->
                             ListView
 
-                        "ScreenView" ->
+                        "screenshots" ->
                             ScreenView Medium
 
                         _ ->
@@ -537,13 +537,13 @@ viewSwitch model =
             Element.html <|
                 Html.select [ Events.onInput SwitchView ]
                     [ Html.option
-                        [ Attr.value "Screenshots"
+                        [ Attr.value "screenshots"
                         , Attr.selected
                             (isScreenview model)
                         ]
                         [ Html.text "Screenshots" ]
-                    , Html.option [ Attr.value "Keywords", Attr.selected (model.view == KeywordsView) ] [ Html.text "Keywords" ]
-                    , Html.option [ Attr.value "List", Attr.selected (model.view == ListView) ] [ Html.text "List" ]
+                    , Html.option [ Attr.value "keywords", Attr.selected (model.view == KeywordsView) ] [ Html.text "Keywords" ]
+                    , Html.option [ Attr.value "list", Attr.selected (model.view == ListView) ] [ Html.text "List" ]
                     ]
         ]
 

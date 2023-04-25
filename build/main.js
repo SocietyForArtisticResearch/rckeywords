@@ -6803,11 +6803,11 @@ var $author$project$Main$update = F2(
 				var str = msg.a;
 				var v = function () {
 					switch (str) {
-						case 'KeywordsView':
+						case 'keywords':
 							return $author$project$Main$KeywordsView;
-						case 'ListView':
+						case 'list':
 							return $author$project$Main$ListView;
-						case 'ScreenView':
+						case 'screenshots':
 							return $author$project$Main$ScreenView($author$project$Main$Medium);
 						default:
 							return $author$project$Main$ListView;
@@ -15187,7 +15187,7 @@ var $author$project$Main$viewSwitch = function (model) {
 								$elm$html$Html$option,
 								_List_fromArray(
 									[
-										$elm$html$Html$Attributes$value('Screenshots'),
+										$elm$html$Html$Attributes$value('screenshots'),
 										$elm$html$Html$Attributes$selected(
 										$author$project$Main$isScreenview(model))
 									]),
@@ -15199,7 +15199,7 @@ var $author$project$Main$viewSwitch = function (model) {
 								$elm$html$Html$option,
 								_List_fromArray(
 									[
-										$elm$html$Html$Attributes$value('Keywords'),
+										$elm$html$Html$Attributes$value('keywords'),
 										$elm$html$Html$Attributes$selected(
 										_Utils_eq(model.view, $author$project$Main$KeywordsView))
 									]),
@@ -15211,7 +15211,7 @@ var $author$project$Main$viewSwitch = function (model) {
 								$elm$html$Html$option,
 								_List_fromArray(
 									[
-										$elm$html$Html$Attributes$value('List'),
+										$elm$html$Html$Attributes$value('list'),
 										$elm$html$Html$Attributes$selected(
 										_Utils_eq(model.view, $author$project$Main$ListView))
 									]),

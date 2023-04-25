@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Browser
 import Dict exposing (Dict)
-import Element exposing (Element, fill, height, padding, px, width)
+import Element exposing (Element, fill, height, padding, px, spacing, width)
 import Element.Border
 import Element.Font
 import Element.Input
@@ -496,31 +496,35 @@ viewList model =
 
 viewSwitch : Model -> Element Msg
 viewSwitch model =
-    Element.html <|
-        Html.div []
-            [ Html.select [ Events.onInput SwitchView ]
-                [ Html.option [ Attr.value "KeywordsView", Attr.selected (model.view == KeywordsView) ] [ Html.text "keywords" ]
-                , Html.option [ Attr.value "ListView", Attr.selected (model.view == ListView) ] [ Html.text "list view" ]
-                , Html.option
-                    [ Attr.value "ScreenView"
-                    , Attr.selected
-                        (model.view == ScreenView)
+    Element.column [ spacing 10 ]
+        [ Element.text "Screenshots/Keywords/List"
+        , Element.el [] <|
+            Element.html <|
+                Html.select [ Events.onInput SwitchView ]
+                    [ Html.option
+                        [ Attr.value "Screenshots"
+                        , Attr.selected
+                            (model.view == ScreenView)
+                        ]
+                        [ Html.text "Screenshots" ]
+                    , Html.option [ Attr.value "Keywords", Attr.selected (model.view == KeywordsView) ] [ Html.text "Keywords" ]
+                    , Html.option [ Attr.value "List", Attr.selected (model.view == ListView) ] [ Html.text "List" ]
                     ]
-                    [ Html.text "screen view" ]
-                ]
-            ]
+        ]
 
 
 screenViewOrderSwitch : Model -> Element Msg
 screenViewOrderSwitch model =
-    Element.html <|
-        Html.div []
-            [ Html.select [ Events.onInput ChangeScreenOrder ]
-                [ Html.option [ Attr.value "random", Attr.selected (model.researchSorting == Random) ] [ Html.text "Random" ]
-                , Html.option [ Attr.value "oldest", Attr.selected (model.researchSorting == OldestFirst) ] [ Html.text "Old First" ]
-                , Html.option [ Attr.value "newest", Attr.selected (model.researchSorting == NewestFirst) ] [ Html.text "New first" ]
-                ]
-            ]
+    Element.column [ spacing 10 ]
+        [ Element.text "Sort by:"
+        , Element.el [] <|
+            Element.html <|
+                Html.select [ Events.onInput ChangeScreenOrder ]
+                    [ Html.option [ Attr.value "random", Attr.selected (model.researchSorting == Random) ] [ Html.text "Random" ]
+                    , Html.option [ Attr.value "oldest", Attr.selected (model.researchSorting == OldestFirst) ] [ Html.text "Old First" ]
+                    , Html.option [ Attr.value "newest", Attr.selected (model.researchSorting == NewestFirst) ] [ Html.text "New first" ]
+                    ]
+        ]
 
 
 view : Model -> Html Msg
@@ -529,18 +533,20 @@ view model =
         body =
             case model.view of
                 ListView ->
-                    Element.column []
-                            [ screenViewOrderSwitch model
-                            , viewList model
-                            ]
-                    
+                    Element.column [ width fill ]
+                        [ Element.row [ Element.spacing 25 ] [ viewSwitch model, screenViewOrderSwitch model ]
+                        , viewList model
+                        ]
 
                 KeywordsView ->
-                    Element.html (viewKeywords model)
+                    Element.column [ width fill ]
+                        [ viewSwitch model
+                        , Element.html (viewKeywords model)
+                        ]
 
                 ScreenView ->
-                    Element.column []
-                        [ screenViewOrderSwitch model
+                    Element.column [ width fill ]
+                        [ Element.row [ Element.spacing 25 ] [ viewSwitch model, screenViewOrderSwitch model ]
                         , Element.html (viewScreenshots model)
                         ]
     in
@@ -551,9 +557,7 @@ view model =
         ]
     <|
         Element.column [ width fill ]
-            [ Element.el [] <| viewSwitch model
-            , body
-            ]
+            [ body ]
 
 
 toggleSorting : Model -> Html Msg
@@ -816,7 +820,7 @@ lazyImageWithErrorHandling dimensions research =
         height =
             (dimensions.h // 3 |> String.fromInt) ++ "px"
     in
-    Html.a [ Attr.href research.defaultPage, Attr.title (getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
+    Html.a [ Attr.target "_blank", Attr.href research.defaultPage, Attr.title (getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
         [ Html.node "lazy-image"
             [ Attr.attribute "src" (urlFromId research.id)
 

@@ -12349,23 +12349,6 @@ var $mdgriffith$elm_ui$Element$column = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
-var $mdgriffith$elm_ui$Element$el = F2(
-	function (attrs, child) {
-		return A4(
-			$mdgriffith$elm_ui$Internal$Model$element,
-			$mdgriffith$elm_ui$Internal$Model$asEl,
-			$mdgriffith$elm_ui$Internal$Model$div,
-			A2(
-				$elm$core$List$cons,
-				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
-				A2(
-					$elm$core$List$cons,
-					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
-					attrs)),
-			$mdgriffith$elm_ui$Internal$Model$Unkeyed(
-				_List_fromArray(
-					[child])));
-	});
 var $mdgriffith$elm_ui$Internal$Model$FontFamily = F2(
 	function (a, b) {
 		return {$: 'FontFamily', a: a, b: b};
@@ -12706,10 +12689,47 @@ var $mdgriffith$elm_ui$Element$paddingEach = function (_v0) {
 				left));
 	}
 };
+var $mdgriffith$elm_ui$Internal$Model$AsRow = {$: 'AsRow'};
+var $mdgriffith$elm_ui$Internal$Model$asRow = $mdgriffith$elm_ui$Internal$Model$AsRow;
+var $mdgriffith$elm_ui$Element$row = F2(
+	function (attrs, children) {
+		return A4(
+			$mdgriffith$elm_ui$Internal$Model$element,
+			$mdgriffith$elm_ui$Internal$Model$asRow,
+			$mdgriffith$elm_ui$Internal$Model$div,
+			A2(
+				$elm$core$List$cons,
+				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.contentLeft + (' ' + $mdgriffith$elm_ui$Internal$Style$classes.contentCenterY)),
+				A2(
+					$elm$core$List$cons,
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
+					A2(
+						$elm$core$List$cons,
+						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
+						attrs))),
+			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
+	});
 var $mdgriffith$elm_ui$Element$Font$sansSerif = $mdgriffith$elm_ui$Internal$Model$SansSerif;
 var $author$project$Main$ChangeScreenOrder = function (a) {
 	return {$: 'ChangeScreenOrder', a: a};
 };
+var $mdgriffith$elm_ui$Element$el = F2(
+	function (attrs, child) {
+		return A4(
+			$mdgriffith$elm_ui$Internal$Model$element,
+			$mdgriffith$elm_ui$Internal$Model$asEl,
+			$mdgriffith$elm_ui$Internal$Model$div,
+			A2(
+				$elm$core$List$cons,
+				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
+				A2(
+					$elm$core$List$cons,
+					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
+					attrs)),
+			$mdgriffith$elm_ui$Internal$Model$Unkeyed(
+				_List_fromArray(
+					[child])));
+	});
 var $elm$html$Html$Events$alwaysStop = function (x) {
 	return _Utils_Tuple2(x, true);
 };
@@ -12753,60 +12773,92 @@ var $elm$html$Html$Attributes$boolProperty = F2(
 			$elm$json$Json$Encode$bool(bool));
 	});
 var $elm$html$Html$Attributes$selected = $elm$html$Html$Attributes$boolProperty('selected');
+var $mdgriffith$elm_ui$Internal$Model$SpacingStyle = F3(
+	function (a, b, c) {
+		return {$: 'SpacingStyle', a: a, b: b, c: c};
+	});
+var $mdgriffith$elm_ui$Internal$Flag$spacing = $mdgriffith$elm_ui$Internal$Flag$flag(3);
+var $mdgriffith$elm_ui$Internal$Model$spacingName = F2(
+	function (x, y) {
+		return 'spacing-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y)));
+	});
+var $mdgriffith$elm_ui$Element$spacing = function (x) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$spacing,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$SpacingStyle,
+			A2($mdgriffith$elm_ui$Internal$Model$spacingName, x, x),
+			x,
+			x));
+};
+var $mdgriffith$elm_ui$Internal$Model$Text = function (a) {
+	return {$: 'Text', a: a};
+};
+var $mdgriffith$elm_ui$Element$text = function (content) {
+	return $mdgriffith$elm_ui$Internal$Model$Text(content);
+};
 var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$Main$screenViewOrderSwitch = function (model) {
-	return $mdgriffith$elm_ui$Element$html(
-		A2(
-			$elm$html$Html$div,
-			_List_Nil,
-			_List_fromArray(
-				[
+	return A2(
+		$mdgriffith$elm_ui$Element$column,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$spacing(10)
+			]),
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$text('Sort by:'),
+				A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_Nil,
+				$mdgriffith$elm_ui$Element$html(
 					A2(
-					$elm$html$Html$select,
-					_List_fromArray(
-						[
-							$elm$html$Html$Events$onInput($author$project$Main$ChangeScreenOrder)
-						]),
-					_List_fromArray(
-						[
-							A2(
-							$elm$html$Html$option,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$value('random'),
-									$elm$html$Html$Attributes$selected(
-									_Utils_eq(model.researchSorting, $author$project$Main$Random))
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('Random')
-								])),
-							A2(
-							$elm$html$Html$option,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$value('oldest'),
-									$elm$html$Html$Attributes$selected(
-									_Utils_eq(model.researchSorting, $author$project$Main$OldestFirst))
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('Old First')
-								])),
-							A2(
-							$elm$html$Html$option,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$value('newest'),
-									$elm$html$Html$Attributes$selected(
-									_Utils_eq(model.researchSorting, $author$project$Main$NewestFirst))
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('New first')
-								]))
-						]))
-				])));
+						$elm$html$Html$select,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onInput($author$project$Main$ChangeScreenOrder)
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('random'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(model.researchSorting, $author$project$Main$Random))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Random')
+									])),
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('oldest'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(model.researchSorting, $author$project$Main$OldestFirst))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Old First')
+									])),
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('newest'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(model.researchSorting, $author$project$Main$NewestFirst))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('New first')
+									]))
+							]))))
+			]));
 };
 var $mdgriffith$elm_ui$Element$Font$typeface = $mdgriffith$elm_ui$Internal$Model$Typeface;
 var $author$project$Main$ChangedQuery = function (a) {
@@ -14367,50 +14419,11 @@ var $author$project$RCStyles$rcButtonStyle = A2(
 			A2($author$project$RCStyles$Style, 'font-size', '11px'),
 			A2($author$project$RCStyles$Style, 'box-sizing', 'border-box')
 		]));
-var $mdgriffith$elm_ui$Internal$Model$AsRow = {$: 'AsRow'};
-var $mdgriffith$elm_ui$Internal$Model$asRow = $mdgriffith$elm_ui$Internal$Model$AsRow;
-var $mdgriffith$elm_ui$Element$row = F2(
-	function (attrs, children) {
-		return A4(
-			$mdgriffith$elm_ui$Internal$Model$element,
-			$mdgriffith$elm_ui$Internal$Model$asRow,
-			$mdgriffith$elm_ui$Internal$Model$div,
-			A2(
-				$elm$core$List$cons,
-				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.contentLeft + (' ' + $mdgriffith$elm_ui$Internal$Style$classes.contentCenterY)),
-				A2(
-					$elm$core$List$cons,
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
-					A2(
-						$elm$core$List$cons,
-						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
-						attrs))),
-			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
-	});
 var $mdgriffith$elm_ui$Element$Font$size = function (i) {
 	return A2(
 		$mdgriffith$elm_ui$Internal$Model$StyleClass,
 		$mdgriffith$elm_ui$Internal$Flag$fontSize,
 		$mdgriffith$elm_ui$Internal$Model$FontSize(i));
-};
-var $mdgriffith$elm_ui$Internal$Model$SpacingStyle = F3(
-	function (a, b, c) {
-		return {$: 'SpacingStyle', a: a, b: b, c: c};
-	});
-var $mdgriffith$elm_ui$Internal$Flag$spacing = $mdgriffith$elm_ui$Internal$Flag$flag(3);
-var $mdgriffith$elm_ui$Internal$Model$spacingName = F2(
-	function (x, y) {
-		return 'spacing-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y)));
-	});
-var $mdgriffith$elm_ui$Element$spacing = function (x) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$spacing,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$SpacingStyle,
-			A2($mdgriffith$elm_ui$Internal$Model$spacingName, x, x),
-			x,
-			x));
 };
 var $mdgriffith$elm_ui$Element$spacingXY = F2(
 	function (x, y) {
@@ -14549,12 +14562,6 @@ var $elm$core$List$take = F2(
 	function (n, list) {
 		return A3($elm$core$List$takeFast, 0, n, list);
 	});
-var $mdgriffith$elm_ui$Internal$Model$Text = function (a) {
-	return {$: 'Text', a: a};
-};
-var $mdgriffith$elm_ui$Element$text = function (content) {
-	return $mdgriffith$elm_ui$Internal$Model$Text(content);
-};
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $author$project$Main$authorAsString = function (_v0) {
 	var a = _v0.a;
@@ -14923,6 +14930,7 @@ var $author$project$Main$getName = function (_v0) {
 	var author = _v0.a;
 	return author.name;
 };
+var $elm$html$Html$Attributes$target = $elm$html$Html$Attributes$stringProperty('target');
 var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
 var $author$project$Main$lazyImageWithErrorHandling = F2(
 	function (dimensions, research) {
@@ -14938,6 +14946,7 @@ var $author$project$Main$lazyImageWithErrorHandling = F2(
 			$elm$html$Html$a,
 			_List_fromArray(
 				[
+					$elm$html$Html$Attributes$target('_blank'),
 					$elm$html$Html$Attributes$href(research.defaultPage),
 					$elm$html$Html$Attributes$title(
 					$author$project$Main$getName(research.author) + (' - ' + (research.title + (' - ' + research.created))))
@@ -15011,58 +15020,65 @@ var $author$project$Main$SwitchView = function (a) {
 	return {$: 'SwitchView', a: a};
 };
 var $author$project$Main$viewSwitch = function (model) {
-	return $mdgriffith$elm_ui$Element$html(
-		A2(
-			$elm$html$Html$div,
-			_List_Nil,
-			_List_fromArray(
-				[
+	return A2(
+		$mdgriffith$elm_ui$Element$column,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$spacing(10)
+			]),
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$text('Screenshots/Keywords/List'),
+				A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_Nil,
+				$mdgriffith$elm_ui$Element$html(
 					A2(
-					$elm$html$Html$select,
-					_List_fromArray(
-						[
-							$elm$html$Html$Events$onInput($author$project$Main$SwitchView)
-						]),
-					_List_fromArray(
-						[
-							A2(
-							$elm$html$Html$option,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$value('KeywordsView'),
-									$elm$html$Html$Attributes$selected(
-									_Utils_eq(model.view, $author$project$Main$KeywordsView))
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('keywords')
-								])),
-							A2(
-							$elm$html$Html$option,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$value('ListView'),
-									$elm$html$Html$Attributes$selected(
-									_Utils_eq(model.view, $author$project$Main$ListView))
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('list view')
-								])),
-							A2(
-							$elm$html$Html$option,
-							_List_fromArray(
-								[
-									$elm$html$Html$Attributes$value('ScreenView'),
-									$elm$html$Html$Attributes$selected(
-									_Utils_eq(model.view, $author$project$Main$ScreenView))
-								]),
-							_List_fromArray(
-								[
-									$elm$html$Html$text('screen view')
-								]))
-						]))
-				])));
+						$elm$html$Html$select,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onInput($author$project$Main$SwitchView)
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('Screenshots'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(model.view, $author$project$Main$ScreenView))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Screenshots')
+									])),
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('Keywords'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(model.view, $author$project$Main$KeywordsView))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Keywords')
+									])),
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('List'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(model.view, $author$project$Main$ListView))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('List')
+									]))
+							]))))
+			]));
 };
 var $author$project$Main$view = function (model) {
 	var body = function () {
@@ -15071,22 +15087,58 @@ var $author$project$Main$view = function (model) {
 			case 'ListView':
 				return A2(
 					$mdgriffith$elm_ui$Element$column,
-					_List_Nil,
 					_List_fromArray(
 						[
-							$author$project$Main$screenViewOrderSwitch(model),
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$row,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$spacing(25)
+								]),
+							_List_fromArray(
+								[
+									$author$project$Main$viewSwitch(model),
+									$author$project$Main$screenViewOrderSwitch(model)
+								])),
 							$author$project$Main$viewList(model)
 						]));
 			case 'KeywordsView':
-				return $mdgriffith$elm_ui$Element$html(
-					$author$project$Main$viewKeywords(model));
+				return A2(
+					$mdgriffith$elm_ui$Element$column,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+						]),
+					_List_fromArray(
+						[
+							$author$project$Main$viewSwitch(model),
+							$mdgriffith$elm_ui$Element$html(
+							$author$project$Main$viewKeywords(model))
+						]));
 			default:
 				return A2(
 					$mdgriffith$elm_ui$Element$column,
-					_List_Nil,
 					_List_fromArray(
 						[
-							$author$project$Main$screenViewOrderSwitch(model),
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$row,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$spacing(25)
+								]),
+							_List_fromArray(
+								[
+									$author$project$Main$viewSwitch(model),
+									$author$project$Main$screenViewOrderSwitch(model)
+								])),
 							$mdgriffith$elm_ui$Element$html(
 							$author$project$Main$viewScreenshots(model))
 						]));
@@ -15112,13 +15164,7 @@ var $author$project$Main$view = function (model) {
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
 				]),
 			_List_fromArray(
-				[
-					A2(
-					$mdgriffith$elm_ui$Element$el,
-					_List_Nil,
-					$author$project$Main$viewSwitch(model)),
-					body
-				])));
+				[body])));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});

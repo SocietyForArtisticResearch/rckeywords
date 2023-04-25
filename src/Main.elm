@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Browser
 import Dict exposing (Dict)
-import Element exposing (Element, fill, height, padding, px, spacing, width)
+import Element exposing (Element, el, fill, height, padding, px, spacing, text, width)
 import Element.Border
 import Element.Font
 import Element.Input
@@ -66,10 +66,17 @@ type ScreenOrder
 -- | Portal
 
 
+type Scale
+    = Micro
+    | Small
+    | Medium
+    | Large
+
+
 type View
     = KeywordsView
     | ListView
-    | ScreenView
+    | ScreenView Scale
 
 
 type alias Model =
@@ -92,6 +99,7 @@ type Msg
     | LoadMore
     | NoScreenshot ExpositionID
     | ChangeScreenOrder String
+    | ChangeScale String
 
 
 type alias Flags =
@@ -106,7 +114,7 @@ init { width, height } =
       , query = ""
       , screenDimensions = { w = width, h = height }
       , sorting = ByUse
-      , view = ScreenView
+      , view = ScreenView Medium
       , numberOfResults = 8
       , researchSorting = Random
       }
@@ -233,7 +241,7 @@ update msg model =
                             ListView
 
                         "ScreenView" ->
-                            ScreenView
+                            ScreenView Medium
 
                         _ ->
                             ListView
@@ -281,6 +289,23 @@ update msg model =
 
                 _ ->
                     shuffleResearch { model | researchSorting = Random }
+
+        ChangeScale str ->
+            case str of
+                "micro" ->
+                    ( { model | view = ScreenView Micro }, Cmd.none )
+
+                "small" ->
+                    ( { model | view = ScreenView Small }, Cmd.none )
+
+                "medium" ->
+                    ( { model | view = ScreenView Medium }, Cmd.none )
+
+                "large" ->
+                    ( { model | view = ScreenView Large }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 image : String -> String -> Element msg
@@ -494,6 +519,16 @@ viewList model =
         ]
 
 
+isScreenview : Model -> Bool
+isScreenview model =
+    case model.view of
+        ScreenView _ ->
+            True
+
+        _ ->
+            False
+
+
 viewSwitch : Model -> Element Msg
 viewSwitch model =
     Element.column [ spacing 10 ]
@@ -504,7 +539,7 @@ viewSwitch model =
                     [ Html.option
                         [ Attr.value "Screenshots"
                         , Attr.selected
-                            (model.view == ScreenView)
+                            (isScreenview model)
                         ]
                         [ Html.text "Screenshots" ]
                     , Html.option [ Attr.value "Keywords", Attr.selected (model.view == KeywordsView) ] [ Html.text "Keywords" ]
@@ -527,6 +562,21 @@ screenViewOrderSwitch model =
         ]
 
 
+viewScaleSwitch : Scale -> Element Msg
+viewScaleSwitch scale =
+    Element.column [ spacing 10 ]
+        [ text "Zoom:"
+        , el [] <|
+            Element.html <|
+                Html.select [ Events.onInput ChangeScale ]
+                    [ Html.option [ Attr.value "micro", Attr.selected (scale == Micro) ] [ Html.text "Tiny" ]
+                    , Html.option [ Attr.value "small", Attr.selected (scale == Small) ] [ Html.text "Small" ]
+                    , Html.option [ Attr.value "medium", Attr.selected (scale == Medium) ] [ Html.text "Medium" ]
+                    , Html.option [ Attr.value "large", Attr.selected (scale == Large) ] [ Html.text "Large" ]
+                    ]
+        ]
+
+
 view : Model -> Html Msg
 view model =
     let
@@ -544,15 +594,15 @@ view model =
                         , Element.html (viewKeywords model)
                         ]
 
-                ScreenView ->
+                ScreenView scale ->
                     Element.column [ width fill ]
-                        [ Element.row [ Element.spacing 25 ] [ viewSwitch model, screenViewOrderSwitch model ]
-                        , Element.html (viewScreenshots model)
+                        [ Element.row [ Element.spacing 25 ] [ viewSwitch model, screenViewOrderSwitch model, viewScaleSwitch scale ]
+                        , Element.html (viewScreenshots scale model)
                         ]
     in
     Element.layout
-        [ --width (Element.px model.screenDimensions.w)
-          Element.Font.family [ Element.Font.typeface "Helvetica Neue", Element.Font.sansSerif ]
+        [ width (Element.px model.screenDimensions.w)
+        , Element.Font.family [ Element.Font.typeface "Helvetica Neue", Element.Font.sansSerif ]
         , Element.paddingEach { top = 50, left = 15, bottom = 25, right = 15 }
         ]
     <|
@@ -808,17 +858,17 @@ imageWithErrorHandling research =
         ]
 
 
-lazyImageWithErrorHandling : { w : Int, h : Int } -> Research -> Html Msg
-lazyImageWithErrorHandling dimensions research =
+lazyImageWithErrorHandling : Int -> { w : Int, h : Int } -> Research -> Html Msg
+lazyImageWithErrorHandling groupSize dimensions research =
     let
         urlFromId i =
             String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
 
         width =
-            (dimensions.w // 4 - 40 |> String.fromInt) ++ "px"
+            (((dimensions.w - 180) // groupSize) |> String.fromInt) ++ "px"
 
         height =
-            (dimensions.h // 3 |> String.fromInt) ++ "px"
+            (dimensions.h // (groupSize - 1) |> String.fromInt) ++ "px"
     in
     Html.a [ Attr.target "_blank", Attr.href research.defaultPage, Attr.title (getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
         [ Html.node "lazy-image"
@@ -849,14 +899,33 @@ splitGroupsOf n lst =
             first :: splitGroupsOf n rest
 
 
-viewScreenshots : Model -> Html Msg
-viewScreenshots model =
+scaleToGroupSize : Scale -> Int
+scaleToGroupSize scale =
+    case scale of
+        Micro ->
+            16
+
+        Small ->
+            8
+
+        Medium ->
+            4
+
+        Large ->
+            3
+
+
+viewScreenshots : Scale -> Model -> Html Msg
+viewScreenshots scale model =
     let
+        groupSize =
+            scaleToGroupSize scale
+
         groups =
-            model.research |> splitGroupsOf 4
+            model.research |> splitGroupsOf groupSize
 
         viewGroup group =
-            Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling model.screenDimensions exp) group)
+            Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize model.screenDimensions exp) group)
     in
     Html.div
         []

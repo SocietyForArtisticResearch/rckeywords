@@ -5538,8 +5538,11 @@ var $author$project$Main$ByUse = {$: 'ByUse'};
 var $author$project$Main$GotResearch = function (a) {
 	return {$: 'GotResearch', a: a};
 };
+var $author$project$Main$Medium = {$: 'Medium'};
 var $author$project$Main$Random = {$: 'Random'};
-var $author$project$Main$ScreenView = {$: 'ScreenView'};
+var $author$project$Main$ScreenView = function (a) {
+	return {$: 'ScreenView', a: a};
+};
 var $author$project$Main$Author = function (a) {
 	return {$: 'Author', a: a};
 };
@@ -6475,7 +6478,7 @@ var $author$project$Main$init = function (_v0) {
 			researchSorting: $author$project$Main$Random,
 			screenDimensions: {h: height, w: width},
 			sorting: $author$project$Main$ByUse,
-			view: $author$project$Main$ScreenView
+			view: $author$project$Main$ScreenView($author$project$Main$Medium)
 		},
 		$elm$http$Http$get(
 			{
@@ -6490,12 +6493,15 @@ var $author$project$Main$subscriptions = function (_v0) {
 };
 var $author$project$Main$Alphabetical = {$: 'Alphabetical'};
 var $author$project$Main$KeywordsView = {$: 'KeywordsView'};
+var $author$project$Main$Large = {$: 'Large'};
 var $author$project$Main$ListView = {$: 'ListView'};
+var $author$project$Main$Micro = {$: 'Micro'};
 var $author$project$Main$NewestFirst = {$: 'NewestFirst'};
 var $author$project$Main$OldestFirst = {$: 'OldestFirst'};
 var $author$project$Main$Randomized = function (a) {
 	return {$: 'Randomized', a: a};
 };
+var $author$project$Main$Small = {$: 'Small'};
 var $elm$random$Random$Generate = function (a) {
 	return {$: 'Generate', a: a};
 };
@@ -6802,7 +6808,7 @@ var $author$project$Main$update = F2(
 						case 'ListView':
 							return $author$project$Main$ListView;
 						case 'ScreenView':
-							return $author$project$Main$ScreenView;
+							return $author$project$Main$ScreenView($author$project$Main$Medium);
 						default:
 							return $author$project$Main$ListView;
 					}
@@ -6822,7 +6828,7 @@ var $author$project$Main$update = F2(
 				var id = msg.a;
 				var _v6 = A2($elm$core$Debug$log, 'no screenshot for', id);
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-			default:
+			case 'ChangeScreenOrder':
 				var order = msg.a;
 				switch (order) {
 					case 'random':
@@ -6868,6 +6874,44 @@ var $author$project$Main$update = F2(
 							_Utils_update(
 								model,
 								{researchSorting: $author$project$Main$Random}));
+				}
+			default:
+				var str = msg.a;
+				switch (str) {
+					case 'micro':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									view: $author$project$Main$ScreenView($author$project$Main$Micro)
+								}),
+							$elm$core$Platform$Cmd$none);
+					case 'small':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									view: $author$project$Main$ScreenView($author$project$Main$Small)
+								}),
+							$elm$core$Platform$Cmd$none);
+					case 'medium':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									view: $author$project$Main$ScreenView($author$project$Main$Medium)
+								}),
+							$elm$core$Platform$Cmd$none);
+					case 'large':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									view: $author$project$Main$ScreenView($author$project$Main$Large)
+								}),
+							$elm$core$Platform$Cmd$none);
+					default:
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 		}
 	});
@@ -12689,6 +12733,10 @@ var $mdgriffith$elm_ui$Element$paddingEach = function (_v0) {
 				left));
 	}
 };
+var $mdgriffith$elm_ui$Internal$Model$Px = function (a) {
+	return {$: 'Px', a: a};
+};
+var $mdgriffith$elm_ui$Element$px = $mdgriffith$elm_ui$Internal$Model$Px;
 var $mdgriffith$elm_ui$Internal$Model$AsRow = {$: 'AsRow'};
 var $mdgriffith$elm_ui$Internal$Model$asRow = $mdgriffith$elm_ui$Internal$Model$AsRow;
 var $mdgriffith$elm_ui$Element$row = F2(
@@ -14687,10 +14735,6 @@ var $mdgriffith$elm_ui$Element$paragraph = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
-var $mdgriffith$elm_ui$Internal$Model$Px = function (a) {
-	return {$: 'Px', a: a};
-};
-var $mdgriffith$elm_ui$Element$px = $mdgriffith$elm_ui$Internal$Model$Px;
 var $mdgriffith$elm_ui$Element$Font$regular = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textNormalWeight);
 var $mdgriffith$elm_ui$Element$rgb = F3(
 	function (r, g, b) {
@@ -14925,6 +14969,82 @@ var $author$project$Main$viewList = function (model) {
 					]))
 			]));
 };
+var $author$project$Main$ChangeScale = function (a) {
+	return {$: 'ChangeScale', a: a};
+};
+var $author$project$Main$viewScaleSwitch = function (scale) {
+	return A2(
+		$mdgriffith$elm_ui$Element$column,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$spacing(10)
+			]),
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$text('Zoom:'),
+				A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_Nil,
+				$mdgriffith$elm_ui$Element$html(
+					A2(
+						$elm$html$Html$select,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onInput($author$project$Main$ChangeScale)
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('micro'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(scale, $author$project$Main$Micro))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Tiny')
+									])),
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('small'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(scale, $author$project$Main$Small))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Small')
+									])),
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('medium'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(scale, $author$project$Main$Medium))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Medium')
+									])),
+								A2(
+								$elm$html$Html$option,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$value('large'),
+										$elm$html$Html$Attributes$selected(
+										_Utils_eq(scale, $author$project$Main$Large))
+									]),
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Large')
+									]))
+							]))))
+			]));
+};
 var $elm$html$Html$br = _VirtualDom_node('br');
 var $author$project$Main$getName = function (_v0) {
 	var author = _v0.a;
@@ -14932,16 +15052,16 @@ var $author$project$Main$getName = function (_v0) {
 };
 var $elm$html$Html$Attributes$target = $elm$html$Html$Attributes$stringProperty('target');
 var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
-var $author$project$Main$lazyImageWithErrorHandling = F2(
-	function (dimensions, research) {
-		var width = $elm$core$String$fromInt(((dimensions.w / 4) | 0) - 40) + 'px';
+var $author$project$Main$lazyImageWithErrorHandling = F3(
+	function (groupSize, dimensions, research) {
+		var width = $elm$core$String$fromInt(((dimensions.w - 180) / groupSize) | 0) + 'px';
 		var urlFromId = function (i) {
 			return function (fileName) {
 				return '/screenshots/' + (fileName + '.jpeg');
 			}(
 				$elm$core$String$fromInt(i));
 		};
-		var height = $elm$core$String$fromInt((dimensions.h / 3) | 0) + 'px';
+		var height = $elm$core$String$fromInt((dimensions.h / (groupSize - 1)) | 0) + 'px';
 		return A2(
 			$elm$html$Html$a,
 			_List_fromArray(
@@ -14968,6 +15088,18 @@ var $author$project$Main$lazyImageWithErrorHandling = F2(
 					_List_Nil)
 				]));
 	});
+var $author$project$Main$scaleToGroupSize = function (scale) {
+	switch (scale.$) {
+		case 'Micro':
+			return 16;
+		case 'Small':
+			return 8;
+		case 'Medium':
+			return 4;
+		default:
+			return 3;
+	}
+};
 var $author$project$Main$splitGroupsOf = F2(
 	function (n, lst) {
 		if (!lst.b) {
@@ -14981,43 +15113,53 @@ var $author$project$Main$splitGroupsOf = F2(
 				A2($author$project$Main$splitGroupsOf, n, rest));
 		}
 	});
-var $author$project$Main$viewScreenshots = function (model) {
-	var viewGroup = function (group) {
-		return A2(
-			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$style, 'display', 'flex')
-				]),
-			A2(
-				$elm$core$List$map,
-				function (exp) {
-					return A2($author$project$Main$lazyImageWithErrorHandling, model.screenDimensions, exp);
-				},
-				group));
-	};
-	var groups = A2($author$project$Main$splitGroupsOf, 4, model.research);
-	return A2(
-		$elm$html$Html$div,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$h1,
-				_List_Nil,
+var $author$project$Main$viewScreenshots = F2(
+	function (scale, model) {
+		var groupSize = $author$project$Main$scaleToGroupSize(scale);
+		var groups = A2($author$project$Main$splitGroupsOf, groupSize, model.research);
+		var viewGroup = function (group) {
+			return A2(
+				$elm$html$Html$div,
 				_List_fromArray(
 					[
-						$elm$html$Html$text('Visual')
-					])),
-				A2($elm$html$Html$br, _List_Nil, _List_Nil),
+						A2($elm$html$Html$Attributes$style, 'display', 'flex')
+					]),
 				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				A2($elm$core$List$map, viewGroup, groups))
-			]));
-};
+					$elm$core$List$map,
+					function (exp) {
+						return A3($author$project$Main$lazyImageWithErrorHandling, groupSize, model.screenDimensions, exp);
+					},
+					group));
+		};
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$h1,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Visual')
+						])),
+					A2($elm$html$Html$br, _List_Nil, _List_Nil),
+					A2(
+					$elm$html$Html$div,
+					_List_Nil,
+					A2($elm$core$List$map, viewGroup, groups))
+				]));
+	});
 var $author$project$Main$SwitchView = function (a) {
 	return {$: 'SwitchView', a: a};
+};
+var $author$project$Main$isScreenview = function (model) {
+	var _v0 = model.view;
+	if (_v0.$ === 'ScreenView') {
+		return true;
+	} else {
+		return false;
+	}
 };
 var $author$project$Main$viewSwitch = function (model) {
 	return A2(
@@ -15047,7 +15189,7 @@ var $author$project$Main$viewSwitch = function (model) {
 									[
 										$elm$html$Html$Attributes$value('Screenshots'),
 										$elm$html$Html$Attributes$selected(
-										_Utils_eq(model.view, $author$project$Main$ScreenView))
+										$author$project$Main$isScreenview(model))
 									]),
 								_List_fromArray(
 									[
@@ -15120,6 +15262,7 @@ var $author$project$Main$view = function (model) {
 							$author$project$Main$viewKeywords(model))
 						]));
 			default:
+				var scale = _v0.a;
 				return A2(
 					$mdgriffith$elm_ui$Element$column,
 					_List_fromArray(
@@ -15137,10 +15280,11 @@ var $author$project$Main$view = function (model) {
 							_List_fromArray(
 								[
 									$author$project$Main$viewSwitch(model),
-									$author$project$Main$screenViewOrderSwitch(model)
+									$author$project$Main$screenViewOrderSwitch(model),
+									$author$project$Main$viewScaleSwitch(scale)
 								])),
 							$mdgriffith$elm_ui$Element$html(
-							$author$project$Main$viewScreenshots(model))
+							A2($author$project$Main$viewScreenshots, scale, model))
 						]));
 		}
 	}();
@@ -15148,6 +15292,8 @@ var $author$project$Main$view = function (model) {
 		$mdgriffith$elm_ui$Element$layout,
 		_List_fromArray(
 			[
+				$mdgriffith$elm_ui$Element$width(
+				$mdgriffith$elm_ui$Element$px(model.screenDimensions.w)),
 				$mdgriffith$elm_ui$Element$Font$family(
 				_List_fromArray(
 					[

@@ -2,12 +2,12 @@ module Main exposing (..)
 
 import Browser
 import Dict exposing (Dict)
-import Element exposing (Element, el, fill, height, padding, px, spacing, text, width)
+import Element exposing (Element, el, fill, height, padding, px, shrink, spacing, text, width)
 import Element.Border
 import Element.Font
 import Element.Input
 import Element.Region
-import Html exposing (Html)
+import Html exposing (Html, p)
 import Html.Attributes as Attr exposing (style)
 import Html.Events as Events
 import Http
@@ -591,7 +591,7 @@ view model =
                 KeywordsView ->
                     Element.column [ width fill ]
                         [ viewSwitch model
-                        , Element.html (viewKeywords model)
+                        , viewKeywords model
                         ]
 
                 ScreenView scale ->
@@ -601,7 +601,7 @@ view model =
                         ]
     in
     Element.layout
-        [ width (Element.px model.screenDimensions.w)
+        [ width (Element.px (toFloat model.screenDimensions.w * 0.9 |> floor))
         , Element.Font.family [ Element.Font.typeface "Helvetica Neue", Element.Font.sansSerif ]
         , Element.paddingEach { top = 50, left = 15, bottom = 25, right = 15 }
         ]
@@ -618,7 +618,7 @@ toggleSorting model =
         ]
 
 
-viewKeywords : Model -> Html Msg
+viewKeywords : Model -> Element Msg
 viewKeywords model =
     let
         researchLst =
@@ -661,31 +661,58 @@ viewKeywords model =
             researchLst |> keywords |> filter model.query |> sortf |> List.reverse
 
         keywordCount =
-            "there are: " ++ (List.length keywordLst |> String.fromInt) ++ " keywords."
+            let
+                count =
+                    "there are: " ++ (List.length keywordLst |> String.fromInt) ++ " keywords."
+            in
+            Element.text count
 
         lastDate =
-            findLastDate researchLst |> Iso8601.fromTime |> String.split "T" |> List.head |> Maybe.withDefault "?"
-    in
-    Html.div
-        [ Attr.style "font-family" "Helvetica-Neue"
-        , Attr.style "padding" "2em"
-        , Attr.style "width" "100%"
-        , Attr.style "text-align" "justify"
-        ]
-        [ Html.p [] [ Html.text ("This was generated on: " ++ lastDate) ]
-        , Html.div []
-            [ Html.h1 [] [ Html.text "Keywords" ]
-            , toggleSorting model
-            , Html.p [] [ Html.text keywordCount ]
-            , Html.input [ Attr.placeholder "Search for keyword", Attr.value model.query, Events.onInput ChangedQuery ] []
-            , Html.div [ Attr.style "white-space" "normal" ] <| List.map viewKeyword keywordLst
-            ]
+            let
+                dateStr =
+                    findLastDate researchLst |> Iso8601.fromTime |> String.split "T" |> List.head |> Maybe.withDefault "?"
+            in
+            Element.el [ Element.Font.size 12 ] (Element.text ("last updated: " ++ dateStr))
 
-        -- , Html.div []
-        --     [ Html.h1 [] [ Html.text "titles" ]
-        --     , Html.p [] <| List.map viewTitle researchLst
-        --     ]
+        keywordSearch : Element Msg
+        keywordSearch =
+            Element.Input.search [ width (px 200) ]
+                { onChange = ChangedQuery
+                , text = model.query
+                , placeholder = Just (Element.Input.placeholder [] (Element.text "search for keyword"))
+                , label = Element.Input.labelAbove [] (Element.text "search")
+                }
+    in
+    Element.column [ width fill ]
+        [ Element.row [ Element.spacingXY 50 10, width fill ]
+            [ Element.el [ width shrink ] lastDate
+            , Element.el [ width shrink ] <| Element.html (toggleSorting model)
+            , Element.el [ width shrink ] keywordCount
+            ]
+        , Element.el [ width shrink ] keywordSearch
+        , Element.paragraph [ Element.Font.size 15 ] (List.map (viewKeyword >> Element.html) keywordLst)
         ]
+
+
+
+-- Html.div
+--     [ Attr.style "font-family" "Helvetica-Neue"
+--     --, Attr.style "padding" ""
+--     , Attr.style "width" "100%"
+--     , Attr.style "text-align" "justify"
+--     ]
+--     [ Html.p [] [ Html.text ("This was generated on: " ++ lastDate) ]
+--     , Html.div []
+--         [ Html.h1 [] [ Html.text "Keywords" ]
+--         , toggleSorting model
+--         , Html.p [] [ Html.text keywordCount ]
+--         , Html.input [ Attr.placeholder "Search for keyword", Attr.value model.query, Events.onInput ChangedQuery ] []
+--         , Html.div [ Attr.style "white-space" "normal" ] <| List.map viewKeyword keywordLst
+--         ]
+-- , Html.div []
+--     [ Html.h1 [] [ Html.text "titles" ]
+--     , Html.p [] <| List.map viewTitle researchLst
+--     ]
 
 
 type Author

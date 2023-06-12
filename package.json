@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "elm-watch": "^1.1.0"
+    "elm-watch": "^1.1.2"
   },
   "dependencies": {
     "@power-elements/lazy-image": "^2.2.0"

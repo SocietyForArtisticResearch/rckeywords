@@ -2,9 +2,9 @@ module Main exposing (..)
 
 import Browser
 import Dict exposing (Dict)
-import Element exposing (Element, el, fill, height, padding, px, shrink, spacing, text, width)
+import Element exposing (Element, el, fill, height, padding, px, rgb, shrink, spacing, spacingXY, text, width)
 import Element.Border
-import Element.Font
+import Element.Font as Font
 import Element.Input
 import Element.Region
 import Html exposing (Html, p)
@@ -15,6 +15,7 @@ import Iso8601
 import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
 import Json.Encode as JE
+import List exposing (reverse)
 import RCStyles
 import Random
 import Random.List exposing (shuffle)
@@ -74,13 +75,20 @@ type Scale
 
 
 type View
-    = KeywordsView
+    = KeywordsView KeywordsViewState
     | ListView
     | ScreenView Scale
 
 
+type KeywordsViewState
+    = KeywordMainView
+    | KeywordDetail Keyword -- could be opaque type?
+
+
 type alias Model =
     { research : List Research
+    , reverseKeywordDict : Dict String (List Research) -- keys are Keywords, values are a list of Expositions that have that
+    , keywords : KeywordSet
     , query : String
     , screenDimensions : { w : Int, h : Int }
     , sorting : KeywordSorting
@@ -100,6 +108,7 @@ type Msg
     | NoScreenshot ExpositionID
     | ChangeScreenOrder String
     | ChangeScale String
+    | ShowKeyword Keyword
 
 
 type alias Flags =
@@ -111,10 +120,12 @@ type alias Flags =
 init : Flags -> ( Model, Cmd Msg )
 init { width, height } =
     ( { research = []
+      , reverseKeywordDict = Dict.empty
+      , keywords = emptyKeywordSet
       , query = ""
       , screenDimensions = { w = width, h = height }
       , sorting = ByUse
-      , view = ScreenView Medium
+      , view = KeywordsView KeywordMainView
       , numberOfResults = 8
       , researchSorting = Random
       }
@@ -124,17 +135,33 @@ init { width, height } =
 
 keywords : List Research -> List Keyword
 keywords researchlist =
+    researchlist
+        |> keywordSet
+        |> toList
+
+
+keywordSet : List Research -> KeywordSet
+keywordSet researchlist =
     List.foldr
-        (\research acc ->
-            List.foldr insert acc research.keywords
+        (\research set ->
+            List.foldr insert set research.keywords
         )
         emptyKeywordSet
         researchlist
-        |> toList
 
 
 type Keyword
     = Keyword { count : Int, name : String }
+
+
+kwName : Keyword -> String
+kwName (Keyword kw) =
+    kw.name
+
+
+getCount : Keyword -> Int
+getCount (Keyword kw) =
+    kw.count
 
 
 type KeywordSet
@@ -200,7 +227,16 @@ update msg model =
         GotResearch result ->
             case result of
                 Ok lst ->
-                    ( { model | research = [] }, Random.generate Randomized (shuffle lst) )
+                    let
+                        reverseDict =
+                            reverseKeywordDict lst
+                    in
+                    ( { model
+                        | research = []
+                        , reverseKeywordDict = reverseDict
+                      }
+                    , Random.generate Randomized (shuffle lst)
+                    )
 
                 Err err ->
                     let
@@ -235,7 +271,7 @@ update msg model =
                 v =
                     case str of
                         "keywords" ->
-                            KeywordsView
+                            KeywordsView KeywordMainView
 
                         "list" ->
                             ListView
@@ -247,6 +283,9 @@ update msg model =
                             ListView
             in
             ( { model | view = v }, Cmd.none )
+
+        ShowKeyword kw ->
+            ( { model | view = KeywordsView (KeywordDetail kw) }, Cmd.none )
 
         LoadMore ->
             ( { model | numberOfResults = model.numberOfResults + 16 }, Cmd.none )
@@ -314,9 +353,8 @@ image src description =
         Html.node "lazy-image"
             [ Attr.attribute "src" src
             , Attr.alt <| description
-            , Attr.attribute "width" "100%"
+            , Attr.attribute "width" "100px"
             , Attr.attribute "height" "250px"
-            , Attr.class "cover"
             ]
             []
 
@@ -331,7 +369,7 @@ viewResearch research =
                     Element.el
                         [ Element.centerX
                         , width fill
-                        , Element.height fill
+                        , height (px 200)
                         , Element.paddingXY 0 5
                         ]
                     <|
@@ -356,8 +394,8 @@ viewResearch research =
         , Element.link [ width fill ] <|
             { label =
                 Element.paragraph
-                    [ Element.Font.family [ Element.Font.typeface "Open Sans", Element.Font.sansSerif ]
-                    , Element.Font.size 16
+                    [ Font.family [ Font.typeface "Open Sans", Font.sansSerif ]
+                    , Font.size 16
                     , Element.Region.heading 1
                     , padding 5
                     , width fill
@@ -368,9 +406,9 @@ viewResearch research =
         , Element.link [ width fill ] <|
             { label =
                 Element.paragraph
-                    [ Element.Font.family [ Element.Font.typeface "Open Sans", Element.Font.sansSerif ]
-                    , Element.Font.size 12
-                    , Element.Font.regular
+                    [ Font.family [ Font.typeface "Open Sans", Font.sansSerif ]
+                    , Font.size 12
+                    , Font.regular
                     , Element.Region.heading 2
                     , padding 5
                     , width fill
@@ -381,9 +419,9 @@ viewResearch research =
             }
         , Element.paragraph
             [ padding 5
-            , Element.Font.size 15
-            , Element.Font.light
-            , Element.Font.color <| Element.rgb 0.33 0.33 0.33
+            , Font.size 15
+            , Font.light
+            , Font.color <| Element.rgb 0.33 0.33 0.33
             ]
             [ Element.text
                 short
@@ -513,7 +551,7 @@ viewList model =
             [ Element.Input.button
                 (Element.centerX :: List.map Element.htmlAttribute RCStyles.rcButtonStyle)
                 { onPress = Just LoadMore
-                , label = Element.el [ Element.centerX, Element.Font.size 18 ] <| Element.text "LOAD MORE"
+                , label = Element.el [ Element.centerX, Font.size 18 ] <| Element.text "LOAD MORE"
                 }
             ]
         ]
@@ -542,10 +580,30 @@ viewSwitch model =
                             (isScreenview model)
                         ]
                         [ Html.text "Screenshots" ]
-                    , Html.option [ Attr.value "keywords", Attr.selected (model.view == KeywordsView) ] [ Html.text "Keywords" ]
-                    , Html.option [ Attr.value "list", Attr.selected (model.view == ListView) ] [ Html.text "List" ]
+                    , Html.option [ Attr.value "keywords", Attr.selected (isKeywordView model.view) ] [ Html.text "Keywords" ]
+                    , Html.option [ Attr.value "list", Attr.selected (isListView model.view) ] [ Html.text "List" ]
                     ]
         ]
+
+
+isListView : View -> Bool
+isListView v =
+    case v of
+        ListView ->
+            True
+
+        _ ->
+            False
+
+
+isKeywordView : View -> Bool
+isKeywordView v =
+    case v of
+        KeywordsView _ ->
+            True
+
+        _ ->
+            False
 
 
 screenViewOrderSwitch : Model -> Element Msg
@@ -588,11 +646,16 @@ view model =
                         , viewList model
                         ]
 
-                KeywordsView ->
-                    Element.column [ width fill ]
-                        [ viewSwitch model
-                        , viewKeywords model
-                        ]
+                KeywordsView kwtype ->
+                    case kwtype of
+                        KeywordMainView ->
+                            Element.column [ width fill ]
+                                [ viewSwitch model
+                                , viewKeywords model
+                                ]
+
+                        KeywordDetail k ->
+                            viewKeywordDetail k model
 
                 ScreenView scale ->
                     Element.column [ width fill ]
@@ -602,7 +665,7 @@ view model =
     in
     Element.layout
         [ width (Element.px (toFloat model.screenDimensions.w * 0.9 |> floor))
-        , Element.Font.family [ Element.Font.typeface "Helvetica Neue", Element.Font.sansSerif ]
+        , Font.family [ Font.typeface "Helvetica Neue", Font.sansSerif ]
         , Element.paddingEach { top = 50, left = 15, bottom = 25, right = 15 }
         ]
     <|
@@ -618,6 +681,81 @@ toggleSorting model =
         ]
 
 
+viewKeywordDetail : Keyword -> Model -> Element Msg
+viewKeywordDetail kw model =
+    let
+        researchWithKeyword =
+            Dict.get (kwName kw) model.reverseKeywordDict |> Maybe.withDefault []
+
+        -- the keywords that research with the same keyword uses:
+        relatedKeywords =
+            Debug.todo "implement keyword lookup"
+
+        --researchWithKeyword |> List.map (\r -> r.keywords)
+        viewRelatedKeyword : Keyword -> Element Msg
+        viewRelatedKeyword rkw =
+            Element.Input.button [] { onPress = Just (ShowKeyword rkw), label = Element.text (kwName rkw) }
+    in
+    -- generate a simple layout with two columns using Element
+    Element.column [ width fill, Element.spacingXY 0 25 ]
+        [ Element.row [ Element.spacing 25, width fill ] [ viewSwitch model, screenViewOrderSwitch model ]
+        , Element.Input.button [] { onPress = Just (SwitchView "keywords"), label = Element.text "Back" }
+        , Element.paragraph [ Font.size 36, padding 25, width fill ] [ Element.text (kwName kw), Element.text (getCount kw |> String.fromInt) ]
+        , Element.paragraph [ Font.size 18 ] (List.map viewRelatedKeyword relatedKeywords)
+        , researchWithKeyword |> List.map viewResearch |> makeColumns 3 [ width fill, spacing 25, Element.paddingXY 0 25 ]
+        ]
+
+
+viewKeywordAsButton : Keyword -> Element Msg
+viewKeywordAsButton (Keyword k) =
+    let
+        name =
+            k.name
+
+        count =
+            k.count
+    in
+    Element.row
+        [ Element.spacing 5
+        , Element.padding 5
+        , Element.Border.solid
+        , Element.Border.color (rgb 0.0 0.0 0.0)
+        , Element.Border.width 1
+        , width fill
+        ]
+        [ Element.Input.button [ Font.color (rgb 0.0 0.0 1.0) ]
+            { onPress = Just (ShowKeyword (Keyword k))
+            , label = Element.paragraph [ Element.centerX, Font.size 18 ] <| [ Element.el [ width fill ] <| Element.text name ]
+            }
+        , Element.el [ width fill, Element.alignLeft ] (Element.text (count |> String.fromInt))
+        ]
+
+
+viewKeywordAsLink : Keyword -> Element Msg
+viewKeywordAsLink (Keyword kw) =
+    let
+        pixels =
+            if kw.count > 12 then
+                12 + kw.count
+
+            else
+                12 + kw.count
+    in
+    Html.span
+        [-- Attr.style "font-size" ((pixels |> String.fromInt) ++ "px")
+        ]
+        [ Html.a
+            [ Attr.href (searchLink kw.name)
+            , Attr.style "display" "inline-block"
+            , Attr.style "padding" "1em"
+            , Attr.style "font-size" "1em"
+            ]
+            [ Html.text kw.name ]
+        , Html.span [ Attr.style "font-size" "1em" ] [ Html.text <| (kw.count |> String.fromInt) ]
+        ]
+        |> Element.html
+
+
 viewKeywords : Model -> Element Msg
 viewKeywords model =
     let
@@ -626,28 +764,6 @@ viewKeywords model =
 
         viewTitle r =
             Html.p [] [ Html.text r.title ]
-
-        viewKeyword (Keyword kw) =
-            let
-                pixels =
-                    if kw.count > 12 then
-                        12 + kw.count
-
-                    else
-                        12 + kw.count
-            in
-            Html.span
-                [-- Attr.style "font-size" ((pixels |> String.fromInt) ++ "px")
-                ]
-                [ Html.a
-                    [ Attr.href (searchLink kw.name)
-                    , Attr.style "display" "inline-block"
-                    , Attr.style "padding" "1em"
-                    , Attr.style "font-size" "1em"
-                    ]
-                    [ Html.text kw.name ]
-                , Html.span [ Attr.style "font-size" "1em" ] [ Html.text <| (kw.count |> String.fromInt) ]
-                ]
 
         sortf =
             case model.sorting of
@@ -672,7 +788,7 @@ viewKeywords model =
                 dateStr =
                     findLastDate researchLst |> Iso8601.fromTime |> String.split "T" |> List.head |> Maybe.withDefault "?"
             in
-            Element.el [ Element.Font.size 12 ] (Element.text ("last updated: " ++ dateStr))
+            Element.el [ Font.size 12 ] (Element.text ("last updated: " ++ dateStr))
 
         keywordSearch : Element Msg
         keywordSearch =
@@ -690,8 +806,17 @@ viewKeywords model =
             , Element.el [ width shrink ] keywordCount
             ]
         , Element.el [ width shrink ] keywordSearch
-        , Element.paragraph [ Element.Font.size 15 ] (List.map (viewKeyword >> Element.html) keywordLst)
+        , List.map viewKeywordAsButton keywordLst |> makeColumns 4 [ width fill, spacing 25, Element.paddingXY 25 25 ]
         ]
+
+
+makeColumns : Int -> List (Element.Attribute Msg) -> List (Element Msg) -> Element Msg
+makeColumns n attrs lst =
+    Element.column attrs
+        (lst
+            |> makeNumColumns n
+            |> List.map (\rowItems -> Element.row [ width fill, spacing 25 ] rowItems)
+        )
 
 
 
@@ -961,3 +1086,60 @@ viewScreenshots scale model =
         , Html.div []
             (List.map viewGroup groups)
         ]
+
+
+
+-- this function creates a dictionary of all keywords and the research that have them
+
+
+reverseKeywordDict : List Research -> Dict String (List Research)
+reverseKeywordDict research =
+    let
+        addExpToKeyword : Research -> String -> Dict String (List Research) -> Dict String (List Research)
+        addExpToKeyword exposition keyword currentDict =
+            Dict.update keyword
+                (\value ->
+                    case value of
+                        Nothing ->
+                            Just [ exposition ]
+
+                        Just lst ->
+                            Just (exposition :: lst)
+                )
+                currentDict
+
+        addResearchToDict exp currentDict =
+            -- this exposition has keywords k1 k2 k3
+            List.foldl (addExpToKeyword exp) currentDict exp.keywords
+    in
+    List.foldl addResearchToDict Dict.empty research
+
+
+viewNeighbors : Research -> Dict String (List Research) -> Element Msg
+viewNeighbors research reverseDict =
+    let
+        collected kw =
+            Element.column []
+                (Element.text ("keyword :" ++ kw)
+                    :: (Dict.get kw reverseDict
+                            |> Maybe.map (List.map viewResearch)
+                            |> Maybe.withDefault [ Element.text "no other" ]
+                       )
+                )
+    in
+    Element.row []
+        (List.map collected research.keywords)
+
+
+makeNumColumns : Int -> List a -> List (List a)
+makeNumColumns num input =
+    let
+        f n inp acc =
+            case inp of
+                [] ->
+                    acc
+
+                x :: xs ->
+                    List.take num (x :: xs) :: f n (List.drop n (x :: xs)) acc
+    in
+    f num input []

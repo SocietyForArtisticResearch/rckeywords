@@ -168,6 +168,11 @@ type KeywordSet
     = KeywordSet (Dict String Keyword)
 
 
+find : String -> KeywordSet -> Maybe Keyword
+find keywordStr (KeywordSet dict) =
+    Dict.get keywordStr dict
+
+
 toList : KeywordSet -> List Keyword
 toList (KeywordSet kwSet) =
     Dict.toList kwSet |> List.map (\( _, keyword ) -> keyword)
@@ -234,7 +239,7 @@ update msg model =
                     ( { model
                         | research = []
                         , reverseKeywordDict = reverseDict
-                        , keywords = keywordSet lst 
+                        , keywords = keywordSet lst
                       }
                     , Random.generate Randomized (shuffle lst)
                     )

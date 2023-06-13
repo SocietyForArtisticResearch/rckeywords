@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1686649086985"
+    "1686665692838"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -8645,7 +8645,6 @@ var $elm$core$Task$perform = F2(
 	});
 var $elm$browser$Browser$element = _Browser_element;
 var $elm$json$Json$Decode$field = _Json_decodeField;
-var $author$project$Main$ByUse = {$: 'ByUse'};
 var $author$project$Main$GotResearch = function (a) {
 	return {$: 'GotResearch', a: a};
 };
@@ -8654,6 +8653,7 @@ var $author$project$Main$KeywordsView = function (a) {
 	return {$: 'KeywordsView', a: a};
 };
 var $author$project$Main$Random = {$: 'Random'};
+var $author$project$Main$RandomKeyword = {$: 'RandomKeyword'};
 var $author$project$Main$Author = function (a) {
 	return {$: 'Author', a: a};
 };
@@ -9587,6 +9587,8 @@ var $author$project$Main$init = function (_v0) {
 	var height = _v0.height;
 	return _Utils_Tuple2(
 		{
+			keywordLst: _List_Nil,
+			keywordSorting: $author$project$Main$RandomKeyword,
 			keywords: $author$project$Main$emptyKeywordSet,
 			numberOfResults: 8,
 			query: '',
@@ -9594,7 +9596,6 @@ var $author$project$Main$init = function (_v0) {
 			researchSorting: $author$project$Main$Random,
 			reverseKeywordDict: $elm$core$Dict$empty,
 			screenDimensions: {h: height, w: width},
-			sorting: $author$project$Main$ByUse,
 			view: $author$project$Main$KeywordsView($author$project$Main$KeywordMainView)
 		},
 		$elm$http$Http$get(
@@ -9608,12 +9609,20 @@ var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $author$project$Main$subscriptions = function (_v0) {
 	return $elm$core$Platform$Sub$none;
 };
-var $author$project$Main$Alphabetical = {$: 'Alphabetical'};
+var $author$project$Main$GotRandomKeyword = function (a) {
+	return {$: 'GotRandomKeyword', a: a};
+};
 var $author$project$Main$KeywordDetail = function (a) {
 	return {$: 'KeywordDetail', a: a};
 };
 var $author$project$Main$Large = {$: 'Large'};
-var $author$project$Main$ListView = {$: 'ListView'};
+var $author$project$Main$ListView = function (a) {
+	return {$: 'ListView', a: a};
+};
+var $author$project$Main$ListViewDetail = function (a) {
+	return {$: 'ListViewDetail', a: a};
+};
+var $author$project$Main$ListViewMain = {$: 'ListViewMain'};
 var $author$project$Main$Medium = {$: 'Medium'};
 var $author$project$Main$Micro = {$: 'Micro'};
 var $author$project$Main$NewestFirst = {$: 'NewestFirst'};
@@ -9625,6 +9634,7 @@ var $author$project$Main$ScreenView = function (a) {
 	return {$: 'ScreenView', a: a};
 };
 var $author$project$Main$Small = {$: 'Small'};
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$random$Random$Generate = function (a) {
 	return {$: 'Generate', a: a};
 };
@@ -9732,6 +9742,10 @@ var $elm$random$Random$generate = F2(
 			$elm$random$Random$Generate(
 				A2($elm$random$Random$map, tagger, generator)));
 	});
+var $author$project$Main$getCount = function (_v0) {
+	var kw = _v0.a;
+	return kw.count;
+};
 var $author$project$Main$Keyword = function (a) {
 	return {$: 'Keyword', a: a};
 };
@@ -9778,8 +9792,11 @@ var $author$project$Main$keywordSet = function (researchlist) {
 		$author$project$Main$emptyKeywordSet,
 		researchlist);
 };
+var $author$project$Main$kwName = function (_v0) {
+	var kw = _v0.a;
+	return kw.name;
+};
 var $elm$core$Debug$log = _Debug_log;
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Main$reverseKeywordDict = function (research) {
 	var addExpToKeyword = F3(
@@ -9936,6 +9953,16 @@ var $author$project$Main$shuffleResearch = function (model) {
 			$author$project$Main$Randomized,
 			$elm_community$random_extra$Random$List$shuffle(model.research)));
 };
+var $author$project$Main$toList = function (_v0) {
+	var kwSet = _v0.a;
+	return A2(
+		$elm$core$List$map,
+		function (_v1) {
+			var keyword = _v1.b;
+			return keyword;
+		},
+		$elm$core$Dict$toList(kwSet));
+};
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -9944,18 +9971,24 @@ var $author$project$Main$update = F2(
 				if (result.$ === 'Ok') {
 					var lst = result.a;
 					var reverseDict = $author$project$Main$reverseKeywordDict(lst);
+					var ks = $author$project$Main$keywordSet(lst);
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{
-								keywords: $author$project$Main$keywordSet(lst),
-								research: _List_Nil,
-								reverseKeywordDict: reverseDict
-							}),
-						A2(
-							$elm$random$Random$generate,
-							$author$project$Main$Randomized,
-							$elm_community$random_extra$Random$List$shuffle(lst)));
+							{keywordLst: _List_Nil, keywords: ks, research: _List_Nil, reverseKeywordDict: reverseDict}),
+						$elm$core$Platform$Cmd$batch(
+							_List_fromArray(
+								[
+									A2(
+									$elm$random$Random$generate,
+									$author$project$Main$Randomized,
+									$elm_community$random_extra$Random$List$shuffle(lst)),
+									A2(
+									$elm$random$Random$generate,
+									$author$project$Main$GotRandomKeyword,
+									$elm_community$random_extra$Random$List$shuffle(
+										$author$project$Main$toList(ks)))
+								])));
 				} else {
 					var err = result.a;
 					var _v2 = A2($elm$core$Debug$log, 'whoops, error: ', err);
@@ -9981,26 +10014,33 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'SetSorting':
 				var sort = msg.a;
-				var _v3 = A2($elm$core$Debug$log, 'what', sort);
 				switch (sort) {
 					case 'ByUse':
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
-								{sorting: $author$project$Main$ByUse}),
+								{
+									keywordLst: $elm$core$List$reverse(
+										A2($elm$core$List$sortBy, $author$project$Main$getCount, model.keywordLst))
+								}),
 							$elm$core$Platform$Cmd$none);
 					case 'Alphabetical':
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
-								{sorting: $author$project$Main$Alphabetical}),
+								{
+									keywordLst: A2($elm$core$List$sortBy, $author$project$Main$kwName, model.keywordLst)
+								}),
 							$elm$core$Platform$Cmd$none);
-					default:
+					case 'Random':
 						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{sorting: $author$project$Main$Alphabetical}),
-							$elm$core$Platform$Cmd$none);
+							model,
+							A2(
+								$elm$random$Random$generate,
+								$author$project$Main$GotRandomKeyword,
+								$elm_community$random_extra$Random$List$shuffle(model.keywordLst)));
+					default:
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 			case 'SwitchView':
 				var str = msg.a;
@@ -10009,11 +10049,11 @@ var $author$project$Main$update = F2(
 						case 'keywords':
 							return $author$project$Main$KeywordsView($author$project$Main$KeywordMainView);
 						case 'list':
-							return $author$project$Main$ListView;
+							return $author$project$Main$ListView($author$project$Main$ListViewMain);
 						case 'screenshots':
 							return $author$project$Main$ScreenView($author$project$Main$Medium);
 						default:
-							return $author$project$Main$ListView;
+							return $author$project$Main$ListView($author$project$Main$ListViewMain);
 					}
 				}();
 				return _Utils_Tuple2(
@@ -10039,7 +10079,7 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'NoScreenshot':
 				var id = msg.a;
-				var _v6 = A2($elm$core$Debug$log, 'no screenshot for', id);
+				var _v5 = A2($elm$core$Debug$log, 'no screenshot for', id);
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			case 'ChangeScreenOrder':
 				var order = msg.a;
@@ -10088,7 +10128,7 @@ var $author$project$Main$update = F2(
 								model,
 								{researchSorting: $author$project$Main$Random}));
 				}
-			default:
+			case 'ChangeScale':
 				var str = msg.a;
 				switch (str) {
 					case 'micro':
@@ -10126,6 +10166,23 @@ var $author$project$Main$update = F2(
 					default:
 						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
+			case 'ShowResearchDetail':
+				var exp = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							view: $author$project$Main$ListView(
+								$author$project$Main$ListViewDetail(exp))
+						}),
+					$elm$core$Platform$Cmd$none);
+			default:
+				var lst = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{keywordLst: lst}),
+					$elm$core$Platform$Cmd$none);
 		}
 	});
 var $mdgriffith$elm_ui$Internal$Model$Unkeyed = function (a) {
@@ -16122,9 +16179,6 @@ var $author$project$Main$screenViewOrderSwitch = function (model) {
 			]));
 };
 var $mdgriffith$elm_ui$Element$Font$typeface = $mdgriffith$elm_ui$Internal$Model$Typeface;
-var $author$project$Main$ShowKeyword = function (a) {
-	return {$: 'ShowKeyword', a: a};
-};
 var $author$project$Main$SwitchView = function (a) {
 	return {$: 'SwitchView', a: a};
 };
@@ -16268,10 +16322,6 @@ var $mdgriffith$elm_ui$Element$Input$button = F2(
 				_List_fromArray(
 					[label])));
 	});
-var $author$project$Main$getCount = function (_v0) {
-	var kw = _v0.a;
-	return kw.count;
-};
 var $author$project$Main$find = F2(
 	function (keywordStr, _v0) {
 		var dict = _v0.a;
@@ -16297,10 +16347,6 @@ var $author$project$Main$getKeywordsOfResearch = F2(
 				},
 				research.keywords));
 	});
-var $author$project$Main$kwName = function (_v0) {
-	var kw = _v0.a;
-	return kw.name;
-};
 var $elm$core$List$drop = F2(
 	function (n, list) {
 		drop:
@@ -16494,19 +16540,6 @@ var $author$project$Main$makeColumns = F3(
 				},
 				A2($author$project$Main$makeNumColumns, n, lst)));
 	});
-var $mdgriffith$elm_ui$Element$padding = function (x) {
-	var f = x;
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$padding,
-		A5(
-			$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
-			'p-' + $elm$core$String$fromInt(x),
-			f,
-			f,
-			f,
-			f));
-};
 var $mdgriffith$elm_ui$Element$paddingXY = F2(
 	function (x, y) {
 		if (_Utils_eq(x, y)) {
@@ -16536,6 +16569,123 @@ var $mdgriffith$elm_ui$Element$paddingXY = F2(
 					xFloat));
 		}
 	});
+var $mdgriffith$elm_ui$Element$Font$size = function (i) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$fontSize,
+		$mdgriffith$elm_ui$Internal$Model$FontSize(i));
+};
+var $mdgriffith$elm_ui$Element$spacingXY = F2(
+	function (x, y) {
+		return A2(
+			$mdgriffith$elm_ui$Internal$Model$StyleClass,
+			$mdgriffith$elm_ui$Internal$Flag$spacing,
+			A3(
+				$mdgriffith$elm_ui$Internal$Model$SpacingStyle,
+				A2($mdgriffith$elm_ui$Internal$Model$spacingName, x, y),
+				x,
+				y));
+	});
+var $elm$core$List$member = F2(
+	function (x, xs) {
+		return A2(
+			$elm$core$List$any,
+			function (a) {
+				return _Utils_eq(a, x);
+			},
+			xs);
+	});
+var $elm_community$list_extra$List$Extra$uniqueHelp = F4(
+	function (f, existing, remaining, accumulator) {
+		uniqueHelp:
+		while (true) {
+			if (!remaining.b) {
+				return $elm$core$List$reverse(accumulator);
+			} else {
+				var first = remaining.a;
+				var rest = remaining.b;
+				var computedFirst = f(first);
+				if (A2($elm$core$List$member, computedFirst, existing)) {
+					var $temp$f = f,
+						$temp$existing = existing,
+						$temp$remaining = rest,
+						$temp$accumulator = accumulator;
+					f = $temp$f;
+					existing = $temp$existing;
+					remaining = $temp$remaining;
+					accumulator = $temp$accumulator;
+					continue uniqueHelp;
+				} else {
+					var $temp$f = f,
+						$temp$existing = A2($elm$core$List$cons, computedFirst, existing),
+						$temp$remaining = rest,
+						$temp$accumulator = A2($elm$core$List$cons, first, accumulator);
+					f = $temp$f;
+					existing = $temp$existing;
+					remaining = $temp$remaining;
+					accumulator = $temp$accumulator;
+					continue uniqueHelp;
+				}
+			}
+		}
+	});
+var $elm_community$list_extra$List$Extra$unique = function (list) {
+	return A4($elm_community$list_extra$List$Extra$uniqueHelp, $elm$core$Basics$identity, _List_Nil, list, _List_Nil);
+};
+var $author$project$Main$ShowKeyword = function (a) {
+	return {$: 'ShowKeyword', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
+	return {$: 'AlignX', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
+var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
+var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
+var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
+var $mdgriffith$elm_ui$Element$Background$color = function (clr) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$bgColor,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Colored,
+			'bg-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
+			'background-color',
+			clr));
+};
+var $mdgriffith$elm_ui$Internal$Flag$borderColor = $mdgriffith$elm_ui$Internal$Flag$flag(28);
+var $mdgriffith$elm_ui$Element$Border$color = function (clr) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$borderColor,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Colored,
+			'bc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
+			'border-color',
+			clr));
+};
+var $mdgriffith$elm_ui$Element$Font$color = function (fontColor) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$fontColor,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Colored,
+			'fc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(fontColor),
+			'color',
+			fontColor));
+};
+var $mdgriffith$elm_ui$Element$padding = function (x) {
+	var f = x;
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$padding,
+		A5(
+			$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
+			'p-' + $elm$core$String$fromInt(x),
+			f,
+			f,
+			f,
+			f));
+};
 var $mdgriffith$elm_ui$Internal$Model$Paragraph = {$: 'Paragraph'};
 var $mdgriffith$elm_ui$Element$paragraph = F2(
 	function (attrs, children) {
@@ -16555,22 +16705,95 @@ var $mdgriffith$elm_ui$Element$paragraph = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
-var $mdgriffith$elm_ui$Element$Font$size = function (i) {
+var $mdgriffith$elm_ui$Element$rgb = F3(
+	function (r, g, b) {
+		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, r, g, b, 1);
+	});
+var $mdgriffith$elm_ui$Element$rgb255 = F3(
+	function (red, green, blue) {
+		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, red / 255, green / 255, blue / 255, 1);
+	});
+var $mdgriffith$elm_ui$Internal$Flag$borderStyle = $mdgriffith$elm_ui$Internal$Flag$flag(11);
+var $mdgriffith$elm_ui$Element$Border$solid = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$borderStyle, $mdgriffith$elm_ui$Internal$Style$classes.borderSolid);
+var $mdgriffith$elm_ui$Internal$Model$BorderWidth = F5(
+	function (a, b, c, d, e) {
+		return {$: 'BorderWidth', a: a, b: b, c: c, d: d, e: e};
+	});
+var $mdgriffith$elm_ui$Element$Border$width = function (v) {
 	return A2(
 		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$fontSize,
-		$mdgriffith$elm_ui$Internal$Model$FontSize(i));
+		$mdgriffith$elm_ui$Internal$Flag$borderWidth,
+		A5(
+			$mdgriffith$elm_ui$Internal$Model$BorderWidth,
+			'b-' + $elm$core$String$fromInt(v),
+			v,
+			v,
+			v,
+			v));
 };
-var $mdgriffith$elm_ui$Element$spacingXY = F2(
-	function (x, y) {
+var $author$project$Main$viewKeywordAsButton = F2(
+	function (fontsize, _v0) {
+		var k = _v0.a;
+		var name = k.name;
+		var count = k.count;
 		return A2(
-			$mdgriffith$elm_ui$Internal$Model$StyleClass,
-			$mdgriffith$elm_ui$Internal$Flag$spacing,
-			A3(
-				$mdgriffith$elm_ui$Internal$Model$SpacingStyle,
-				A2($mdgriffith$elm_ui$Internal$Model$spacingName, x, y),
-				x,
-				y));
+			$mdgriffith$elm_ui$Element$row,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$spacing(5),
+					$mdgriffith$elm_ui$Element$padding(5),
+					$mdgriffith$elm_ui$Element$Border$solid,
+					$mdgriffith$elm_ui$Element$Border$color(
+					A3($mdgriffith$elm_ui$Element$rgb255, 144, 144, 144)),
+					$mdgriffith$elm_ui$Element$Border$width(1),
+					$mdgriffith$elm_ui$Element$Background$color(
+					A3($mdgriffith$elm_ui$Element$rgb255, 250, 250, 250)),
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$mdgriffith$elm_ui$Element$Input$button,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Font$color(
+							A3($mdgriffith$elm_ui$Element$rgb, 0.0, 0.0, 1.0)),
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+						]),
+					{
+						label: A2(
+							$mdgriffith$elm_ui$Element$paragraph,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$centerX,
+									$mdgriffith$elm_ui$Element$Font$size(fontsize)
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$mdgriffith$elm_ui$Element$el,
+									_List_fromArray(
+										[
+											$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+										]),
+									$mdgriffith$elm_ui$Element$text(name))
+								])),
+						onPress: $elm$core$Maybe$Just(
+							$author$project$Main$ShowKeyword(
+								$author$project$Main$Keyword(k)))
+					}),
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width(
+							$mdgriffith$elm_ui$Element$px(25)),
+							$mdgriffith$elm_ui$Element$alignRight,
+							$mdgriffith$elm_ui$Element$Font$size(fontsize)
+						]),
+					$mdgriffith$elm_ui$Element$text(
+						$elm$core$String$fromInt(count)))
+				]));
 	});
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $author$project$Main$authorAsString = function (_v0) {
@@ -16581,23 +16804,8 @@ var $author$project$Main$authorUrl = function (_v0) {
 	var a = _v0.a;
 	return 'https://www.researchcatalogue.net/profile/?person=' + $elm$core$String$fromInt(a.id);
 };
-var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
-	return {$: 'AlignX', a: a};
-};
-var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
-var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
 var $mdgriffith$elm_ui$Internal$Flag$overflow = $mdgriffith$elm_ui$Internal$Flag$flag(20);
 var $mdgriffith$elm_ui$Element$clip = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$overflow, $mdgriffith$elm_ui$Internal$Style$classes.clip);
-var $mdgriffith$elm_ui$Element$Font$color = function (fontColor) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$fontColor,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Colored,
-			'fc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(fontColor),
-			'color',
-			fontColor));
-};
 var $mdgriffith$elm_ui$Internal$Model$Heading = function (a) {
 	return {$: 'Heading', a: a};
 };
@@ -16677,10 +16885,6 @@ var $elm$core$Maybe$map2 = F3(
 var $mdgriffith$elm_ui$Internal$Model$Empty = {$: 'Empty'};
 var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
 var $mdgriffith$elm_ui$Element$Font$regular = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textNormalWeight);
-var $mdgriffith$elm_ui$Element$rgb = F3(
-	function (r, g, b) {
-		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, r, g, b, 1);
-	});
 var $author$project$Main$listAndThen = F2(
 	function (f, lst) {
 		return $elm$core$List$concat(
@@ -16905,20 +17109,6 @@ var $author$project$Main$viewSwitch = function (model) {
 };
 var $author$project$Main$viewKeywordDetail = F2(
 	function (kw, model) {
-		var viewRelatedKeyword = function (rkw) {
-			return A2(
-				$mdgriffith$elm_ui$Element$Input$button,
-				_List_fromArray(
-					[
-						A2($mdgriffith$elm_ui$Element$paddingXY, 10, 0)
-					]),
-				{
-					label: $mdgriffith$elm_ui$Element$text(
-						$author$project$Main$kwName(rkw)),
-					onPress: $elm$core$Maybe$Just(
-						$author$project$Main$ShowKeyword(rkw))
-				});
-		};
 		var researchWithKeyword = A2(
 			$elm$core$Maybe$withDefault,
 			_List_Nil,
@@ -16926,16 +17116,21 @@ var $author$project$Main$viewKeywordDetail = F2(
 				$elm$core$Dict$get,
 				$author$project$Main$kwName(kw),
 				model.reverseKeywordDict));
-		var relatedKeywords = A2(
-			$elm$core$List$concatMap,
-			$author$project$Main$getKeywordsOfResearch(model.keywords),
-			researchWithKeyword);
+		var relatedKeywords = $elm$core$List$reverse(
+			A2(
+				$elm$core$List$sortBy,
+				$author$project$Main$getCount,
+				$elm_community$list_extra$List$Extra$unique(
+					A2(
+						$elm$core$List$concatMap,
+						$author$project$Main$getKeywordsOfResearch(model.keywords),
+						researchWithKeyword))));
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					A2($mdgriffith$elm_ui$Element$spacingXY, 0, 25)
+					A2($mdgriffith$elm_ui$Element$spacingXY, 0, 0)
 				]),
 			_List_fromArray(
 				[
@@ -16943,7 +17138,7 @@ var $author$project$Main$viewKeywordDetail = F2(
 					$mdgriffith$elm_ui$Element$row,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$spacing(25),
+							A2($mdgriffith$elm_ui$Element$spacingXY, 0, 25),
 							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
 						]),
 					_List_fromArray(
@@ -16960,31 +17155,45 @@ var $author$project$Main$viewKeywordDetail = F2(
 							$author$project$Main$SwitchView('keywords'))
 					}),
 					A2(
-					$mdgriffith$elm_ui$Element$paragraph,
+					$mdgriffith$elm_ui$Element$column,
 					_List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$Font$size(36),
-							$mdgriffith$elm_ui$Element$padding(25),
+							A2($mdgriffith$elm_ui$Element$paddingXY, 0, 25),
 							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
 						]),
 					_List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$text(
 							$author$project$Main$kwName(kw)),
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$Font$size(14)
+								]),
 							$mdgriffith$elm_ui$Element$text(
-							$elm$core$String$fromInt(
-								$author$project$Main$getCount(kw)))
+								$elm$core$String$fromInt(
+									$author$project$Main$getCount(kw)) + ' expositions use this keyword'))
 						])),
 					A2(
-					$mdgriffith$elm_ui$Element$paragraph,
+					$mdgriffith$elm_ui$Element$el,
+					_List_Nil,
+					$mdgriffith$elm_ui$Element$text('related keywords : ')),
+					A3(
+					$author$project$Main$makeColumns,
+					6,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$Font$size(18)
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							$mdgriffith$elm_ui$Element$spacing(5),
+							A2($mdgriffith$elm_ui$Element$paddingXY, 0, 25),
+							$mdgriffith$elm_ui$Element$Font$size(9)
 						]),
 					A2(
-						$elm$core$List$cons,
-						$mdgriffith$elm_ui$Element$text('related keywords --- '),
-						A2($elm$core$List$map, viewRelatedKeyword, relatedKeywords))),
+						$elm$core$List$map,
+						$author$project$Main$viewKeywordAsButton(15),
+						A2($elm$core$List$take, 12, relatedKeywords))),
 					A3(
 					$author$project$Main$makeColumns,
 					3,
@@ -17000,19 +17209,6 @@ var $author$project$Main$viewKeywordDetail = F2(
 var $author$project$Main$ChangedQuery = function (a) {
 	return {$: 'ChangedQuery', a: a};
 };
-var $author$project$Main$filter = F2(
-	function (query, lst) {
-		return A2(
-			$elm$core$List$filter,
-			function (_v0) {
-				var kw = _v0.a;
-				return A2(
-					$elm$core$String$contains,
-					$elm$core$String$toLower(query),
-					$elm$core$String$toLower(kw.name));
-			},
-			lst);
-	});
 var $elm$core$Maybe$andThen = F2(
 	function (callback, maybeValue) {
 		if (maybeValue.$ === 'Just') {
@@ -18071,20 +18267,6 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$fromTime = function (time) {
 		3,
 		A2($elm$time$Time$toMillis, $elm$time$Time$utc, time)) + 'Z'))))))))))));
 };
-var $author$project$Main$toList = function (_v0) {
-	var kwSet = _v0.a;
-	return A2(
-		$elm$core$List$map,
-		function (_v1) {
-			var keyword = _v1.b;
-			return keyword;
-		},
-		$elm$core$Dict$toList(kwSet));
-};
-var $author$project$Main$keywords = function (researchlist) {
-	return $author$project$Main$toList(
-		$author$project$Main$keywordSet(researchlist));
-};
 var $mdgriffith$elm_ui$Element$Input$Above = {$: 'Above'};
 var $mdgriffith$elm_ui$Element$Input$Label = F3(
 	function (a, b, c) {
@@ -18237,27 +18419,6 @@ var $mdgriffith$elm_ui$Element$Input$calcMoveToCompensateForPadding = function (
 			$elm$core$Basics$floor(vSpace / 2));
 	}
 };
-var $mdgriffith$elm_ui$Element$Background$color = function (clr) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$bgColor,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Colored,
-			'bg-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
-			'background-color',
-			clr));
-};
-var $mdgriffith$elm_ui$Internal$Flag$borderColor = $mdgriffith$elm_ui$Internal$Flag$flag(28);
-var $mdgriffith$elm_ui$Element$Border$color = function (clr) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderColor,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Colored,
-			'bc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
-			'border-color',
-			clr));
-};
 var $mdgriffith$elm_ui$Element$Input$darkGrey = A3($mdgriffith$elm_ui$Element$rgb, 186 / 255, 189 / 255, 182 / 255);
 var $mdgriffith$elm_ui$Element$Input$defaultTextPadding = A2($mdgriffith$elm_ui$Element$paddingXY, 12, 12);
 var $mdgriffith$elm_ui$Internal$Flag$borderRound = $mdgriffith$elm_ui$Internal$Flag$flag(17);
@@ -18272,22 +18433,6 @@ var $mdgriffith$elm_ui$Element$Border$rounded = function (radius) {
 			$elm$core$String$fromInt(radius) + 'px'));
 };
 var $mdgriffith$elm_ui$Element$Input$white = A3($mdgriffith$elm_ui$Element$rgb, 1, 1, 1);
-var $mdgriffith$elm_ui$Internal$Model$BorderWidth = F5(
-	function (a, b, c, d, e) {
-		return {$: 'BorderWidth', a: a, b: b, c: c, d: d, e: e};
-	});
-var $mdgriffith$elm_ui$Element$Border$width = function (v) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderWidth,
-		A5(
-			$mdgriffith$elm_ui$Internal$Model$BorderWidth,
-			'b-' + $elm$core$String$fromInt(v),
-			v,
-			v,
-			v,
-			v));
-};
 var $mdgriffith$elm_ui$Element$Input$defaultTextBoxStyle = _List_fromArray(
 	[
 		$mdgriffith$elm_ui$Element$Input$defaultTextPadding,
@@ -18941,6 +19086,8 @@ var $mdgriffith$elm_ui$Element$Input$search = $mdgriffith$elm_ui$Element$Input$t
 		spellchecked: false,
 		type_: $mdgriffith$elm_ui$Element$Input$TextInputNode('search')
 	});
+var $author$project$Main$Alphabetical = {$: 'Alphabetical'};
+var $author$project$Main$ByUse = {$: 'ByUse'};
 var $author$project$Main$SetSorting = function (a) {
 	return {$: 'SetSorting', a: a};
 };
@@ -18957,7 +19104,9 @@ var $author$project$Main$toggleSorting = function (model) {
 				$elm$html$Html$option,
 				_List_fromArray(
 					[
-						$elm$html$Html$Attributes$value('ByUse')
+						$elm$html$Html$Attributes$value('ByUse'),
+						$elm$html$Html$Attributes$selected(
+						_Utils_eq(model.keywordSorting, $author$project$Main$ByUse))
 					]),
 				_List_fromArray(
 					[
@@ -18967,74 +19116,26 @@ var $author$project$Main$toggleSorting = function (model) {
 				$elm$html$Html$option,
 				_List_fromArray(
 					[
-						$elm$html$Html$Attributes$value('Alphabetical')
+						$elm$html$Html$Attributes$value('Alphabetical'),
+						$elm$html$Html$Attributes$selected(
+						_Utils_eq(model.keywordSorting, $author$project$Main$Alphabetical))
 					]),
 				_List_fromArray(
 					[
 						$elm$html$Html$text('Alphabetical')
+					])),
+				A2(
+				$elm$html$Html$option,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$value('Random'),
+						$elm$html$Html$Attributes$selected(
+						_Utils_eq(model.keywordSorting, $author$project$Main$RandomKeyword))
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Random')
 					]))
-			]));
-};
-var $mdgriffith$elm_ui$Internal$Model$Left = {$: 'Left'};
-var $mdgriffith$elm_ui$Element$alignLeft = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Left);
-var $mdgriffith$elm_ui$Internal$Flag$borderStyle = $mdgriffith$elm_ui$Internal$Flag$flag(11);
-var $mdgriffith$elm_ui$Element$Border$solid = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$borderStyle, $mdgriffith$elm_ui$Internal$Style$classes.borderSolid);
-var $author$project$Main$viewKeywordAsButton = function (_v0) {
-	var k = _v0.a;
-	var name = k.name;
-	var count = k.count;
-	return A2(
-		$mdgriffith$elm_ui$Element$row,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$spacing(5),
-				$mdgriffith$elm_ui$Element$padding(5),
-				$mdgriffith$elm_ui$Element$Border$solid,
-				$mdgriffith$elm_ui$Element$Border$color(
-				A3($mdgriffith$elm_ui$Element$rgb, 0.0, 0.0, 0.0)),
-				$mdgriffith$elm_ui$Element$Border$width(1),
-				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
-			]),
-		_List_fromArray(
-			[
-				A2(
-				$mdgriffith$elm_ui$Element$Input$button,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$Font$color(
-						A3($mdgriffith$elm_ui$Element$rgb, 0.0, 0.0, 1.0))
-					]),
-				{
-					label: A2(
-						$mdgriffith$elm_ui$Element$paragraph,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$centerX,
-								$mdgriffith$elm_ui$Element$Font$size(18)
-							]),
-						_List_fromArray(
-							[
-								A2(
-								$mdgriffith$elm_ui$Element$el,
-								_List_fromArray(
-									[
-										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
-									]),
-								$mdgriffith$elm_ui$Element$text(name))
-							])),
-					onPress: $elm$core$Maybe$Just(
-						$author$project$Main$ShowKeyword(
-							$author$project$Main$Keyword(k)))
-				}),
-				A2(
-				$mdgriffith$elm_ui$Element$el,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-						$mdgriffith$elm_ui$Element$alignLeft
-					]),
-				$mdgriffith$elm_ui$Element$text(
-					$elm$core$String$fromInt(count)))
 			]));
 };
 var $author$project$Main$viewKeywords = function (model) {
@@ -19047,22 +19148,6 @@ var $author$project$Main$viewKeywords = function (model) {
 					$elm$html$Html$text(r.title)
 				]));
 	};
-	var sortf = function () {
-		var _v0 = model.sorting;
-		if (_v0.$ === 'ByUse') {
-			return $elm$core$List$sortBy(
-				function (_v1) {
-					var k = _v1.a;
-					return k.count;
-				});
-		} else {
-			return $elm$core$List$sortBy(
-				function (_v2) {
-					var k = _v2.a;
-					return k.name;
-				});
-		}
-	}();
 	var researchLst = model.research;
 	var lastDate = function () {
 		var dateStr = A2(
@@ -19102,17 +19187,20 @@ var $author$project$Main$viewKeywords = function (model) {
 					$mdgriffith$elm_ui$Element$text('search for keyword'))),
 			text: model.query
 		});
-	var keywordLst = $elm$core$List$reverse(
-		sortf(
-			A2(
-				$author$project$Main$filter,
-				model.query,
-				$author$project$Main$keywords(researchLst))));
 	var keywordCount = function () {
 		var count = 'there are: ' + ($elm$core$String$fromInt(
-			$elm$core$List$length(keywordLst)) + ' keywords.');
+			$elm$core$List$length(model.keywordLst)) + ' keywords.');
 		return $mdgriffith$elm_ui$Element$text(count);
 	}();
+	var filtered = A2(
+		$elm$core$List$filter,
+		function (kw) {
+			return A2(
+				$elm$core$String$contains,
+				model.query,
+				$author$project$Main$kwName(kw));
+		},
+		model.keywordLst);
 	return A2(
 		$mdgriffith$elm_ui$Element$column,
 		_List_fromArray(
@@ -19169,7 +19257,10 @@ var $author$project$Main$viewKeywords = function (model) {
 						$mdgriffith$elm_ui$Element$spacing(25),
 						A2($mdgriffith$elm_ui$Element$paddingXY, 25, 25)
 					]),
-				A2($elm$core$List$map, $author$project$Main$viewKeywordAsButton, keywordLst))
+				A2(
+					$elm$core$List$map,
+					$author$project$Main$viewKeywordAsButton(16),
+					filtered))
 			]));
 };
 var $author$project$Main$LoadMore = {$: 'LoadMore'};
@@ -19206,6 +19297,128 @@ var $author$project$RCStyles$rcButtonStyle = A2(
 			A2($author$project$RCStyles$Style, 'font-size', '11px'),
 			A2($author$project$RCStyles$Style, 'box-sizing', 'border-box')
 		]));
+var $mdgriffith$elm_ui$Element$fillPortion = $mdgriffith$elm_ui$Internal$Model$Fill;
+var $author$project$Main$viewResearchMicro = function (research) {
+	var _short = $author$project$Main$shortAbstract(
+		A2($elm$core$Maybe$withDefault, 'no abstract', research._abstract));
+	var img = F2(
+		function (src, desc) {
+			return A2(
+				$mdgriffith$elm_ui$Element$link,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width(
+						$mdgriffith$elm_ui$Element$fillPortion(1))
+					]),
+				{
+					label: A2(
+						$mdgriffith$elm_ui$Element$el,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$centerX,
+								$mdgriffith$elm_ui$Element$width(
+								$mdgriffith$elm_ui$Element$px(100)),
+								$mdgriffith$elm_ui$Element$height(
+								$mdgriffith$elm_ui$Element$px(100)),
+								A2($mdgriffith$elm_ui$Element$paddingXY, 0, 5)
+							]),
+						A2($author$project$Main$image, src, desc)),
+					url: research.defaultPage
+				});
+		});
+	return A2(
+		$mdgriffith$elm_ui$Element$row,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+				$mdgriffith$elm_ui$Element$height(
+				$mdgriffith$elm_ui$Element$px(100)),
+				$mdgriffith$elm_ui$Element$centerX,
+				$mdgriffith$elm_ui$Element$clip
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$elm$core$Maybe$withDefault,
+				$mdgriffith$elm_ui$Element$none,
+				A3(
+					$elm$core$Maybe$map2,
+					img,
+					research.thumbnail,
+					A2($elm$core$Maybe$map, $author$project$Main$shortAbstract, research._abstract))),
+				A2(
+				$mdgriffith$elm_ui$Element$column,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width(
+						$mdgriffith$elm_ui$Element$fillPortion(6)),
+						$mdgriffith$elm_ui$Element$alignTop
+					]),
+				_List_fromArray(
+					[
+						A2(
+						$mdgriffith$elm_ui$Element$link,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+							]),
+						{
+							label: A2(
+								$mdgriffith$elm_ui$Element$paragraph,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$Font$family(
+										_List_fromArray(
+											[
+												$mdgriffith$elm_ui$Element$Font$typeface('Open Sans'),
+												$mdgriffith$elm_ui$Element$Font$sansSerif
+											])),
+										$mdgriffith$elm_ui$Element$Font$size(11),
+										$mdgriffith$elm_ui$Element$Region$heading(1),
+										$mdgriffith$elm_ui$Element$padding(5),
+										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+									]),
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$text(research.title)
+									])),
+							url: research.defaultPage
+						}),
+						A2(
+						$mdgriffith$elm_ui$Element$link,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+							]),
+						{
+							label: A2(
+								$mdgriffith$elm_ui$Element$paragraph,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$Font$family(
+										_List_fromArray(
+											[
+												$mdgriffith$elm_ui$Element$Font$typeface('Open Sans'),
+												$mdgriffith$elm_ui$Element$Font$sansSerif
+											])),
+										$mdgriffith$elm_ui$Element$Font$size(11),
+										$mdgriffith$elm_ui$Element$Font$regular,
+										$mdgriffith$elm_ui$Element$Region$heading(2),
+										$mdgriffith$elm_ui$Element$padding(5),
+										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+										$mdgriffith$elm_ui$Element$htmlAttribute(
+										A2($elm$html$Html$Attributes$attribute, 'style', 'text-transform: unset'))
+									]),
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$text(
+										$author$project$Main$authorAsString(research.author))
+									])),
+							url: $author$project$Main$authorUrl(research.author)
+						})
+					]))
+			]));
+};
 var $author$project$Main$viewList = function (model) {
 	var researchInProgress = A2(
 		$elm$core$List$filter,
@@ -19223,7 +19436,7 @@ var $author$project$Main$viewList = function (model) {
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					A2($mdgriffith$elm_ui$Element$paddingXY, 5, 5)
 				]),
-			A2($elm$core$List$map, $author$project$Main$viewResearch, lst));
+			A2($elm$core$List$map, $author$project$Main$viewResearchMicro, lst));
 	};
 	var filtered = A2(
 		$elm$core$List$filter,

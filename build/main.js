@@ -6621,6 +6621,52 @@ var $elm$random$Random$generate = F2(
 			$elm$random$Random$Generate(
 				A2($elm$random$Random$map, tagger, generator)));
 	});
+var $author$project$Main$Keyword = function (a) {
+	return {$: 'Keyword', a: a};
+};
+var $author$project$Main$newKey = function (str) {
+	return $author$project$Main$Keyword(
+		{count: 1, name: str});
+};
+var $author$project$Main$use = function (_v0) {
+	var kw = _v0.a;
+	return $author$project$Main$Keyword(
+		_Utils_update(
+			kw,
+			{count: kw.count + 1}));
+};
+var $author$project$Main$insert = F2(
+	function (k, _v0) {
+		var dict = _v0.a;
+		var result = A2($elm$core$Dict$get, k, dict);
+		if (result.$ === 'Just') {
+			var kw = result.a.a;
+			return $author$project$Main$KeywordSet(
+				A3(
+					$elm$core$Dict$insert,
+					kw.name,
+					$author$project$Main$use(
+						$author$project$Main$Keyword(kw)),
+					dict));
+		} else {
+			return $author$project$Main$KeywordSet(
+				A3(
+					$elm$core$Dict$insert,
+					k,
+					$author$project$Main$newKey(k),
+					dict));
+		}
+	});
+var $author$project$Main$keywordSet = function (researchlist) {
+	return A3(
+		$elm$core$List$foldr,
+		F2(
+			function (research, set) {
+				return A3($elm$core$List$foldr, $author$project$Main$insert, set, research.keywords);
+			}),
+		$author$project$Main$emptyKeywordSet,
+		researchlist);
+};
 var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
@@ -6790,7 +6836,11 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{research: _List_Nil, reverseKeywordDict: reverseDict}),
+							{
+								keywords: $author$project$Main$keywordSet(lst),
+								research: _List_Nil,
+								reverseKeywordDict: reverseDict
+							}),
 						A2(
 							$elm$random$Random$generate,
 							$author$project$Main$Randomized,
@@ -13741,8 +13791,8 @@ var $author$project$Main$viewKeywordDetail = F2(
 		var relatedKeywords = _Debug_todo(
 			'Main',
 			{
-				start: {line: 692, column: 13},
-				end: {line: 692, column: 23}
+				start: {line: 693, column: 13},
+				end: {line: 693, column: 23}
 			})('implement keyword lookup');
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
@@ -14881,52 +14931,6 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$fromTime = function (time) {
 		$rtfeldman$elm_iso8601_date_strings$Iso8601$toPaddedString,
 		3,
 		A2($elm$time$Time$toMillis, $elm$time$Time$utc, time)) + 'Z'))))))))))));
-};
-var $author$project$Main$Keyword = function (a) {
-	return {$: 'Keyword', a: a};
-};
-var $author$project$Main$newKey = function (str) {
-	return $author$project$Main$Keyword(
-		{count: 1, name: str});
-};
-var $author$project$Main$use = function (_v0) {
-	var kw = _v0.a;
-	return $author$project$Main$Keyword(
-		_Utils_update(
-			kw,
-			{count: kw.count + 1}));
-};
-var $author$project$Main$insert = F2(
-	function (k, _v0) {
-		var dict = _v0.a;
-		var result = A2($elm$core$Dict$get, k, dict);
-		if (result.$ === 'Just') {
-			var kw = result.a.a;
-			return $author$project$Main$KeywordSet(
-				A3(
-					$elm$core$Dict$insert,
-					kw.name,
-					$author$project$Main$use(
-						$author$project$Main$Keyword(kw)),
-					dict));
-		} else {
-			return $author$project$Main$KeywordSet(
-				A3(
-					$elm$core$Dict$insert,
-					k,
-					$author$project$Main$newKey(k),
-					dict));
-		}
-	});
-var $author$project$Main$keywordSet = function (researchlist) {
-	return A3(
-		$elm$core$List$foldr,
-		F2(
-			function (research, set) {
-				return A3($elm$core$List$foldr, $author$project$Main$insert, set, research.keywords);
-			}),
-		$author$project$Main$emptyKeywordSet,
-		researchlist);
 };
 var $author$project$Main$toList = function (_v0) {
 	var kwSet = _v0.a;

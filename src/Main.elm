@@ -234,6 +234,7 @@ update msg model =
                     ( { model
                         | research = []
                         , reverseKeywordDict = reverseDict
+                        , keywords = keywordSet lst 
                       }
                     , Random.generate Randomized (shuffle lst)
                     )

@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Browser
 import Dict exposing (Dict)
-import Element exposing (Element, el, fill, height, padding, px, rgb, shrink, spacing, spacingXY, text, width)
+import Element exposing (paddingXY, Element, el, fill, height, padding, px, rgb, shrink, spacing, spacingXY, text, width)
 import Element.Border
 import Element.Font as Font
 import Element.Input
@@ -16,6 +16,7 @@ import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
 import Json.Encode as JE
 import List exposing (reverse)
+import Maybe.Extra exposing (values)
 import RCStyles
 import Random
 import Random.List exposing (shuffle)
@@ -73,10 +74,13 @@ type Scale
     | Medium
     | Large
 
+type ListViewState 
+    = ListViewMain
+    | ListViewDetail ExpositionID
 
 type View
     = KeywordsView KeywordsViewState
-    | ListView
+    | ListView 
     | ScreenView Scale
 
 
@@ -687,6 +691,13 @@ toggleSorting model =
         ]
 
 
+getKeywordsOfResearch : KeywordSet -> Research -> List Keyword
+getKeywordsOfResearch keywordset research =
+    research.keywords
+        |> List.map (\str -> find str keywordset)
+        |> values
+
+
 viewKeywordDetail : Keyword -> Model -> Element Msg
 viewKeywordDetail kw model =
     let
@@ -695,19 +706,19 @@ viewKeywordDetail kw model =
 
         -- the keywords that research with the same keyword uses:
         relatedKeywords =
-            Debug.todo "implement keyword lookup"
+            researchWithKeyword
+                |> List.concatMap (getKeywordsOfResearch model.keywords)
 
-        --researchWithKeyword |> List.map (\r -> r.keywords)
         viewRelatedKeyword : Keyword -> Element Msg
         viewRelatedKeyword rkw =
-            Element.Input.button [] { onPress = Just (ShowKeyword rkw), label = Element.text (kwName rkw) }
+            Element.Input.button [paddingXY 10 0] { onPress = Just (ShowKeyword rkw), label = Element.text (kwName rkw) }
     in
     -- generate a simple layout with two columns using Element
     Element.column [ width fill, Element.spacingXY 0 25 ]
         [ Element.row [ Element.spacing 25, width fill ] [ viewSwitch model, screenViewOrderSwitch model ]
         , Element.Input.button [] { onPress = Just (SwitchView "keywords"), label = Element.text "Back" }
         , Element.paragraph [ Font.size 36, padding 25, width fill ] [ Element.text (kwName kw), Element.text (getCount kw |> String.fromInt) ]
-        , Element.paragraph [ Font.size 18 ] (List.map viewRelatedKeyword relatedKeywords)
+        , Element.paragraph [ Font.size 18 ] (Element.text "related keywords --- "::List.map viewRelatedKeyword relatedKeywords)
         , researchWithKeyword |> List.map viewResearch |> makeColumns 3 [ width fill, spacing 25, Element.paddingXY 0 25 ]
         ]
 

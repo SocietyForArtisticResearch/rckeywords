@@ -12,7 +12,7 @@ import Element.Font as Font
 import Element.Input
 import Element.Region
 import Force exposing (links)
-import Html exposing (Html, p, s)
+import Html exposing (Html, a, p, s)
 import Html.Attributes as Attr exposing (default, style)
 import Html.Events as Events
 import Http
@@ -107,7 +107,8 @@ type alias Model =
     { research : List Research
     , reverseKeywordDict : Dict String (List Research) -- keys are Keywords, values are a list of Expositions that have that
     , keywords : KeywordSet
-    , keywordLst : List Keyword
+
+    --, keywordLst : List Keyword
     , keywordSorting : KeywordSorting
     , query : String
     , screenDimensions : { w : Int, h : Int }
@@ -122,7 +123,6 @@ type alias Model =
 type Msg
     = GotResearch (Result Http.Error (List Research))
     | Randomized (List Research)
-    | GotRandomKeyword (List Keyword)
     | ChangedQuery String
     | SetSorting String
     | SwitchView String
@@ -154,7 +154,6 @@ init { width, height } url key =
     ( { research = []
       , reverseKeywordDict = Dict.empty
       , keywords = emptyKeywordSet
-      , keywordLst = []
       , keywordSorting = RandomKeyword
       , query = ""
       , screenDimensions = { w = width, h = height }
@@ -198,6 +197,11 @@ kwName (Keyword kw) =
 getCount : Keyword -> Int
 getCount (Keyword kw) =
     kw.count
+
+
+totalNumber : KeywordSet -> Int
+totalNumber (KeywordSet dict) =
+    dict |> Dict.keys |> List.length
 
 
 type KeywordSet
@@ -252,14 +256,33 @@ type Title
     = Title String
 
 
+shuffleWithSeed : Int -> List a -> List a
+shuffleWithSeed seed lst =
+    Random.initialSeed seed
+        |> Random.step (shuffle lst)
+        |> Tuple.first
+
+
+listWithSorting : KeywordSorting -> KeywordSet -> List Keyword
+listWithSorting sorting kwset =
+    let
+        lst =
+            kwset |> toList
+    in
+    case sorting of
+        ByUse ->
+            lst |> List.sortBy getCount
+
+        Alphabetical ->
+            lst |> List.sortBy kwName
+
+        RandomKeyword ->
+            lst |> shuffleWithSeed 42
+
+
 titles : List Research -> List Title
 titles =
     List.map (.title >> Title)
-
-
-shuffleResearch : Model -> ( Model, Cmd Msg )
-shuffleResearch model =
-    ( { model | research = [] }, Random.generate Randomized (shuffle model.research) )
 
 
 defaultPadding : Element.Attribute Msg
@@ -284,12 +307,8 @@ update msg model =
                         | research = []
                         , reverseKeywordDict = reverseDict
                         , keywords = ks
-                        , keywordLst = []
                       }
-                    , Cmd.batch
-                        [ Random.generate Randomized (shuffle lst)
-                        , Random.generate GotRandomKeyword (shuffle (toList ks))
-                        ]
+                    , Cmd.none
                     )
 
                 Err err ->
@@ -308,13 +327,13 @@ update msg model =
         SetSorting sort ->
             case sort of
                 "ByUse" ->
-                    ( { model | keywordLst = List.sortBy getCount model.keywordLst |> List.reverse }, Cmd.none )
+                    ( { model | keywordSorting = ByUse }, Cmd.none )
 
                 "Alphabetical" ->
-                    ( { model | keywordLst = List.sortBy kwName model.keywordLst }, Cmd.none )
+                    ( { model | keywordSorting = Alphabetical }, Cmd.none )
 
                 "Random" ->
-                    ( model, Random.generate GotRandomKeyword (shuffle model.keywordLst) )
+                    ( { model | keywordSorting = RandomKeyword }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -353,7 +372,7 @@ update msg model =
         ChangeScreenOrder order ->
             case order of
                 "random" ->
-                    shuffleResearch { model | researchSorting = Random }
+                    ( { model | researchSorting = Random }, Cmd.none )
 
                 "oldest" ->
                     let
@@ -362,7 +381,6 @@ update msg model =
                     in
                     ( { model
                         | researchSorting = OldestFirst
-                        , research = List.sortBy fsort model.research
                       }
                     , Cmd.none
                     )
@@ -374,13 +392,12 @@ update msg model =
                     in
                     ( { model
                         | researchSorting = NewestFirst
-                        , research = List.sortBy fsort model.research |> List.reverse
                       }
                     , Cmd.none
                     )
 
                 _ ->
-                    shuffleResearch { model | researchSorting = Random }
+                    ( { model | researchSorting = Random }, Cmd.none )
 
         ChangeScale str ->
             case str of
@@ -401,9 +418,6 @@ update msg model =
 
         ShowResearchDetail exp ->
             ( { model | view = ListView (ListViewDetail exp) }, Cmd.none )
-
-        GotRandomKeyword lst ->
-            ( { model | keywordLst = lst }, Cmd.none )
 
         UrlChanged url ->
             ( { model | url = url |> urlWhereFragmentIsPath }, Cmd.none )
@@ -1121,7 +1135,7 @@ viewKeywords model =
         keywordCount =
             let
                 count =
-                    "there are: " ++ (List.length model.keywordLst |> String.fromInt) ++ " keywords."
+                    "there are: " ++ (model.keywords |> totalNumber |> String.fromInt) ++ " keywords."
             in
             Element.text count
 
@@ -1142,7 +1156,8 @@ viewKeywords model =
                 }
 
         filtered =
-            model.keywordLst
+            model.keywords
+                |> toList
                 |> List.filter (\kw -> String.contains model.query (kwName kw))
     in
     Element.column [ width fill ]

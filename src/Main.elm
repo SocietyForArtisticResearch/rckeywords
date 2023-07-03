@@ -13,7 +13,7 @@ import Element.Input
 import Element.Region
 import Force exposing (links)
 import Html exposing (Html, a, p, s)
-import Html.Attributes as Attr exposing (default, style)
+import Html.Attributes as Attr exposing (default, style, title)
 import Html.Events as Events
 import Http
 import Iso8601
@@ -46,6 +46,7 @@ ofString x =
     String.toInt x
 
 
+main : Program Flags Model Msg
 main =
     Browser.application
         { init = init
@@ -68,7 +69,7 @@ type KeywordSorting
     | RandomKeyword
 
 
-type ScreenOrder
+type TitleSorting
     = Random
     | OldestFirst
     | NewestFirst
@@ -90,16 +91,14 @@ type ListViewState
     | ListViewDetail ExpositionID
 
 
-type
-    View
-    -- Routes
+type View
     = KeywordsView KeywordsViewState
     | ListView ListViewState
-    | ScreenView Scale
+    | ScreenView Scale TitleSorting
 
 
 type KeywordsViewState
-    = KeywordMainView
+    = KeywordMainView KeywordSorting
     | KeywordDetail Keyword -- could be opaque type?
 
 
@@ -107,14 +106,10 @@ type alias Model =
     { research : List Research
     , reverseKeywordDict : Dict String (List Research) -- keys are Keywords, values are a list of Expositions that have that
     , keywords : KeywordSet
-
-    --, keywordLst : List Keyword
-    , keywordSorting : KeywordSorting
     , query : String
     , screenDimensions : { w : Int, h : Int }
     , view : View
     , numberOfResults : Int
-    , researchSorting : ScreenOrder -- stored in model, since maybe we want to remember?
     , key : Nav.Key
     , url : AppUrl
     }
@@ -124,12 +119,9 @@ type Msg
     = GotResearch (Result Http.Error (List Research))
     | Randomized (List Research)
     | ChangedQuery String
-    | SetSorting String
     | SwitchView String
     | LoadMore
     | NoScreenshot ExpositionID
-    | ChangeScreenOrder String
-    | ChangeScale String
     | ShowKeyword Keyword
     | ShowResearchDetail ExpositionID
     | UrlChanged Url.Url
@@ -154,12 +146,10 @@ init { width, height } url key =
     ( { research = []
       , reverseKeywordDict = Dict.empty
       , keywords = emptyKeywordSet
-      , keywordSorting = RandomKeyword
       , query = ""
       , screenDimensions = { w = width, h = height }
-      , view = KeywordsView KeywordMainView
+      , view = KeywordsView (KeywordMainView RandomKeyword)
       , numberOfResults = 8
-      , researchSorting = Random
       , url = initUrl
       , key = key
       }
@@ -280,6 +270,19 @@ listWithSorting sorting kwset =
             lst |> shuffleWithSeed 42
 
 
+sortKeywordLst : KeywordSorting -> List Keyword -> List Keyword
+sortKeywordLst sorting lst =
+    case sorting of
+        ByUse ->
+            lst |> List.sortBy getCount |> List.reverse
+
+        Alphabetical ->
+            lst |> List.sortBy kwName
+
+        RandomKeyword ->
+            lst |> shuffleWithSeed 42
+
+
 titles : List Research -> List Title
 titles =
     List.map (.title >> Title)
@@ -304,7 +307,7 @@ update msg model =
                             keywordSet lst
                     in
                     ( { model
-                        | research = []
+                        | research = lst
                         , reverseKeywordDict = reverseDict
                         , keywords = ks
                       }
@@ -324,32 +327,18 @@ update msg model =
         Randomized lst ->
             ( { model | research = lst }, Cmd.none )
 
-        SetSorting sort ->
-            case sort of
-                "ByUse" ->
-                    ( { model | keywordSorting = ByUse }, Cmd.none )
-
-                "Alphabetical" ->
-                    ( { model | keywordSorting = Alphabetical }, Cmd.none )
-
-                "Random" ->
-                    ( { model | keywordSorting = RandomKeyword }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
         SwitchView str ->
             let
                 v =
                     case str of
                         "keywords" ->
-                            KeywordsView KeywordMainView
+                            KeywordsView (KeywordMainView RandomKeyword)
 
                         "list" ->
                             ListView ListViewMain
 
                         "screenshots" ->
-                            ScreenView Medium
+                            ScreenView Medium Random
 
                         _ ->
                             ListView ListViewMain
@@ -368,53 +357,6 @@ update msg model =
                     Debug.log "no screenshot for" id
             in
             ( model, Cmd.none )
-
-        ChangeScreenOrder order ->
-            case order of
-                "random" ->
-                    ( { model | researchSorting = Random }, Cmd.none )
-
-                "oldest" ->
-                    let
-                        fsort r =
-                            r.created |> String.split "/" |> List.reverse |> String.join "/"
-                    in
-                    ( { model
-                        | researchSorting = OldestFirst
-                      }
-                    , Cmd.none
-                    )
-
-                "newest" ->
-                    let
-                        fsort r =
-                            r.created |> String.split "/" |> List.reverse |> String.join "/"
-                    in
-                    ( { model
-                        | researchSorting = NewestFirst
-                      }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( { model | researchSorting = Random }, Cmd.none )
-
-        ChangeScale str ->
-            case str of
-                "micro" ->
-                    ( { model | view = ScreenView Micro }, Nav.pushUrl model.key "/screenshots?zoom=micro" )
-
-                "small" ->
-                    ( { model | view = ScreenView Small }, Nav.pushUrl model.key "/screenshots?zoom=small" )
-
-                "medium" ->
-                    ( { model | view = ScreenView Medium }, Nav.pushUrl model.key "/screenshots?zoom=medium" )
-
-                "large" ->
-                    ( { model | view = ScreenView Large }, Nav.pushUrl model.key "/screenshots?zoom=large" )
-
-                _ ->
-                    ( model, Cmd.none )
 
         ShowResearchDetail exp ->
             ( { model | view = ListView (ListViewDetail exp) }, Cmd.none )
@@ -469,6 +411,22 @@ urlWhereFragmentIsPath url =
     url |> Url.toString |> String.replace "/#" "" |> Url.fromString |> warnMaybe |> Maybe.withDefault url |> AppUrl.fromUrl
 
 
+sortingFromString : String -> KeywordSorting
+sortingFromString str =
+    case str of
+        "ByUse" ->
+            ByUse
+
+        "Alphabetical" ->
+            Alphabetical
+
+        "Random" ->
+            RandomKeyword
+
+        _ ->
+            ByUse
+
+
 handleUrl : AppUrl.AppUrl -> Model -> Model
 handleUrl url model =
     let
@@ -477,7 +435,11 @@ handleUrl url model =
     in
     case url.path of
         [ "keywords" ] ->
-            { model | view = KeywordsView KeywordMainView }
+            let
+                sorting =
+                    url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.withDefault "ByUse" |> sortingFromString
+            in
+            { model | view = KeywordsView (KeywordMainView sorting) }
 
         [ "keywords", keywordAsString ] ->
             case find keywordAsString model.keywords of
@@ -485,7 +447,7 @@ handleUrl url model =
                     { model | view = KeywordsView (KeywordDetail kw) }
 
                 Nothing ->
-                    { model | view = KeywordsView KeywordMainView }
+                    { model | view = KeywordsView (KeywordMainView ByUse) }
 
         [ "screenshots" ] ->
             let
@@ -505,8 +467,22 @@ handleUrl url model =
 
                         _ ->
                             Medium
+
+                sorting =
+                    case Dict.get "sorting" url.queryParameters of
+                        Just [ "random" ] ->
+                            Random
+
+                        Just [ "oldestfirst" ] ->
+                            OldestFirst
+
+                        Just [ "newestfirst" ] ->
+                            NewestFirst
+
+                        _ ->
+                            Random
             in
-            { model | view = ScreenView zoom }
+            { model | view = ScreenView zoom sorting }
 
         [ "list" ] ->
             let
@@ -538,7 +514,6 @@ handleUrl url model =
             { model
                 | view = ListView ListViewMain
                 , query = q
-                , researchSorting = sorting
             }
 
         _ ->
@@ -805,8 +780,8 @@ makeRowsOfN rowSize lst =
     unfold f lst
 
 
-viewList : Model -> Element Msg
-viewList model =
+listView : Model -> Element Msg
+listView model =
     let
         filtered =
             List.filter
@@ -824,9 +799,8 @@ viewList model =
             Element.column [ Element.spacing 5, Element.alignTop, width fill, Element.paddingXY 5 5 ]
                 (List.map viewResearchMicro lst)
 
-        researchInProgress =
-            List.filter (\r -> r.publicationStatus == InProgress) model.research
-
+        -- researchInProgress =
+        --     List.filter (\r -> r.publicationStatus == InProgress) model.research
         published =
             List.filter (\r -> r.publicationStatus == Published) filtered
     in
@@ -850,7 +824,7 @@ viewList model =
 isScreenview : View -> Bool
 isScreenview vw =
     case vw of
-        ScreenView _ ->
+        ScreenView _ _ ->
             True
 
         _ ->
@@ -896,33 +870,37 @@ isKeywordView v =
             False
 
 
-screenViewOrderSwitch : Model -> Element Msg
-screenViewOrderSwitch model =
-    Element.column [ spacing 10 ]
-        [ Element.text "Sort by:"
-        , Element.el [] <|
-            Element.html <|
-                Html.select [ Events.onInput ChangeScreenOrder ]
-                    [ Html.option [ Attr.value "random", Attr.selected (model.researchSorting == Random) ] [ Html.text "Random" ]
-                    , Html.option [ Attr.value "oldest", Attr.selected (model.researchSorting == OldestFirst) ] [ Html.text "Old First" ]
-                    , Html.option [ Attr.value "newest", Attr.selected (model.researchSorting == NewestFirst) ] [ Html.text "New first" ]
-                    ]
+screenViewOrderSwitch : TitleSorting -> Element Msg
+screenViewOrderSwitch titleSorting =
+    Element.row [ paddingXY 0 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+        [ Element.link (linkStyle (titleSorting == Random) SmallLink) { url = "/#/screenshots?sorting=random", label = Element.text "random" }
+        , Element.link (linkStyle (titleSorting == OldestFirst) SmallLink) { url = "/#/screenshots?sorting=oldestfirst", label = Element.text "old first" }
+        , Element.link (linkStyle (titleSorting == NewestFirst) SmallLink) { url = "/#/screenshots?sorting=newestfirst", label = Element.text "new first" }
         ]
 
 
 viewScaleSwitch : Scale -> Element Msg
 viewScaleSwitch scale =
-    Element.column [ spacing 10 ]
-        [ text "Zoom:"
-        , el [] <|
-            Element.html <|
-                Html.select [ Events.onInput ChangeScale ]
-                    [ Html.option [ Attr.value "micro", Attr.selected (scale == Micro) ] [ Html.text "Tiny" ]
-                    , Html.option [ Attr.value "small", Attr.selected (scale == Small) ] [ Html.text "Small" ]
-                    , Html.option [ Attr.value "medium", Attr.selected (scale == Medium) ] [ Html.text "Medium" ]
-                    , Html.option [ Attr.value "large", Attr.selected (scale == Large) ] [ Html.text "Large" ]
-                    ]
+    Element.row [ padding 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+        [ Element.link (linkStyle (scale == Micro) SmallLink) { url = "/#/screenshots?zoom=micro", label = Element.text "micro" }
+        , Element.link (linkStyle (scale == Small) SmallLink) { url = "/#/screenshots?zoom=small", label = Element.text "small" }
+        , Element.link (linkStyle (scale == Medium) SmallLink) { url = "/#/screenshots?zoom=medium", label = Element.text "medium" }
+        , Element.link (linkStyle (scale == Large) SmallLink) { url = "/#/screenshots?zoom=large", label = Element.text "large" }
         ]
+
+
+
+-- Element.column [ spacing 10 ]
+--     [ text "Zoom:"
+--     , el [] <|
+--         Element.html <|
+--             Html.select [ Events.onInput ChangeScale ]
+--                 [ Html.option [ Attr.value "micro", Attr.selected (scale == Micro) ] [ Html.text "Tiny" ]
+--                 , Html.option [ Attr.value "small", Attr.selected (scale == Small) ] [ Html.text "Small" ]
+--                 , Html.option [ Attr.value "medium", Attr.selected (scale == Medium) ] [ Html.text "Medium" ]
+--                 , Html.option [ Attr.value "large", Attr.selected (scale == Large) ] [ Html.text "Large" ]
+--                 ]
+--     ]
 
 
 red : Element.Color
@@ -934,41 +912,59 @@ black : Element.Color
 black =
     Element.rgb 0.0 0.0 0.0
 
+gray : Element.Color
+gray =
+    Element.rgb 0.5 0.5 0.5
 
 blue : Element.Color
 blue =
     Element.rgb255 66 135 245
 
 
+white : Element.Color
 white =
     Element.rgb 1.0 1.0 1.0
 
 
-linkStyle active =
+type LinkStyle
+    = SmallLink
+    | BigLink
+
+
+linkStyle : Bool -> LinkStyle -> List (Element.Attribute msg)
+linkStyle active style =
     let
+        ( padding, fontSize ) =
+            case style of
+                SmallLink ->
+                    ( 10, 12 )
+
+                BigLink ->
+                    ( 25, 20 )
+
         common =
-            [ Element.Border.solid
-            , Element.Border.color black
-            , Element.Border.width 2
-            , Element.padding 25
+            [ Element.Border.color gray
+            , Element.Border.width 1
+            , Element.padding padding
             , Element.Background.color white
             , Font.color black
             , Element.mouseOver [ Font.color (Element.rgb 0.5 0.5 0.5) ]
+            , Font.size fontSize
             ]
     in
     if active then
-        Font.underline :: common
+        List.append [ Font.underline, Element.Border.solid ] common
 
     else
-        common
+        Element.Border.dashed :: common
 
 
 viewNav : View -> Element Msg
 viewNav currentView =
-    Element.row [ padding 25, Element.Region.navigation, width fill, spacing 25, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (isKeywordView currentView)) { url = "/#/keywords", label = Element.text "keywords" }
-        , Element.link (linkStyle (isScreenview currentView)) { url = "/#/screenshots", label = Element.text "screenshots" }
-        , Element.link (linkStyle (isListView currentView)) { url = "/#/list", label = Element.text "list" }
+    Element.row [ paddingXY 0 5, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+        [ Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "keywords" }
+        , Element.link (linkStyle (isScreenview currentView) BigLink) { url = "/#/screenshots", label = Element.text "screenshots" }
+        , Element.link (linkStyle (isListView currentView) BigLink) { url = "/#/list", label = Element.text "list" }
         ]
 
 
@@ -984,8 +980,8 @@ view model =
             case model.view of
                 ListView ListViewMain ->
                     Element.column [ width fill ]
-                        [ Element.row [ Element.spacing 25, defaultPadding ] [ screenViewOrderSwitch model ]
-                        , viewList model
+                        [ Element.row [ Element.spacingXY 0 25 ] [ screenViewOrderSwitch Random ]
+                        , listView model
                         ]
 
                 ListView (ListViewDetail id) ->
@@ -998,18 +994,21 @@ view model =
 
                 KeywordsView kwtype ->
                     case kwtype of
-                        KeywordMainView ->
+                        KeywordMainView sorting ->
                             Element.column [ width fill ]
-                                [ viewKeywords model
+                                [ viewKeywords model sorting
                                 ]
 
                         KeywordDetail k ->
                             viewKeywordDetail k model
 
-                ScreenView scale ->
+                ScreenView scale sorting ->
                     Element.column [ width fill ]
-                        [ Element.row [ Element.spacing 25 ] [ screenViewOrderSwitch model, viewScaleSwitch scale ]
-                        , Element.html (viewScreenshots scale model)
+                        [ Element.row [ Element.spacing 25 ]
+                            [ screenViewOrderSwitch sorting
+                            , viewScaleSwitch scale
+                            ]
+                        , viewScreenshots scale sorting model
                         ]
     in
     { title = "Research Catalogue - Screenshot Page"
@@ -1017,7 +1016,7 @@ view model =
         [ Element.layout
             [ width (Element.px (toFloat model.screenDimensions.w * 0.9 |> floor))
             , Font.family [ Font.typeface "Helvetica Neue", Font.sansSerif ]
-            , Element.paddingEach { top = 50, left = 15, bottom = 25, right = 15 }
+            , Element.paddingEach { top = 10, left = 15, bottom = 25, right = 15 }
             ]
             (Element.column [ width fill ]
                 [ viewNav model.view, body ]
@@ -1026,12 +1025,22 @@ view model =
     }
 
 
-toggleSorting : Model -> Html Msg
-toggleSorting model =
-    Html.select [ Events.onInput SetSorting ]
-        [ Html.option [ Attr.value "ByUse", Attr.selected (model.keywordSorting == ByUse) ] [ Html.text "By Use" ]
-        , Html.option [ Attr.value "Alphabetical", Attr.selected (model.keywordSorting == Alphabetical) ] [ Html.text "Alphabetical" ]
-        , Html.option [ Attr.value "Random", Attr.selected (model.keywordSorting == RandomKeyword) ] [ Html.text "Random" ]
+
+-- toggleSorting : KeywordSorting -> Html Msg
+-- toggleSorting sorting =
+--     Html.select [ Events.onInput SetSorting ]
+--         [ Html.option [ Attr.value "ByUse", Attr.selected (sorting == ByUse) ] [ Html.text "By Use" ]
+--         , Html.option [ Attr.value "Alphabetical", Attr.selected (sorting == Alphabetical) ] [ Html.text "Alphabetical" ]
+--         , Html.option [ Attr.value "Random", Attr.selected (sorting == RandomKeyword) ] [ Html.text "Random" ]
+--         ]
+
+
+toggleSorting : KeywordSorting -> Element Msg
+toggleSorting sorting =
+    Element.row [ paddingXY 0 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+        [ Element.link (linkStyle (sorting == ByUse) SmallLink) { url = "/#/keywords?sorting=ByUse", label = Element.text "by use" }
+        , Element.link (linkStyle (sorting == Alphabetical) SmallLink) { url = "/#/keywords?sorting=Alphabetical", label = Element.text "alphabetical" }
+        , Element.link (linkStyle (sorting == RandomKeyword) SmallLink) { url = "/#/keywords?sorting=Random", label = Element.text "random" }
         ]
 
 
@@ -1058,7 +1067,7 @@ viewKeywordDetail kw model =
     in
     -- generate a simple layout with two columns using Element
     Element.column [ width fill, Element.spacingXY 0 0 ]
-        [ Element.row [ Element.spacingXY 25 5, width fill ] [ screenViewOrderSwitch model ]
+        [ Element.row [ Element.spacingXY 25 5, width fill ] [ screenViewOrderSwitch NewestFirst ]
         , Element.link [] { url = "/keywords", label = Element.text "Back" }
         , Element.column [ Font.size 36, paddingXY 0 25, width fill ] [ Element.text (kwName kw), Element.el [ Font.size 14 ] <| Element.text ((getCount kw |> String.fromInt) ++ " expositions use this keyword") ]
         , Element.el [] (Element.text "related keywords : ")
@@ -1123,15 +1132,9 @@ viewKeywordAsLink (Keyword kw) =
         |> Element.html
 
 
-viewKeywords : Model -> Element Msg
-viewKeywords model =
+viewKeywords : Model -> KeywordSorting -> Element Msg
+viewKeywords model sorting =
     let
-        researchLst =
-            model.research
-
-        viewTitle r =
-            Html.p [] [ Html.text r.title ]
-
         keywordCount =
             let
                 count =
@@ -1142,7 +1145,7 @@ viewKeywords model =
         lastDate =
             let
                 dateStr =
-                    findLastDate researchLst |> Iso8601.fromTime |> String.split "T" |> List.head |> Maybe.withDefault "?"
+                    findLastDate model.research |> Iso8601.fromTime |> String.split "T" |> List.head |> Maybe.withDefault "?"
             in
             Element.el [ Font.size 12 ] (Element.text ("last updated: " ++ dateStr))
 
@@ -1159,15 +1162,18 @@ viewKeywords model =
             model.keywords
                 |> toList
                 |> List.filter (\kw -> String.contains model.query (kwName kw))
+
+        sorted =
+            filtered |> sortKeywordLst sorting
     in
     Element.column [ width fill ]
         [ Element.row [ defaultPadding, Element.spacingXY 25 25, width fill ]
             [ Element.el [ width shrink ] lastDate
-            , Element.el [ width shrink ] <| Element.html (toggleSorting model)
+            , Element.el [ width shrink ] (toggleSorting sorting)
             , Element.el [ width shrink ] keywordCount
             ]
         , Element.el [ width shrink, defaultPadding ] keywordSearch
-        , List.map (viewKeywordAsButton 16) filtered |> makeColumns 4 [ width fill, spacing 25, Element.paddingXY 25 25 ]
+        , List.map (viewKeywordAsButton 16) sorted |> makeColumns 4 [ width fill, spacing 25, Element.paddingXY 25 25 ]
         ]
 
 
@@ -1428,28 +1434,45 @@ scaleToGroupSize scale =
             3
 
 
-viewScreenshots : Scale -> Model -> Html Msg
-viewScreenshots scale model =
+sortResearch : TitleSorting -> List Research -> List Research
+sortResearch sorting research =
+    case sorting of
+        OldestFirst ->
+            research |> List.sortBy (\r -> r.created)
+
+        Random ->
+            research |> List.sortBy (\r -> r.id) |> List.reverse
+
+        NewestFirst ->
+            research |> List.sortBy (\r -> r.created) |> List.reverse
+
+
+viewScreenshots : Scale -> TitleSorting -> Model -> Element Msg
+viewScreenshots scale titlesort model =
     let
         groupSize =
             scaleToGroupSize scale
 
         groups =
-            model.research |> splitGroupsOf groupSize
+            model.research |> sortResearch titlesort |> splitGroupsOf groupSize
 
         viewGroup group =
             Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize model.screenDimensions exp) group)
     in
-    Html.div
-        []
-        [ Html.h1 [] [ Html.text "Visual" ]
-        , Html.br [] []
-        , Html.div []
-            (List.map viewGroup groups)
+    Element.column []
+        [ Element.el [ Element.Region.heading 1 ] <| text "Visual"
+        , Element.html (Html.div [] (List.map viewGroup groups))
         ]
 
 
 
+-- Html.div
+--     []
+--     [ Html.h1 [] [ Html.text "Visual" ]
+--     , Html.br [] []
+--     , Html.div []
+--         (List.map viewGroup groups)
+--     ]
 -- this function creates a dictionary of all keywords and the research that have them
 
 

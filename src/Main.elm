@@ -1167,7 +1167,7 @@ sortResearch sorting research =
             research |> List.sortBy (\r -> r.created)
 
         Random ->
-            research |> List.sortBy (\r -> r.id) |> List.reverse
+            research |> shuffleWithSeed 42
 
         NewestFirst ->
             research |> List.sortBy (\r -> r.created) |> List.reverse

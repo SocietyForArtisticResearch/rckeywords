@@ -912,9 +912,11 @@ black : Element.Color
 black =
     Element.rgb 0.0 0.0 0.0
 
+
 gray : Element.Color
 gray =
     Element.rgb 0.5 0.5 0.5
+
 
 blue : Element.Color
 blue =
@@ -940,7 +942,7 @@ linkStyle active style =
                     ( 10, 12 )
 
                 BigLink ->
-                    ( 25, 20 )
+                    ( 10, 20 )
 
         common =
             [ Element.Border.color gray
@@ -1138,9 +1140,9 @@ viewKeywords model sorting =
         keywordCount =
             let
                 count =
-                    "there are: " ++ (model.keywords |> totalNumber |> String.fromInt) ++ " keywords."
+                    (model.keywords |> totalNumber |> String.fromInt) ++ " keywords"
             in
-            Element.text count
+            el [ Font.size 12 ] (Element.text count)
 
         lastDate =
             let
@@ -1166,14 +1168,14 @@ viewKeywords model sorting =
         sorted =
             filtered |> sortKeywordLst sorting
     in
-    Element.column [ width fill ]
-        [ Element.row [ defaultPadding, Element.spacingXY 25 25, width fill ]
-            [ Element.el [ width shrink ] lastDate
-            , Element.el [ width shrink ] (toggleSorting sorting)
+    Element.column [ width fill, spacingXY 0 15 ]
+        [ Element.row [ Element.spacingXY 25 25, width fill ]
+            [ Element.el [ width shrink ] (toggleSorting sorting)
             , Element.el [ width shrink ] keywordCount
+            , Element.el [ width shrink ] lastDate
             ]
-        , Element.el [ width shrink, defaultPadding ] keywordSearch
-        , List.map (viewKeywordAsButton 16) sorted |> makeColumns 4 [ width fill, spacing 25, Element.paddingXY 25 25 ]
+        , Element.el [ width shrink ] keywordSearch
+        , List.map (viewKeywordAsButton 16) sorted |> makeColumns 4 [ width fill, spacingXY 25 25 ] --Element.paddingXY 25 25 ]
         ]
 
 

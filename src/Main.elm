@@ -1,4 +1,7 @@
-module Main exposing (Author(..), ExpositionID, Flags, Keyword(..), KeywordSet(..), KeywordSorting(..), KeywordsViewState(..), LinkStyle(..), ListViewState(..), Model, Msg(..), PublicationStatus(..), Research, Scale(..), Title(..), TitleSorting(..), View(..), main)
+module Main exposing
+    ( 
+     main
+    )
 
 import AppUrl exposing (AppUrl)
 import Browser
@@ -19,6 +22,7 @@ import Json.Decode.Extra as JDE
 import List
 import List.Extra
 import Maybe.Extra exposing (values)
+import Parser
 import RCStyles
 import Random
 import Random.List exposing (shuffle)
@@ -121,6 +125,7 @@ type alias Flags =
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init { width, height } url key =
     let
+        initUrl : AppUrl
         initUrl =
             urlWhereFragmentIsPath url
     in
@@ -200,6 +205,7 @@ newKey str =
 insert : String -> KeywordSet -> KeywordSet
 insert k (KeywordSet dict) =
     let
+        result : Maybe Keyword
         result =
             Dict.get k dict
     in
@@ -211,8 +217,9 @@ insert k (KeywordSet dict) =
             KeywordSet (Dict.insert k (newKey k) dict)
 
 
-type Title
-    = Title String
+
+-- type Title
+--     = Title String
 
 
 shuffleWithSeed : Int -> List a -> List a
@@ -242,9 +249,11 @@ update msg model =
             case result of
                 Ok lst ->
                     let
+                        reverseDict : Dict String (List Research)
                         reverseDict =
                             reverseKeywordDict lst
 
+                        ks : KeywordSet
                         ks =
                             keywordSet lst
                     in
@@ -281,10 +290,14 @@ update msg model =
                     )
 
 
+
 --We use a fragment, since otherwise the server would have to be configured to serve the same page for all paths
+
+
 urlWhereFragmentIsPath : Url -> AppUrl.AppUrl
 urlWhereFragmentIsPath url =
     let
+        warnMaybe : Maybe a -> Maybe a
         warnMaybe m =
             case m of
                 Nothing ->
@@ -317,6 +330,7 @@ handleUrl url model =
     case url.path of
         [ "keywords" ] ->
             let
+                sorting : KeywordSorting
                 sorting =
                     url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.withDefault "ByUse" |> sortingFromString
             in
@@ -332,6 +346,7 @@ handleUrl url model =
 
         [ "screenshots" ] ->
             let
+                zoom : Scale
                 zoom =
                     case Dict.get "zoom" url.queryParameters of
                         Just [ "micro" ] ->
@@ -349,6 +364,7 @@ handleUrl url model =
                         _ ->
                             Medium
 
+                sorting : TitleSorting
                 sorting =
                     case Dict.get "sorting" url.queryParameters of
                         Just [ "random" ] ->
@@ -367,6 +383,7 @@ handleUrl url model =
 
         [ "list" ] ->
             let
+                q : String
                 q =
                     case Dict.get "q" url.queryParameters of
                         Just [ qstr ] ->
@@ -384,8 +401,8 @@ handleUrl url model =
             model
 
 
-image : String -> String -> Element msg
-image src description =
+image : String -> Element msg
+image src =
     Element.html <|
         Html.node "lazy-image"
             [ Attr.attribute "src" src
@@ -396,38 +413,11 @@ image src description =
             []
 
 
-
-{- }
-   urlFromModel : Model -> String
-   urlFromModel model =
-       let sorting =
-           case model.researchSorting of
-               Random ->
-                   "random"
-
-               OldestFirst ->
-                   "oldest"
-
-               NewestFirst ->
-                   "newest"
-       in
-       case model.view of
-           ListView ListViewMain ->
-               "/#/list" ++ "?sorting=" ++ "random"
-
-           ListView ListViewDetail ->
-               "/#/list" ++ "?sorting=" ++ "oldest"
-
-           ScreenView Scale ->
-               "/#/screenview" ++
-
--}
-
-
 viewResearchMicro : Research -> Element Msg
 viewResearchMicro research =
     let
-        img src desc =
+        img : String -> Element msg
+        img src =
             Element.link [ width (fillPortion 1) ]
                 { url = research.defaultPage
                 , label =
@@ -437,7 +427,7 @@ viewResearchMicro research =
                         , Element.paddingXY 0 5
                         ]
                     <|
-                        image src desc
+                        image src
                 }
     in
     case research.thumbnail of
@@ -447,7 +437,7 @@ viewResearchMicro research =
                 , height (px 200)
                 , Element.clip
                 ]
-                [ Maybe.map2 img research.thumbnail (research.abstract |> Maybe.map shortAbstract) |> Maybe.withDefault Element.none
+                [ Maybe.map img research.thumbnail |> Maybe.withDefault Element.none
                 , Element.column [ width (fillPortion 6), Element.alignTop ] <|
                     [ Element.link [ width fill, Element.alignLeft ] <|
                         { label =
@@ -486,7 +476,8 @@ viewResearchMicro research =
 viewResearch : Research -> Element Msg
 viewResearch research =
     let
-        img src desc =
+        img : String -> Element msg
+        img src =
             Element.link [ width fill ]
                 { url = research.defaultPage
                 , label =
@@ -497,9 +488,10 @@ viewResearch research =
                         , Element.paddingXY 0 5
                         ]
                     <|
-                        image src desc
+                        image src
                 }
 
+        short : String
         short =
             research.abstract
                 |> Maybe.withDefault "no abstract"
@@ -514,7 +506,7 @@ viewResearch research =
         , Element.centerX
         , Element.clip
         ]
-        [ Maybe.map2 img research.thumbnail (research.abstract |> Maybe.map shortAbstract) |> Maybe.withDefault Element.none
+        [ Maybe.map img research.thumbnail |> Maybe.withDefault Element.none
         , Element.link [ width fill ] <|
             { label =
                 Element.paragraph
@@ -561,6 +553,7 @@ listAndThen f lst =
 shortAbstract : String -> String
 shortAbstract abstract =
     let
+        splitted : List String
         splitted =
             abstract
                 |> String.split "."
@@ -577,6 +570,7 @@ shortAbstract abstract =
 listView : Model -> Element Msg
 listView model =
     let
+        filtered : List { id : ExpositionID, title : String, keywords : List String, created : String, author : Author, issueId : Maybe Int, publicationStatus : PublicationStatus, publication : Maybe String, abstract : Maybe String, defaultPage : String, thumbnail : Maybe String }
         filtered =
             List.filter
                 (\r ->
@@ -589,12 +583,14 @@ listView model =
                 )
                 model.research
 
+        researchColumn : List Research -> Element Msg
         researchColumn lst =
             Element.column [ Element.spacing 5, Element.alignTop, width fill, Element.paddingXY 5 5 ]
                 (List.map viewResearchMicro lst)
 
         -- researchInProgress =
         --     List.filter (\r -> r.publicationStatus == InProgress) model.research
+        published : List { id : ExpositionID, title : String, keywords : List String, created : String, author : Author, issueId : Maybe Int, publication : Maybe String, abstract : Maybe String, defaultPage : String, thumbnail : Maybe String, publicationStatus : PublicationStatus }
         published =
             List.filter (\r -> r.publicationStatus == Published) filtered
     in
@@ -701,14 +697,25 @@ type LinkStyle
 linkStyle : Bool -> LinkStyle -> List (Element.Attribute msg)
 linkStyle active style =
     let
-        ( padding, fontSize ) =
+        padding : number
+        padding =
             case style of
                 SmallLink ->
-                    ( 10, 12 )
+                    10
 
                 BigLink ->
-                    ( 10, 20 )
+                    10
 
+        fontSize : number
+        fontSize =
+            case style of
+                SmallLink ->
+                    12
+
+                BigLink ->
+                    20
+
+        common : List (Element.Attr () msg)
         common =
             [ Element.Border.color gray
             , Element.Border.width 1
@@ -738,6 +745,7 @@ viewNav currentView =
 view : Model -> Browser.Document Msg
 view model =
     let
+        body : Element Msg
         body =
             case model.view of
                 ListView ListViewMain ->
@@ -808,10 +816,12 @@ getKeywordsOfResearch keywordset research =
 viewKeywordDetail : Keyword -> Model -> Element Msg
 viewKeywordDetail kw model =
     let
+        researchWithKeyword : List Research
         researchWithKeyword =
             Dict.get (kwName kw) model.reverseKeywordDict |> Maybe.withDefault []
 
         -- the keywords that research with the same keyword uses:
+        relatedKeywords : List Keyword
         relatedKeywords =
             researchWithKeyword
                 |> List.concatMap (getKeywordsOfResearch model.keywords)
@@ -833,9 +843,11 @@ viewKeywordDetail kw model =
 viewKeywordAsButton : Int -> Keyword -> Element Msg
 viewKeywordAsButton fontsize (Keyword k) =
     let
+        name : String
         name =
             k.name
 
+        count : Int
         count =
             k.count
     in
@@ -864,15 +876,19 @@ viewKeywordAsButton fontsize (Keyword k) =
 viewKeywords : Model -> KeywordSorting -> Element Msg
 viewKeywords model sorting =
     let
+        keywordCount : Element msg
         keywordCount =
             let
+                count : String
                 count =
                     (model.keywords |> totalNumber |> String.fromInt) ++ " keywords"
             in
             el [ Font.size 12 ] (Element.text count)
 
+        lastDate : Element msg
         lastDate =
             let
+                dateStr : String
                 dateStr =
                     findLastDate model.research |> Iso8601.fromTime |> String.split "T" |> List.head |> Maybe.withDefault "?"
             in
@@ -887,11 +903,13 @@ viewKeywords model sorting =
                 , label = Element.Input.labelAbove [] (Element.text "search")
                 }
 
+        filtered : List Keyword
         filtered =
             model.keywords
                 |> toList
                 |> List.filter (\kw -> String.contains model.query (kwName kw))
 
+        sorted : List Keyword
         sorted =
             filtered |> sortKeywordLst sorting
     in
@@ -968,6 +986,7 @@ type alias Research =
 dateFromString : String -> Maybe Time.Posix
 dateFromString str =
     let
+        result : Result (List Parser.DeadEnd) Time.Posix
         result =
             str |> String.split "/" |> List.reverse |> String.join "-" |> Iso8601.toTime
     in
@@ -1051,6 +1070,7 @@ entry =
         author : Decoder Author
         author =
             let
+                makeAuthor : Int -> String -> Author
                 makeAuthor id name =
                     Author { id = id, name = name }
             in
@@ -1084,12 +1104,15 @@ getName (Author author) =
 lazyImageWithErrorHandling : Int -> { w : Int, h : Int } -> Research -> Html Msg
 lazyImageWithErrorHandling groupSize dimensions research =
     let
+        urlFromId : Int -> String
         urlFromId i =
             String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
 
+        width : String
         width =
             (((dimensions.w - 180) // groupSize) |> String.fromInt) ++ "px"
 
+        height : String
         height =
             (dimensions.h // (groupSize - 1) |> String.fromInt) ++ "px"
     in
@@ -1113,9 +1136,11 @@ splitGroupsOf n lst =
 
         _ ->
             let
+                first : List a
                 first =
                     List.take n lst
 
+                rest : List a
                 rest =
                     List.drop n lst
             in
@@ -1154,12 +1179,15 @@ sortResearch sorting research =
 viewScreenshots : Scale -> TitleSorting -> Model -> Element Msg
 viewScreenshots scale titlesort model =
     let
+        groupSize : Int
         groupSize =
             scaleToGroupSize scale
 
+        groups : List (List Research)
         groups =
             model.research |> sortResearch titlesort |> splitGroupsOf groupSize
 
+        viewGroup : List Research -> Html Msg
         viewGroup group =
             Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize model.screenDimensions exp) group)
     in
@@ -1196,6 +1224,7 @@ reverseKeywordDict research =
                 )
                 currentDict
 
+        addResearchToDict : Research -> Dict String (List Research) -> Dict String (List Research)
         addResearchToDict exp currentDict =
             -- this exposition has keywords k1 k2 k3
             List.foldl (addExpToKeyword exp) currentDict exp.keywords
@@ -1206,6 +1235,7 @@ reverseKeywordDict research =
 makeNumColumns : Int -> List a -> List (List a)
 makeNumColumns num input =
     let
+        f : Int -> List a -> List (List a) -> List (List a)
         f n inp acc =
             case inp of
                 [] ->

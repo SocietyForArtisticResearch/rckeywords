@@ -1,33 +1,28 @@
-module Main exposing (..)
+module Main exposing (Author(..), ExpositionID, Flags, Keyword(..), KeywordSet(..), KeywordSorting(..), KeywordsViewState(..), LinkStyle(..), ListViewState(..), Model, Msg(..), PublicationStatus(..), Research, Scale(..), Title(..), TitleSorting(..), View(..), main)
 
 import AppUrl exposing (AppUrl)
 import Browser
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
-import Element exposing (Element, el, fill, fillPortion, height, link, padding, paddingXY, px, rgb, rgb255, shrink, spacing, spacingXY, text, width)
+import Element exposing (Element, el, fill, fillPortion, height, padding, paddingXY, px, rgb255, shrink, spacing, spacingXY, text, width)
 import Element.Background
 import Element.Border
-import Element.Events
 import Element.Font as Font
 import Element.Input
 import Element.Region
-import Force exposing (links)
-import Html exposing (Html, a, p, s)
-import Html.Attributes as Attr exposing (default, style, title)
-import Html.Events as Events
+import Html exposing (Html)
+import Html.Attributes as Attr
 import Http
 import Iso8601
 import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
-import Json.Encode as JE
-import List exposing (reverse)
+import List
 import List.Extra
 import Maybe.Extra exposing (values)
 import RCStyles
 import Random
 import Random.List exposing (shuffle)
-import Set exposing (Set)
-import String exposing (split)
+import String
 import Time
 import Url exposing (Url)
 
@@ -39,11 +34,6 @@ import Url exposing (Url)
 
 type alias ExpositionID =
     Int
-
-
-ofString : String -> Maybe ExpositionID
-ofString x =
-    String.toInt x
 
 
 main : Program Flags Model Msg
@@ -88,7 +78,6 @@ type Scale
 
 type ListViewState
     = ListViewMain
-    | ListViewDetail ExpositionID
 
 
 type View
@@ -117,13 +106,8 @@ type alias Model =
 
 type Msg
     = GotResearch (Result Http.Error (List Research))
-    | Randomized (List Research)
     | ChangedQuery String
-    | SwitchView String
     | LoadMore
-    | NoScreenshot ExpositionID
-    | ShowKeyword Keyword
-    | ShowResearchDetail ExpositionID
     | UrlChanged Url.Url
     | LinkClicked Browser.UrlRequest
 
@@ -139,9 +123,6 @@ init { width, height } url key =
     let
         initUrl =
             urlWhereFragmentIsPath url
-
-        _ =
-            Debug.log "url" initUrl
     in
     ( { research = []
       , reverseKeywordDict = Dict.empty
@@ -156,13 +137,6 @@ init { width, height } url key =
         |> handleUrl initUrl
     , Http.get { url = "internal_research.json", expect = Http.expectJson GotResearch decodeResearch }
     )
-
-
-keywords : List Research -> List Keyword
-keywords researchlist =
-    researchlist
-        |> keywordSet
-        |> toList
 
 
 keywordSet : List Research -> KeywordSet
@@ -205,12 +179,7 @@ find keywordStr (KeywordSet dict) =
 
 toList : KeywordSet -> List Keyword
 toList (KeywordSet kwSet) =
-    Dict.toList kwSet |> List.map (\( _, keyword ) -> keyword)
-
-
-filter : String -> List Keyword -> List Keyword
-filter query lst =
-    lst |> List.filter (\(Keyword kw) -> String.contains (query |> String.toLower) (kw.name |> String.toLower))
+    kwSet |> Dict.values
 
 
 emptyKeywordSet : KeywordSet
@@ -253,23 +222,6 @@ shuffleWithSeed seed lst =
         |> Tuple.first
 
 
-listWithSorting : KeywordSorting -> KeywordSet -> List Keyword
-listWithSorting sorting kwset =
-    let
-        lst =
-            kwset |> toList
-    in
-    case sorting of
-        ByUse ->
-            lst |> List.sortBy getCount
-
-        Alphabetical ->
-            lst |> List.sortBy kwName
-
-        RandomKeyword ->
-            lst |> shuffleWithSeed 42
-
-
 sortKeywordLst : KeywordSorting -> List Keyword -> List Keyword
 sortKeywordLst sorting lst =
     case sorting of
@@ -281,16 +233,6 @@ sortKeywordLst sorting lst =
 
         RandomKeyword ->
             lst |> shuffleWithSeed 42
-
-
-titles : List Research -> List Title
-titles =
-    List.map (.title >> Title)
-
-
-defaultPadding : Element.Attribute Msg
-defaultPadding =
-    Element.paddingXY 25 5
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -314,52 +256,14 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err err ->
-                    let
-                        _ =
-                            Debug.log "whoops, error: " err
-                    in
+                Err _ ->
                     ( { model | research = [] }, Cmd.none )
 
         ChangedQuery q ->
             ( { model | query = q }, Cmd.none )
 
-        Randomized lst ->
-            ( { model | research = lst }, Cmd.none )
-
-        SwitchView str ->
-            let
-                v =
-                    case str of
-                        "keywords" ->
-                            KeywordsView (KeywordMainView RandomKeyword)
-
-                        "list" ->
-                            ListView ListViewMain
-
-                        "screenshots" ->
-                            ScreenView Medium Random
-
-                        _ ->
-                            ListView ListViewMain
-            in
-            ( { model | view = v }, Cmd.none )
-
-        ShowKeyword kw ->
-            ( { model | view = KeywordsView (KeywordDetail kw) }, Cmd.none )
-
         LoadMore ->
             ( { model | numberOfResults = model.numberOfResults + 16 }, Cmd.none )
-
-        NoScreenshot id ->
-            let
-                _ =
-                    Debug.log "no screenshot for" id
-            in
-            ( model, Cmd.none )
-
-        ShowResearchDetail exp ->
-            ( { model | view = ListView (ListViewDetail exp) }, Cmd.none )
 
         UrlChanged url ->
             ( { model | url = url |> urlWhereFragmentIsPath }, Cmd.none )
@@ -377,37 +281,18 @@ update msg model =
                     )
 
 
+--We use a fragment, since otherwise the server would have to be configured to serve the same page for all paths
 urlWhereFragmentIsPath : Url -> AppUrl.AppUrl
 urlWhereFragmentIsPath url =
     let
-        -- stripFirstSlash str =
-        --     str
-        --         |> String.toList
-        --         |> (\s ->
-        --             let
-        --                 _ = Debug.log "s" s
-        --             in
-        --                 case s of
-        --                     '/' :: rest ->
-        --                         rest
-        --                     _ ->
-        --                         s
-        --            )
-        --         |> String.fromList
-        -- _ = Debug.log "url.fragment" url.fragment
         warnMaybe m =
             case m of
                 Nothing ->
-                    let
-                        _ =
-                            Debug.log "warning maybe detected" m
-                    in
                     m
 
                 Just something ->
                     Just something
     in
-    --url.fragment |> Maybe.withDefault "" |> stripFirstSlash |> Url.fromString |> warnMaybe |> Maybe.withDefault url |> AppUrl.fromUrl
     url |> Url.toString |> String.replace "/#" "" |> Url.fromString |> warnMaybe |> Maybe.withDefault url |> AppUrl.fromUrl
 
 
@@ -429,10 +314,6 @@ sortingFromString str =
 
 handleUrl : AppUrl.AppUrl -> Model -> Model
 handleUrl url model =
-    let
-        _ =
-            Debug.log "app-url" url
-    in
     case url.path of
         [ "keywords" ] ->
             let
@@ -493,23 +374,6 @@ handleUrl url model =
 
                         _ ->
                             ""
-
-                sorting =
-                    case Dict.get "sortby" url.queryParameters of
-                        Just [ "random" ] ->
-                            Random
-
-                        Just [ "old" ] ->
-                            OldestFirst
-
-                        Just [ "new" ] ->
-                            NewestFirst
-
-                        Just _ ->
-                            NewestFirst
-
-                        Nothing ->
-                            Random
             in
             { model
                 | view = ListView ListViewMain
@@ -575,14 +439,9 @@ viewResearchMicro research =
                     <|
                         image src desc
                 }
-
-        short =
-            research.abstract
-                |> Maybe.withDefault "no abstract"
-                |> shortAbstract
     in
     case research.thumbnail of
-        Just thumb ->
+        Just _ ->
             Element.row
                 [ width fill
                 , height (px 200)
@@ -696,7 +555,7 @@ viewResearch research =
 
 listAndThen : (a -> List b) -> List a -> List b
 listAndThen f lst =
-    lst |> List.map f |> List.concat
+    lst |> List.concatMap f
 
 
 shortAbstract : String -> String
@@ -713,71 +572,6 @@ shortAbstract abstract =
 
         [] ->
             ""
-
-
-splitInColumns : Int -> List a -> List (List a)
-splitInColumns n lst =
-    let
-        size =
-            List.length lst
-
-        chunkSize =
-            size // n
-
-        remain =
-            modBy n size
-
-        columnLengths =
-            List.repeat n chunkSize
-
-        distribute : Int -> List Int -> List Int
-        distribute x ls =
-            case ls of
-                [] ->
-                    []
-
-                lss ->
-                    (List.take x ls |> List.map ((+) 1)) ++ List.drop x ls
-
-        finalLengths =
-            distribute remain columnLengths
-
-        auxe lengths l =
-            case ( l, lengths ) of
-                ( _, [] ) ->
-                    []
-
-                ( [], _ ) ->
-                    []
-
-                ( xs, currentLength :: restLengths ) ->
-                    List.take currentLength xs :: auxe restLengths (List.drop currentLength xs)
-    in
-    auxe finalLengths lst
-
-
-unfold : (state -> Maybe ( state, item )) -> state -> List item
-unfold f start =
-    case f start of
-        Just ( state2, item ) ->
-            item :: unfold f state2
-
-        Nothing ->
-            []
-
-
-makeRowsOfN : Int -> List a -> List (List a)
-makeRowsOfN rowSize lst =
-    let
-        f input =
-            case List.take rowSize input of
-                [] ->
-                    Nothing
-
-                some ->
-                    Just ( some, List.drop rowSize input )
-    in
-    unfold f lst
 
 
 listView : Model -> Element Msg
@@ -829,25 +623,6 @@ isScreenview vw =
 
         _ ->
             False
-
-
-viewSwitch : Model -> Element Msg
-viewSwitch model =
-    Element.column [ spacing 10 ]
-        [ Element.text "Screenshots/Keywords/List"
-        , Element.el [] <|
-            Element.html <|
-                Html.select [ Events.onInput SwitchView ]
-                    [ Html.option
-                        [ Attr.value "screenshots"
-                        , Attr.selected
-                            (isScreenview model.view)
-                        ]
-                        [ Html.text "Screenshots" ]
-                    , Html.option [ Attr.value "keywords", Attr.selected (isKeywordView model.view) ] [ Html.text "Keywords" ]
-                    , Html.option [ Attr.value "list", Attr.selected (isListView model.view) ] [ Html.text "List" ]
-                    ]
-        ]
 
 
 isListView : View -> Bool
@@ -903,11 +678,6 @@ viewScaleSwitch scale =
 --     ]
 
 
-red : Element.Color
-red =
-    Element.rgb 1.0 0.0 0.0
-
-
 black : Element.Color
 black =
     Element.rgb 0.0 0.0 0.0
@@ -916,11 +686,6 @@ black =
 gray : Element.Color
 gray =
     Element.rgb 0.5 0.5 0.5
-
-
-blue : Element.Color
-blue =
-    Element.rgb255 66 135 245
 
 
 white : Element.Color
@@ -970,11 +735,6 @@ viewNav currentView =
         ]
 
 
-getExposition : ExpositionID -> Model -> Maybe Research
-getExposition id model =
-    model.research |> List.filter (\r -> r.id == id) |> List.head
-
-
 view : Model -> Browser.Document Msg
 view model =
     let
@@ -985,14 +745,6 @@ view model =
                         [ Element.row [ Element.spacingXY 0 25 ] [ screenViewOrderSwitch Random ]
                         , listView model
                         ]
-
-                ListView (ListViewDetail id) ->
-                    case getExposition id model of
-                        Nothing ->
-                            Element.none
-
-                        Just r ->
-                            viewResearch r
 
                 KeywordsView kwtype ->
                     case kwtype of
@@ -1109,31 +861,6 @@ viewKeywordAsButton fontsize (Keyword k) =
         ]
 
 
-viewKeywordAsLink : Keyword -> Element Msg
-viewKeywordAsLink (Keyword kw) =
-    let
-        pixels =
-            if kw.count > 12 then
-                12 + kw.count
-
-            else
-                12 + kw.count
-    in
-    Html.span
-        [-- Attr.style "font-size" ((pixels |> String.fromInt) ++ "px")
-        ]
-        [ Html.a
-            [ Attr.href (searchLink kw.name)
-            , Attr.style "display" "inline-block"
-            , Attr.style "padding" "1em"
-            , Attr.style "font-size" "1em"
-            ]
-            [ Html.text kw.name ]
-        , Html.span [ Attr.style "font-size" "1em" ] [ Html.text <| (kw.count |> String.fromInt) ]
-        ]
-        |> Element.html
-
-
 viewKeywords : Model -> KeywordSorting -> Element Msg
 viewKeywords model sorting =
     let
@@ -1248,11 +975,7 @@ dateFromString str =
         Ok time ->
             Just time
 
-        Err err ->
-            let
-                _ =
-                    Debug.log "time error" err
-            in
+        Err _ ->
             Nothing
 
 
@@ -1283,7 +1006,6 @@ findLastDate lst =
 type PublicationStatus
     = InProgress
     | Published
-    | LocalPublication
     | Undecided
 
 
@@ -1354,29 +1076,9 @@ entry =
         )
 
 
-searchLink : String -> String
-searchLink term =
-    "https://www.researchcatalogue.net/portal/search-result?fulltext=&title=&autocomplete=&keyword=" ++ term ++ "&portal=&statusprogress=0&statuspublished=0&includelimited=0&includeprivate=0&type_research=research&resulttype=research&format=html&limit=25&page=0" |> String.replace " " "%20"
-
-
 getName : Author -> String
 getName (Author author) =
     author.name
-
-
-imageWithErrorHandling : Research -> Html Msg
-imageWithErrorHandling research =
-    let
-        urlFromId i =
-            String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
-    in
-    Html.a [ Attr.href research.defaultPage, Attr.title (getName research.author ++ " - " ++ research.title) ]
-        [ Html.img
-            [ Attr.attribute "src" (urlFromId research.id)
-            , Events.on "error" <| Json.Decode.succeed (NoScreenshot research.id)
-            ]
-            []
-        ]
 
 
 lazyImageWithErrorHandling : Int -> { w : Int, h : Int } -> Research -> Html Msg
@@ -1499,22 +1201,6 @@ reverseKeywordDict research =
             List.foldl (addExpToKeyword exp) currentDict exp.keywords
     in
     List.foldl addResearchToDict Dict.empty research
-
-
-viewNeighbors : Research -> Dict String (List Research) -> Element Msg
-viewNeighbors research reverseDict =
-    let
-        collected kw =
-            Element.column []
-                (Element.text ("keyword :" ++ kw)
-                    :: (Dict.get kw reverseDict
-                            |> Maybe.map (List.map viewResearch)
-                            |> Maybe.withDefault [ Element.text "no other" ]
-                       )
-                )
-    in
-    Element.row []
-        (List.map collected research.keywords)
 
 
 makeNumColumns : Int -> List a -> List (List a)

@@ -1,4 +1,4 @@
-module RCStyles exposing (..)
+module RCStyles exposing (Style(..), rcButtonStyle)
 
 import Html exposing (Attribute)
 import Html.Attributes exposing (style)

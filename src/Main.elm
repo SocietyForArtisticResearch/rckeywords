@@ -775,7 +775,7 @@ view model =
         [ Element.layout
             [ width (Element.px (toFloat model.screenDimensions.w * 0.9 |> floor))
             , Font.family [ Font.typeface "Helvetica Neue", Font.sansSerif ]
-            , Element.paddingEach { top = 10, left = 15, bottom = 25, right = 15 }
+            , Element.paddingEach { top = 40, left = 15, bottom = 25, right = 15 }
             ]
             (Element.column [ width fill ]
                 [ viewNav model.view, body ]

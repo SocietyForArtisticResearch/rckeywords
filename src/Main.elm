@@ -1,7 +1,4 @@
-module Main exposing
-    ( 
-     main
-    )
+module Main exposing (main)
 
 import AppUrl exposing (AppUrl)
 import Browser
@@ -134,7 +131,7 @@ init { width, height } url key =
       , keywords = emptyKeywordSet
       , query = ""
       , screenDimensions = { w = width, h = height }
-      , view = KeywordsView (KeywordMainView RandomKeyword)
+      , view = ScreenView Medium Random
       , numberOfResults = 8
       , url = initUrl
       , key = key

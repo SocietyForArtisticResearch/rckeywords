@@ -9,6 +9,7 @@ import Element.Background
 import Element.Border
 import Element.Font as Font
 import Element.Input
+import Element.Lazy
 import Element.Region
 import Html exposing (Html)
 import Html.Attributes as Attr
@@ -24,6 +25,7 @@ import RCStyles
 import Random
 import Random.List exposing (shuffle)
 import String
+import Task
 import Time
 import Url exposing (Url)
 
@@ -92,11 +94,30 @@ type KeywordsViewState
     | KeywordDetail Keyword -- could be opaque type?
 
 
+type Search
+    = SearchQuery String
+    | SearchWorking String
+    | SearchResult String (List Keyword)
+
+
+getQuery : Search -> String
+getQuery search =
+    case search of
+        SearchQuery q ->
+            q
+
+        SearchWorking q ->
+            q
+
+        SearchResult q _ ->
+            q
+
+
 type alias Model =
     { research : List Research
     , reverseKeywordDict : Dict String (List Research) -- keys are Keywords, values are a list of Expositions that have that
     , keywords : KeywordSet
-    , query : String
+    , query : Search
     , screenDimensions : { w : Int, h : Int }
     , view : View
     , numberOfResults : Int
@@ -108,6 +129,7 @@ type alias Model =
 type Msg
     = GotResearch (Result Http.Error (List Research))
     | ChangedQuery String
+    | FoundKeywords (List Keyword)
     | LoadMore
     | UrlChanged Url.Url
     | LinkClicked Browser.UrlRequest
@@ -125,19 +147,25 @@ init { width, height } url key =
         initUrl : AppUrl
         initUrl =
             urlWhereFragmentIsPath url
+
+        ( model, cmd ) =
+            { research = []
+            , reverseKeywordDict = Dict.empty
+            , keywords = emptyKeywordSet
+            , query = SearchQuery ""
+            , screenDimensions = { w = width, h = height }
+            , view = ScreenView Medium Random
+            , numberOfResults = 8
+            , url = initUrl
+            , key = key
+            }
+                |> handleUrl initUrl
     in
-    ( { research = []
-      , reverseKeywordDict = Dict.empty
-      , keywords = emptyKeywordSet
-      , query = ""
-      , screenDimensions = { w = width, h = height }
-      , view = ScreenView Medium Random
-      , numberOfResults = 8
-      , url = initUrl
-      , key = key
-      }
-        |> handleUrl initUrl
-    , Http.get { url = "internal_research.json", expect = Http.expectJson GotResearch decodeResearch }
+    ( model
+    , Cmd.batch
+        [ Http.get { url = "internal_research.json", expect = Http.expectJson GotResearch decodeResearch }
+        , cmd
+        ]
     )
 
 
@@ -239,6 +267,10 @@ sortKeywordLst sorting lst =
             lst |> shuffleWithSeed 42
 
 
+searchKeywords q model =
+    Task.succeed (model.keywords |> toList |> List.filter (kwName >> String.contains q))
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -266,7 +298,12 @@ update msg model =
                     ( { model | research = [] }, Cmd.none )
 
         ChangedQuery q ->
-            ( { model | query = q }, Cmd.none )
+            ( { model | query = SearchQuery q }
+            , Cmd.none
+            )
+
+        FoundKeywords lst ->
+            ( { model | query = SearchResult (getQuery model.query) lst }, Cmd.none )
 
         LoadMore ->
             ( { model | numberOfResults = model.numberOfResults + 16 }, Cmd.none )
@@ -277,8 +314,12 @@ update msg model =
         LinkClicked urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
-                    ( handleUrl (url |> urlWhereFragmentIsPath) model
-                    , Nav.pushUrl model.key (Url.toString url)
+                    let
+                        ( mdl, cmd ) =
+                            handleUrl (url |> urlWhereFragmentIsPath) model
+                    in
+                    ( mdl
+                    , Cmd.batch [ cmd, Nav.pushUrl model.key (Url.toString url) ]
                     )
 
                 Browser.External url ->
@@ -322,7 +363,12 @@ sortingFromString str =
             ByUse
 
 
-handleUrl : AppUrl.AppUrl -> Model -> Model
+noCmd : Model -> ( Model, Cmd Msg )
+noCmd model =
+    ( model, Cmd.none )
+
+
+handleUrl : AppUrl.AppUrl -> Model -> ( Model, Cmd Msg )
 handleUrl url model =
     case url.path of
         [ "keywords" ] ->
@@ -331,15 +377,30 @@ handleUrl url model =
                 sorting =
                     url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.withDefault "ByUse" |> sortingFromString
             in
-            { model | view = KeywordsView (KeywordMainView sorting) }
+            noCmd { model | view = KeywordsView (KeywordMainView sorting) }
+
+        [ "keywords", "search" ] ->
+            let
+                q =
+                    url.queryParameters |> Dict.get "q" |> Maybe.andThen List.head |> Maybe.withDefault ""
+
+                sorting =
+                    url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.map sortingFromString |> Maybe.withDefault ByUse
+            in
+            ( { model
+                | query = SearchQuery q
+                , view = KeywordsView (KeywordMainView sorting)
+              }
+            , Task.perform FoundKeywords (searchKeywords q model)
+            )
 
         [ "keywords", keywordAsString ] ->
             case find keywordAsString model.keywords of
                 Just kw ->
-                    { model | view = KeywordsView (KeywordDetail kw) }
+                    noCmd { model | view = KeywordsView (KeywordDetail kw) }
 
                 Nothing ->
-                    { model | view = KeywordsView (KeywordMainView ByUse) }
+                    noCmd { model | view = KeywordsView (KeywordMainView ByUse) }
 
         [ "screenshots" ] ->
             let
@@ -376,26 +437,16 @@ handleUrl url model =
                         _ ->
                             Random
             in
-            { model | view = ScreenView zoom sorting }
+            noCmd { model | view = ScreenView zoom sorting }
 
         [ "list" ] ->
-            let
-                q : String
-                q =
-                    case Dict.get "q" url.queryParameters of
-                        Just [ qstr ] ->
-                            qstr
-
-                        _ ->
-                            ""
-            in
-            { model
-                | view = ListView ListViewMain
-                , query = q
-            }
+            noCmd
+                { model
+                    | view = ListView ListViewMain
+                }
 
         _ ->
-            model
+            noCmd model
 
 
 image : String -> Element msg
@@ -895,30 +946,55 @@ viewKeywords model sorting =
         keywordSearch =
             Element.Input.search [ width (px 200) ]
                 { onChange = ChangedQuery
-                , text = model.query
+                , text =
+                    case model.query of
+                        SearchQuery txt ->
+                            txt
+
+                        SearchWorking txt ->
+                            txt
+
+                        SearchResult txt _ ->
+                            txt
                 , placeholder = Just (Element.Input.placeholder [] (Element.text "search for keyword"))
                 , label = Element.Input.labelAbove [] (Element.text "search")
                 }
 
-        filtered : List Keyword
+        filtered : Maybe (List Keyword)
         filtered =
-            model.keywords
-                |> toList
-                |> List.filter (\kw -> String.contains model.query (kwName kw))
+            case model.query of
+                SearchQuery _ ->
+                    Just (model.keywords |> toList)
 
-        sorted : List Keyword
+                SearchWorking _ ->
+                    Nothing
+
+                SearchResult _ result ->
+                    Just result
+
+        sorted : Maybe (List Keyword)
         sorted =
-            filtered |> sortKeywordLst sorting
+            filtered |> Maybe.map (sortKeywordLst sorting)
+
+        lazyf : Maybe (List Keyword) -> Element Msg
+        lazyf result =
+            Element.column [ width fill, spacingXY 0 15 ]
+                [ Element.row [ Element.spacingXY 25 25, width fill ]
+                    [ Element.el [ width shrink ] (toggleSorting sorting)
+                    , Element.el [ width shrink ] keywordCount
+                    , Element.el [ width shrink ] lastDate
+                    ]
+                , Element.el [ width shrink ] keywordSearch
+                , Element.link (linkStyle True BigLink) { url = "/#/keywords/search?q=" ++ (model.query |> getQuery), label = Element.text "search" }
+                , case result of
+                    Nothing ->
+                        Element.text "waiting"
+
+                    Just srted ->
+                        List.map (viewKeywordAsButton 16) srted |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                ]
     in
-    Element.column [ width fill, spacingXY 0 15 ]
-        [ Element.row [ Element.spacingXY 25 25, width fill ]
-            [ Element.el [ width shrink ] (toggleSorting sorting)
-            , Element.el [ width shrink ] keywordCount
-            , Element.el [ width shrink ] lastDate
-            ]
-        , Element.el [ width shrink ] keywordSearch
-        , List.map (viewKeywordAsButton 16) sorted |> makeColumns 4 [ width fill, spacingXY 25 25 ] --Element.paddingXY 25 25 ]
-        ]
+    Element.Lazy.lazy lazyf sorted
 
 
 makeColumns : Int -> List (Element.Attribute Msg) -> List (Element Msg) -> Element Msg

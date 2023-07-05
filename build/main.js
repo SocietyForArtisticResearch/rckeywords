@@ -11336,9 +11336,13 @@ var $author$project$Main$kwName = function (_v0) {
 	var kw = _v0.a;
 	return kw.name;
 };
+var $elm$core$Debug$log = _Debug_log;
 var $author$project$Main$toList = function (_v0) {
 	var kwSet = _v0.a;
-	return $elm$core$Dict$values(kwSet);
+	var calc = $elm$core$Dict$values(kwSet);
+	var _v1 = A2($elm$core$Debug$log, 'start', 'start');
+	var _v2 = A2($elm$core$Debug$log, 'finished', 'finished');
+	return calc;
 };
 var $author$project$Main$searchKeywords = F2(
 	function (q, model) {
@@ -20325,15 +20329,16 @@ var $mdgriffith$elm_ui$Element$Lazy$embed = function (x) {
 				$elm$virtual_dom$VirtualDom$text(''));
 	}
 };
-var $mdgriffith$elm_ui$Element$Lazy$apply1 = F2(
-	function (fn, a) {
+var $mdgriffith$elm_ui$Element$Lazy$apply5 = F6(
+	function (fn, a, b, c, d, e) {
 		return $mdgriffith$elm_ui$Element$Lazy$embed(
-			fn(a));
+			A5(fn, a, b, c, d, e));
 	});
-var $mdgriffith$elm_ui$Element$Lazy$lazy = F2(
-	function (fn, a) {
+var $elm$virtual_dom$VirtualDom$lazy7 = _VirtualDom_lazy7;
+var $mdgriffith$elm_ui$Element$Lazy$lazy5 = F6(
+	function (fn, a, b, c, d, e) {
 		return $mdgriffith$elm_ui$Internal$Model$Unstyled(
-			A3($elm$virtual_dom$VirtualDom$lazy3, $mdgriffith$elm_ui$Element$Lazy$apply1, fn, a));
+			A7($elm$virtual_dom$VirtualDom$lazy7, $mdgriffith$elm_ui$Element$Lazy$apply5, fn, a, b, c, d, e));
 	});
 var $mdgriffith$elm_ui$Element$Input$Placeholder = F2(
 	function (a, b) {
@@ -21353,6 +21358,83 @@ var $author$project$Main$totalNumber = function (_v0) {
 };
 var $author$project$Main$viewKeywords = F2(
 	function (model, sorting) {
+		var lazyf = F5(
+			function (result, toggle, kwcount, date, searchbox) {
+				return A2(
+					$mdgriffith$elm_ui$Element$column,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							A2($mdgriffith$elm_ui$Element$spacingXY, 0, 15)
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$row,
+							_List_fromArray(
+								[
+									A2($mdgriffith$elm_ui$Element$spacingXY, 25, 25),
+									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$mdgriffith$elm_ui$Element$el,
+									_List_fromArray(
+										[
+											$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink)
+										]),
+									toggle),
+									A2(
+									$mdgriffith$elm_ui$Element$el,
+									_List_fromArray(
+										[
+											$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink)
+										]),
+									kwcount),
+									A2(
+									$mdgriffith$elm_ui$Element$el,
+									_List_fromArray(
+										[
+											$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink)
+										]),
+									date)
+								])),
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink)
+								]),
+							searchbox),
+							A2(
+							$mdgriffith$elm_ui$Element$link,
+							A2($author$project$Main$linkStyle, true, $author$project$Main$BigLink),
+							{
+								label: $mdgriffith$elm_ui$Element$text('search'),
+								url: '/#/keywords/search?q=' + $author$project$Main$getQuery(model.query)
+							}),
+							function () {
+							if (result.$ === 'Nothing') {
+								return $mdgriffith$elm_ui$Element$text('waiting');
+							} else {
+								var srted = result.a;
+								return A3(
+									$author$project$Main$makeColumns,
+									4,
+									_List_fromArray(
+										[
+											$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+											A2($mdgriffith$elm_ui$Element$spacingXY, 25, 25)
+										]),
+									A2(
+										$elm$core$List$map,
+										$author$project$Main$viewKeywordAsButton(16),
+										srted));
+							}
+						}()
+						]));
+			});
 		var lastDate = function () {
 			var dateStr = A2(
 				$elm$core$Maybe$withDefault,
@@ -21390,16 +21472,16 @@ var $author$project$Main$viewKeywords = F2(
 						_List_Nil,
 						$mdgriffith$elm_ui$Element$text('search for keyword'))),
 				text: function () {
-					var _v2 = model.query;
-					switch (_v2.$) {
+					var _v1 = model.query;
+					switch (_v1.$) {
 						case 'SearchQuery':
-							var txt = _v2.a;
+							var txt = _v1.a;
 							return txt;
 						case 'SearchWorking':
-							var txt = _v2.a;
+							var txt = _v1.a;
 							return txt;
 						default:
-							var txt = _v2.a;
+							var txt = _v1.a;
 							return txt;
 					}
 				}()
@@ -21415,82 +21497,6 @@ var $author$project$Main$viewKeywords = F2(
 					]),
 				$mdgriffith$elm_ui$Element$text(count));
 		}();
-		var lazyf = function (result) {
-			return A2(
-				$mdgriffith$elm_ui$Element$column,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-						A2($mdgriffith$elm_ui$Element$spacingXY, 0, 15)
-					]),
-				_List_fromArray(
-					[
-						A2(
-						$mdgriffith$elm_ui$Element$row,
-						_List_fromArray(
-							[
-								A2($mdgriffith$elm_ui$Element$spacingXY, 25, 25),
-								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
-							]),
-						_List_fromArray(
-							[
-								A2(
-								$mdgriffith$elm_ui$Element$el,
-								_List_fromArray(
-									[
-										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink)
-									]),
-								$author$project$Main$toggleSorting(sorting)),
-								A2(
-								$mdgriffith$elm_ui$Element$el,
-								_List_fromArray(
-									[
-										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink)
-									]),
-								keywordCount),
-								A2(
-								$mdgriffith$elm_ui$Element$el,
-								_List_fromArray(
-									[
-										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink)
-									]),
-								lastDate)
-							])),
-						A2(
-						$mdgriffith$elm_ui$Element$el,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink)
-							]),
-						keywordSearch),
-						A2(
-						$mdgriffith$elm_ui$Element$link,
-						A2($author$project$Main$linkStyle, true, $author$project$Main$BigLink),
-						{
-							label: $mdgriffith$elm_ui$Element$text('search'),
-							url: '/#/keywords/search?q=' + $author$project$Main$getQuery(model.query)
-						}),
-						function () {
-						if (result.$ === 'Nothing') {
-							return $mdgriffith$elm_ui$Element$text('waiting');
-						} else {
-							var srted = result.a;
-							return A3(
-								$author$project$Main$makeColumns,
-								4,
-								_List_fromArray(
-									[
-										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-										A2($mdgriffith$elm_ui$Element$spacingXY, 25, 25)
-									]),
-								A2(
-									$elm$core$List$map,
-									$author$project$Main$viewKeywordAsButton(16),
-									srted));
-						}
-					}()
-					]));
-		};
 		var filtered = function () {
 			var _v0 = model.query;
 			switch (_v0.$) {
@@ -21508,7 +21514,14 @@ var $author$project$Main$viewKeywords = F2(
 			$elm$core$Maybe$map,
 			$author$project$Main$sortKeywordLst(sorting),
 			filtered);
-		return A2($mdgriffith$elm_ui$Element$Lazy$lazy, lazyf, sorted);
+		return A6(
+			$mdgriffith$elm_ui$Element$Lazy$lazy5,
+			lazyf,
+			sorted,
+			$author$project$Main$toggleSorting(sorting),
+			keywordCount,
+			lastDate,
+			keywordSearch);
 	});
 var $author$project$Main$isKeywordView = function (v) {
 	if (v.$ === 'KeywordsView') {

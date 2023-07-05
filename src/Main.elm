@@ -209,8 +209,15 @@ find keywordStr (KeywordSet dict) =
 
 toList : KeywordSet -> List Keyword
 toList (KeywordSet kwSet) =
-    --let _ = Debug.log "call" "call" in
-    kwSet |> Dict.values
+    let 
+        _ = Debug.log "start" "start" 
+
+        calc = kwSet |> Dict.values
+
+        _ = Debug.log "finished" "finished"
+    in
+    calc
+
 
 
 emptyKeywordSet : KeywordSet
@@ -977,15 +984,14 @@ viewKeywords model sorting =
         sorted =
             filtered |> Maybe.map (sortKeywordLst sorting)
 
-        lazyf : Maybe (List Keyword) -> Element Msg
-        lazyf result =
+        lazyf result toggle kwcount date searchbox =
             Element.column [ width fill, spacingXY 0 15 ]
                 [ Element.row [ Element.spacingXY 25 25, width fill ]
-                    [ Element.el [ width shrink ] (toggleSorting sorting)
-                    , Element.el [ width shrink ] keywordCount
-                    , Element.el [ width shrink ] lastDate
+                    [ Element.el [ width shrink ] toggle
+                    , Element.el [ width shrink ] kwcount
+                    , Element.el [ width shrink ] date
                     ]
-                , Element.el [ width shrink ] keywordSearch
+                , Element.el [ width shrink ] searchbox
                 , Element.link (linkStyle True BigLink) { url = "/#/keywords/search?q=" ++ (model.query |> getQuery), label = Element.text "search" }
                 , case result of
                     Nothing ->
@@ -995,7 +1001,7 @@ viewKeywords model sorting =
                         List.map (viewKeywordAsButton 16) srted |> makeColumns 4 [ width fill, spacingXY 25 25 ]
                 ]
     in
-    Element.Lazy.lazy lazyf sorted
+    Element.Lazy.lazy5 lazyf sorted (toggleSorting sorting) keywordCount lastDate keywordSearch
 
 
 makeColumns : Int -> List (Element.Attribute Msg) -> List (Element Msg) -> Element Msg

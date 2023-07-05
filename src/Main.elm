@@ -194,35 +194,30 @@ getCount (Keyword kw) =
 
 
 totalNumber : KeywordSet -> Int
-totalNumber (KeywordSet dict) =
-    dict |> Dict.keys |> List.length
+totalNumber (KeywordSet set) =
+    set.dict |> Dict.keys |> List.length
 
 
 type KeywordSet
-    = KeywordSet (Dict String Keyword)
+    = KeywordSet
+        { dict : Dict String Keyword
+        , list : List Keyword
+        }
 
 
 find : String -> KeywordSet -> Maybe Keyword
-find keywordStr (KeywordSet dict) =
-    Dict.get keywordStr dict
+find keywordStr (KeywordSet set) =
+    set.dict |> Dict.get keywordStr
 
 
 toList : KeywordSet -> List Keyword
 toList (KeywordSet kwSet) =
-    let 
-        _ = Debug.log "start" "start" 
-
-        calc = kwSet |> Dict.values
-
-        _ = Debug.log "finished" "finished"
-    in
-    calc
-
+    kwSet.list
 
 
 emptyKeywordSet : KeywordSet
 emptyKeywordSet =
-    KeywordSet Dict.empty
+    KeywordSet { dict = Dict.empty, list = [] }
 
 
 use : Keyword -> Keyword
@@ -236,18 +231,30 @@ newKey str =
 
 
 insert : String -> KeywordSet -> KeywordSet
-insert k (KeywordSet dict) =
+insert k (KeywordSet set) =
     let
+        dict : Dict String Keyword
+        dict =
+            set.dict
+
         result : Maybe Keyword
         result =
             Dict.get k dict
     in
     case result of
         Just (Keyword kw) ->
-            KeywordSet (Dict.insert kw.name (use (Keyword kw)) dict)
+            let
+                used =
+                    use (Keyword kw)
+            in
+            KeywordSet { set | dict = Dict.insert kw.name used dict, list = set.list }
 
         Nothing ->
-            KeywordSet (Dict.insert k (newKey k) dict)
+            let
+                new =
+                    newKey k
+            in
+            KeywordSet { set | dict = Dict.insert k new dict, list = new :: set.list }
 
 
 
@@ -264,15 +271,16 @@ shuffleWithSeed seed lst =
 
 sortKeywordLst : KeywordSorting -> List Keyword -> List Keyword
 sortKeywordLst sorting lst =
-    case sorting of
-        ByUse ->
-            lst |> List.sortBy getCount |> List.reverse
+    lst
+    -- case sorting of
+    --     ByUse ->
+    --         lst |> List.sortBy getCount |> List.reverse
 
-        Alphabetical ->
-            lst |> List.sortBy kwName
+    --     Alphabetical ->
+    --         lst |> List.sortBy kwName
 
-        RandomKeyword ->
-            lst |> shuffleWithSeed 42
+    --     RandomKeyword ->
+    --         lst |> shuffleWithSeed 42
 
 
 searchKeywords q model =

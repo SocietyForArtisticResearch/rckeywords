@@ -11014,7 +11014,8 @@ var $author$project$Main$decodeResearch = $elm$json$Json$Decode$list($author$pro
 var $author$project$Main$KeywordSet = function (a) {
 	return {$: 'KeywordSet', a: a};
 };
-var $author$project$Main$emptyKeywordSet = $author$project$Main$KeywordSet($elm$core$Dict$empty);
+var $author$project$Main$emptyKeywordSet = $author$project$Main$KeywordSet(
+	{dict: $elm$core$Dict$empty, list: _List_Nil});
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
 		return {$: 'BadStatus_', a: a, b: b};
@@ -11296,8 +11297,8 @@ var $elm$core$Maybe$andThen = F2(
 	});
 var $author$project$Main$find = F2(
 	function (keywordStr, _v0) {
-		var dict = _v0.a;
-		return A2($elm$core$Dict$get, keywordStr, dict);
+		var set = _v0.a;
+		return A2($elm$core$Dict$get, keywordStr, set.dict);
 	});
 var $elm$core$List$head = function (list) {
 	if (list.b) {
@@ -11336,13 +11337,9 @@ var $author$project$Main$kwName = function (_v0) {
 	var kw = _v0.a;
 	return kw.name;
 };
-var $elm$core$Debug$log = _Debug_log;
 var $author$project$Main$toList = function (_v0) {
 	var kwSet = _v0.a;
-	var calc = $elm$core$Dict$values(kwSet);
-	var _v1 = A2($elm$core$Debug$log, 'start', 'start');
-	var _v2 = A2($elm$core$Debug$log, 'finished', 'finished');
-	return calc;
+	return kwSet.list;
 };
 var $author$project$Main$searchKeywords = F2(
 	function (q, model) {
@@ -11744,24 +11741,29 @@ var $author$project$Main$use = function (_v0) {
 };
 var $author$project$Main$insert = F2(
 	function (k, _v0) {
-		var dict = _v0.a;
+		var set = _v0.a;
+		var dict = set.dict;
 		var result = A2($elm$core$Dict$get, k, dict);
 		if (result.$ === 'Just') {
 			var kw = result.a.a;
+			var used = $author$project$Main$use(
+				$author$project$Main$Keyword(kw));
 			return $author$project$Main$KeywordSet(
-				A3(
-					$elm$core$Dict$insert,
-					kw.name,
-					$author$project$Main$use(
-						$author$project$Main$Keyword(kw)),
-					dict));
+				_Utils_update(
+					set,
+					{
+						dict: A3($elm$core$Dict$insert, kw.name, used, dict),
+						list: set.list
+					}));
 		} else {
+			var _new = $author$project$Main$newKey(k);
 			return $author$project$Main$KeywordSet(
-				A3(
-					$elm$core$Dict$insert,
-					k,
-					$author$project$Main$newKey(k),
-					dict));
+				_Utils_update(
+					set,
+					{
+						dict: A3($elm$core$Dict$insert, k, _new, dict),
+						list: A2($elm$core$List$cons, _new, set.list)
+					}));
 		}
 	});
 var $author$project$Main$keywordSet = function (researchlist) {
@@ -21141,169 +21143,9 @@ var $mdgriffith$elm_ui$Element$Input$search = $mdgriffith$elm_ui$Element$Input$t
 		spellchecked: false,
 		type_: $mdgriffith$elm_ui$Element$Input$TextInputNode('search')
 	});
-var $elm$random$Random$Seed = F2(
-	function (a, b) {
-		return {$: 'Seed', a: a, b: b};
-	});
-var $elm$random$Random$next = function (_v0) {
-	var state0 = _v0.a;
-	var incr = _v0.b;
-	return A2($elm$random$Random$Seed, ((state0 * 1664525) + incr) >>> 0, incr);
-};
-var $elm$random$Random$initialSeed = function (x) {
-	var _v0 = $elm$random$Random$next(
-		A2($elm$random$Random$Seed, 0, 1013904223));
-	var state1 = _v0.a;
-	var incr = _v0.b;
-	var state2 = (state1 + x) >>> 0;
-	return $elm$random$Random$next(
-		A2($elm$random$Random$Seed, state2, incr));
-};
-var $elm$random$Random$Generator = function (a) {
-	return {$: 'Generator', a: a};
-};
-var $elm$core$Bitwise$xor = _Bitwise_xor;
-var $elm$random$Random$peel = function (_v0) {
-	var state = _v0.a;
-	var word = (state ^ (state >>> ((state >>> 28) + 4))) * 277803737;
-	return ((word >>> 22) ^ word) >>> 0;
-};
-var $elm$random$Random$int = F2(
-	function (a, b) {
-		return $elm$random$Random$Generator(
-			function (seed0) {
-				var _v0 = (_Utils_cmp(a, b) < 0) ? _Utils_Tuple2(a, b) : _Utils_Tuple2(b, a);
-				var lo = _v0.a;
-				var hi = _v0.b;
-				var range = (hi - lo) + 1;
-				if (!((range - 1) & range)) {
-					return _Utils_Tuple2(
-						(((range - 1) & $elm$random$Random$peel(seed0)) >>> 0) + lo,
-						$elm$random$Random$next(seed0));
-				} else {
-					var threshhold = (((-range) >>> 0) % range) >>> 0;
-					var accountForBias = function (seed) {
-						accountForBias:
-						while (true) {
-							var x = $elm$random$Random$peel(seed);
-							var seedN = $elm$random$Random$next(seed);
-							if (_Utils_cmp(x, threshhold) < 0) {
-								var $temp$seed = seedN;
-								seed = $temp$seed;
-								continue accountForBias;
-							} else {
-								return _Utils_Tuple2((x % range) + lo, seedN);
-							}
-						}
-					};
-					return accountForBias(seed0);
-				}
-			});
-	});
-var $elm$random$Random$maxInt = 2147483647;
-var $elm$random$Random$minInt = -2147483648;
-var $elm_community$random_extra$Random$List$anyInt = A2($elm$random$Random$int, $elm$random$Random$minInt, $elm$random$Random$maxInt);
-var $elm$random$Random$map3 = F4(
-	function (func, _v0, _v1, _v2) {
-		var genA = _v0.a;
-		var genB = _v1.a;
-		var genC = _v2.a;
-		return $elm$random$Random$Generator(
-			function (seed0) {
-				var _v3 = genA(seed0);
-				var a = _v3.a;
-				var seed1 = _v3.b;
-				var _v4 = genB(seed1);
-				var b = _v4.a;
-				var seed2 = _v4.b;
-				var _v5 = genC(seed2);
-				var c = _v5.a;
-				var seed3 = _v5.b;
-				return _Utils_Tuple2(
-					A3(func, a, b, c),
-					seed3);
-			});
-	});
-var $elm$random$Random$step = F2(
-	function (_v0, seed) {
-		var generator = _v0.a;
-		return generator(seed);
-	});
-var $elm$random$Random$independentSeed = $elm$random$Random$Generator(
-	function (seed0) {
-		var makeIndependentSeed = F3(
-			function (state, b, c) {
-				return $elm$random$Random$next(
-					A2($elm$random$Random$Seed, state, (1 | (b ^ c)) >>> 0));
-			});
-		var gen = A2($elm$random$Random$int, 0, 4294967295);
-		return A2(
-			$elm$random$Random$step,
-			A4($elm$random$Random$map3, makeIndependentSeed, gen, gen, gen),
-			seed0);
-	});
-var $elm$random$Random$map = F2(
-	function (func, _v0) {
-		var genA = _v0.a;
-		return $elm$random$Random$Generator(
-			function (seed0) {
-				var _v1 = genA(seed0);
-				var a = _v1.a;
-				var seed1 = _v1.b;
-				return _Utils_Tuple2(
-					func(a),
-					seed1);
-			});
-	});
-var $elm_community$random_extra$Random$List$shuffle = function (list) {
-	return A2(
-		$elm$random$Random$map,
-		function (independentSeed) {
-			return A2(
-				$elm$core$List$map,
-				$elm$core$Tuple$first,
-				A2(
-					$elm$core$List$sortBy,
-					$elm$core$Tuple$second,
-					A3(
-						$elm$core$List$foldl,
-						F2(
-							function (item, _v0) {
-								var acc = _v0.a;
-								var seed = _v0.b;
-								var _v1 = A2($elm$random$Random$step, $elm_community$random_extra$Random$List$anyInt, seed);
-								var tag = _v1.a;
-								var nextSeed = _v1.b;
-								return _Utils_Tuple2(
-									A2(
-										$elm$core$List$cons,
-										_Utils_Tuple2(item, tag),
-										acc),
-									nextSeed);
-							}),
-						_Utils_Tuple2(_List_Nil, independentSeed),
-						list).a));
-		},
-		$elm$random$Random$independentSeed);
-};
-var $author$project$Main$shuffleWithSeed = F2(
-	function (seed, lst) {
-		return A2(
-			$elm$random$Random$step,
-			$elm_community$random_extra$Random$List$shuffle(lst),
-			$elm$random$Random$initialSeed(seed)).a;
-	});
 var $author$project$Main$sortKeywordLst = F2(
 	function (sorting, lst) {
-		switch (sorting.$) {
-			case 'ByUse':
-				return $elm$core$List$reverse(
-					A2($elm$core$List$sortBy, $author$project$Main$getCount, lst));
-			case 'Alphabetical':
-				return A2($elm$core$List$sortBy, $author$project$Main$kwName, lst);
-			default:
-				return A2($author$project$Main$shuffleWithSeed, 42, lst);
-		}
+		return lst;
 	});
 var $author$project$Main$toggleSorting = function (sorting) {
 	return A2(
@@ -21352,9 +21194,9 @@ var $author$project$Main$toggleSorting = function (sorting) {
 			]));
 };
 var $author$project$Main$totalNumber = function (_v0) {
-	var dict = _v0.a;
+	var set = _v0.a;
 	return $elm$core$List$length(
-		$elm$core$Dict$keys(dict));
+		$elm$core$Dict$keys(set.dict));
 };
 var $author$project$Main$viewKeywords = F2(
 	function (model, sorting) {
@@ -21699,6 +21541,158 @@ var $author$project$Main$scaleToGroupSize = function (scale) {
 			return 3;
 	}
 };
+var $elm$random$Random$Seed = F2(
+	function (a, b) {
+		return {$: 'Seed', a: a, b: b};
+	});
+var $elm$random$Random$next = function (_v0) {
+	var state0 = _v0.a;
+	var incr = _v0.b;
+	return A2($elm$random$Random$Seed, ((state0 * 1664525) + incr) >>> 0, incr);
+};
+var $elm$random$Random$initialSeed = function (x) {
+	var _v0 = $elm$random$Random$next(
+		A2($elm$random$Random$Seed, 0, 1013904223));
+	var state1 = _v0.a;
+	var incr = _v0.b;
+	var state2 = (state1 + x) >>> 0;
+	return $elm$random$Random$next(
+		A2($elm$random$Random$Seed, state2, incr));
+};
+var $elm$random$Random$Generator = function (a) {
+	return {$: 'Generator', a: a};
+};
+var $elm$core$Bitwise$xor = _Bitwise_xor;
+var $elm$random$Random$peel = function (_v0) {
+	var state = _v0.a;
+	var word = (state ^ (state >>> ((state >>> 28) + 4))) * 277803737;
+	return ((word >>> 22) ^ word) >>> 0;
+};
+var $elm$random$Random$int = F2(
+	function (a, b) {
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v0 = (_Utils_cmp(a, b) < 0) ? _Utils_Tuple2(a, b) : _Utils_Tuple2(b, a);
+				var lo = _v0.a;
+				var hi = _v0.b;
+				var range = (hi - lo) + 1;
+				if (!((range - 1) & range)) {
+					return _Utils_Tuple2(
+						(((range - 1) & $elm$random$Random$peel(seed0)) >>> 0) + lo,
+						$elm$random$Random$next(seed0));
+				} else {
+					var threshhold = (((-range) >>> 0) % range) >>> 0;
+					var accountForBias = function (seed) {
+						accountForBias:
+						while (true) {
+							var x = $elm$random$Random$peel(seed);
+							var seedN = $elm$random$Random$next(seed);
+							if (_Utils_cmp(x, threshhold) < 0) {
+								var $temp$seed = seedN;
+								seed = $temp$seed;
+								continue accountForBias;
+							} else {
+								return _Utils_Tuple2((x % range) + lo, seedN);
+							}
+						}
+					};
+					return accountForBias(seed0);
+				}
+			});
+	});
+var $elm$random$Random$maxInt = 2147483647;
+var $elm$random$Random$minInt = -2147483648;
+var $elm_community$random_extra$Random$List$anyInt = A2($elm$random$Random$int, $elm$random$Random$minInt, $elm$random$Random$maxInt);
+var $elm$random$Random$map3 = F4(
+	function (func, _v0, _v1, _v2) {
+		var genA = _v0.a;
+		var genB = _v1.a;
+		var genC = _v2.a;
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v3 = genA(seed0);
+				var a = _v3.a;
+				var seed1 = _v3.b;
+				var _v4 = genB(seed1);
+				var b = _v4.a;
+				var seed2 = _v4.b;
+				var _v5 = genC(seed2);
+				var c = _v5.a;
+				var seed3 = _v5.b;
+				return _Utils_Tuple2(
+					A3(func, a, b, c),
+					seed3);
+			});
+	});
+var $elm$random$Random$step = F2(
+	function (_v0, seed) {
+		var generator = _v0.a;
+		return generator(seed);
+	});
+var $elm$random$Random$independentSeed = $elm$random$Random$Generator(
+	function (seed0) {
+		var makeIndependentSeed = F3(
+			function (state, b, c) {
+				return $elm$random$Random$next(
+					A2($elm$random$Random$Seed, state, (1 | (b ^ c)) >>> 0));
+			});
+		var gen = A2($elm$random$Random$int, 0, 4294967295);
+		return A2(
+			$elm$random$Random$step,
+			A4($elm$random$Random$map3, makeIndependentSeed, gen, gen, gen),
+			seed0);
+	});
+var $elm$random$Random$map = F2(
+	function (func, _v0) {
+		var genA = _v0.a;
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v1 = genA(seed0);
+				var a = _v1.a;
+				var seed1 = _v1.b;
+				return _Utils_Tuple2(
+					func(a),
+					seed1);
+			});
+	});
+var $elm_community$random_extra$Random$List$shuffle = function (list) {
+	return A2(
+		$elm$random$Random$map,
+		function (independentSeed) {
+			return A2(
+				$elm$core$List$map,
+				$elm$core$Tuple$first,
+				A2(
+					$elm$core$List$sortBy,
+					$elm$core$Tuple$second,
+					A3(
+						$elm$core$List$foldl,
+						F2(
+							function (item, _v0) {
+								var acc = _v0.a;
+								var seed = _v0.b;
+								var _v1 = A2($elm$random$Random$step, $elm_community$random_extra$Random$List$anyInt, seed);
+								var tag = _v1.a;
+								var nextSeed = _v1.b;
+								return _Utils_Tuple2(
+									A2(
+										$elm$core$List$cons,
+										_Utils_Tuple2(item, tag),
+										acc),
+									nextSeed);
+							}),
+						_Utils_Tuple2(_List_Nil, independentSeed),
+						list).a));
+		},
+		$elm$random$Random$independentSeed);
+};
+var $author$project$Main$shuffleWithSeed = F2(
+	function (seed, lst) {
+		return A2(
+			$elm$random$Random$step,
+			$elm_community$random_extra$Random$List$shuffle(lst),
+			$elm$random$Random$initialSeed(seed)).a;
+	});
 var $author$project$Main$sortResearch = F2(
 	function (sorting, research) {
 		switch (sorting.$) {

@@ -21,6 +21,7 @@ import List
 import List.Extra
 import Maybe.Extra exposing (values)
 import Parser
+import Process
 import RCStyles
 import Random
 import Random.List exposing (shuffle)
@@ -60,6 +61,35 @@ type KeywordSorting
     = ByUse
     | Alphabetical
     | RandomKeyword
+
+
+sortingToString : KeywordSorting -> String
+sortingToString s =
+    case s of
+        ByUse ->
+            "ByUse"
+
+        Alphabetical ->
+            "Alphabetical"
+
+        RandomKeyword ->
+            "RandomKeyword"
+
+
+sortingFromString : String -> KeywordSorting
+sortingFromString str =
+    case str of
+        "ByUse" ->
+            ByUse
+
+        "Alphabetical" ->
+            Alphabetical
+
+        "Random" ->
+            RandomKeyword
+
+        _ ->
+            ByUse
 
 
 type TitleSorting
@@ -113,11 +143,18 @@ getQuery search =
             q
 
 
+type SearchAction
+    = Idle
+    | Searching
+    | FoundResults (List Keyword)
+
+
 type alias Model =
     { research : List Research
     , reverseKeywordDict : Dict String (List Research) -- keys are Keywords, values are a list of Expositions that have that
     , keywords : KeywordSet
-    , query : Search
+    , query : String
+    , search : SearchAction
     , screenDimensions : { w : Int, h : Int }
     , view : View
     , numberOfResults : Int
@@ -152,7 +189,8 @@ init { width, height } url key =
             { research = []
             , reverseKeywordDict = Dict.empty
             , keywords = emptyKeywordSet
-            , query = SearchQuery ""
+            , query = ""
+            , search = Idle
             , screenDimensions = { w = width, h = height }
             , view = ScreenView Medium Random
             , numberOfResults = 8
@@ -246,8 +284,11 @@ insert k (KeywordSet set) =
             let
                 used =
                     use (Keyword kw)
+
+                newDict =
+                    Dict.insert kw.name used dict
             in
-            KeywordSet { set | dict = Dict.insert kw.name used dict, list = set.list }
+            KeywordSet { set | dict = newDict, list = Dict.values newDict }
 
         Nothing ->
             let
@@ -271,20 +312,30 @@ shuffleWithSeed seed lst =
 
 sortKeywordLst : KeywordSorting -> List Keyword -> List Keyword
 sortKeywordLst sorting lst =
-    lst
-    -- case sorting of
-    --     ByUse ->
-    --         lst |> List.sortBy getCount |> List.reverse
+    case sorting of
+        ByUse ->
+            lst |> List.sortBy getCount |> List.reverse
 
-    --     Alphabetical ->
-    --         lst |> List.sortBy kwName
+        Alphabetical ->
+            lst |> List.sortBy kwName
 
-    --     RandomKeyword ->
-    --         lst |> shuffleWithSeed 42
+        RandomKeyword ->
+            lst |> shuffleWithSeed 42
 
 
-searchKeywords q model =
-    Task.succeed (model.keywords |> toList |> List.filter (kwName >> String.contains q))
+searchKeywords : String -> KeywordSorting -> List Keyword -> Cmd Msg
+searchKeywords q sorting lst =
+    let
+        wait =
+            Process.sleep 1
+
+        filter ls =
+            wait |> Task.andThen (\_ -> Task.succeed (ls |> List.filter (kwName >> String.contains q)))
+
+        sort ls =
+            wait |> Task.andThen (\_ -> Task.succeed (ls |> sortKeywordLst sorting))
+    in
+    Task.perform FoundKeywords (Task.succeed lst |> Task.andThen filter |> Task.andThen sort)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -314,12 +365,12 @@ update msg model =
                     ( { model | research = [] }, Cmd.none )
 
         ChangedQuery q ->
-            ( { model | query = SearchQuery q }
+            ( { model | query = q }
             , Cmd.none
             )
 
         FoundKeywords lst ->
-            ( { model | query = SearchResult (getQuery model.query) lst }, Cmd.none )
+            ( { model | search = FoundResults lst }, Cmd.none )
 
         LoadMore ->
             ( { model | numberOfResults = model.numberOfResults + 16 }, Cmd.none )
@@ -363,22 +414,6 @@ urlWhereFragmentIsPath url =
     url |> Url.toString |> String.replace "/#" "" |> Url.fromString |> warnMaybe |> Maybe.withDefault url |> AppUrl.fromUrl
 
 
-sortingFromString : String -> KeywordSorting
-sortingFromString str =
-    case str of
-        "ByUse" ->
-            ByUse
-
-        "Alphabetical" ->
-            Alphabetical
-
-        "Random" ->
-            RandomKeyword
-
-        _ ->
-            ByUse
-
-
 noCmd : Model -> ( Model, Cmd Msg )
 noCmd model =
     ( model, Cmd.none )
@@ -393,7 +428,11 @@ handleUrl url model =
                 sorting =
                     url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.withDefault "ByUse" |> sortingFromString
             in
-            noCmd { model | view = KeywordsView (KeywordMainView sorting) }
+            noCmd
+                { model
+                    | search = Idle
+                    , view = KeywordsView (KeywordMainView sorting)
+                }
 
         [ "keywords", "search" ] ->
             let
@@ -402,12 +441,21 @@ handleUrl url model =
 
                 sorting =
                     url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.map sortingFromString |> Maybe.withDefault ByUse
+
+                cmd =
+                    case q of
+                        "" ->
+                            Cmd.none
+
+                        someQ ->
+                            searchKeywords someQ sorting (model.keywords |> toList)
             in
             ( { model
-                | query = SearchQuery q
+                | query = q
                 , view = KeywordsView (KeywordMainView sorting)
+                , search = Searching
               }
-            , Task.perform FoundKeywords (searchKeywords q model)
+            , cmd
             )
 
         [ "keywords", keywordAsString ] ->
@@ -962,54 +1010,49 @@ viewKeywords model sorting =
         keywordSearch =
             Element.Input.search [ width (px 200) ]
                 { onChange = ChangedQuery
-                , text =
-                    case model.query of
-                        SearchQuery txt ->
-                            txt
-
-                        SearchWorking txt ->
-                            txt
-
-                        SearchResult txt _ ->
-                            txt
+                , text = model.query
                 , placeholder = Just (Element.Input.placeholder [] (Element.text "search for keyword"))
                 , label = Element.Input.labelAbove [] (Element.text "search")
                 }
 
-        filtered : Maybe (List Keyword)
-        filtered =
-            case model.query of
-                SearchQuery _ ->
-                    model.keywords |> toList |> Just
-
-                SearchWorking _ ->
-                    Nothing
-
-                SearchResult _ result ->
-                    Just result
-
-        sorted : Maybe (List Keyword)
         sorted =
-            filtered |> Maybe.map (sortKeywordLst sorting)
+            model.keywords |> toList |> sortKeywordLst sorting
 
-        lazyf result toggle kwcount date searchbox =
+        lazyf all result kwcount date searchbox =
             Element.column [ width fill, spacingXY 0 15 ]
                 [ Element.row [ Element.spacingXY 25 25, width fill ]
-                    [ Element.el [ width shrink ] toggle
+                    [ Element.el [ width shrink ] (toggleSorting sorting)
                     , Element.el [ width shrink ] kwcount
                     , Element.el [ width shrink ] date
                     ]
                 , Element.el [ width shrink ] searchbox
-                , Element.link (linkStyle True BigLink) { url = "/#/keywords/search?q=" ++ (model.query |> getQuery), label = Element.text "search" }
+                , Element.link (linkStyle True BigLink) { url = "/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ sortingToString sorting, label = Element.text "search" }
                 , case result of
-                    Nothing ->
-                        Element.text "waiting"
+                    FoundResults results ->
+                        Element.column []
+                            [ Element.text "results"
+                            , List.map (viewKeywordAsButton 16) results |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                            ]
 
-                    Just srted ->
-                        List.map (viewKeywordAsButton 16) srted |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                    Idle ->
+                        Element.column []
+                            [ Element.text "idle"
+                            , List.map (viewKeywordAsButton 16) all |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                            ]
+
+                    Searching ->
+                        Element.column []
+                            [ Element.text "searching..."
+                            ]
                 ]
     in
-    Element.Lazy.lazy5 lazyf sorted (toggleSorting sorting) keywordCount lastDate keywordSearch
+    Element.Lazy.lazy5
+        lazyf
+        sorted
+        model.search
+        keywordCount
+        lastDate
+        keywordSearch
 
 
 makeColumns : Int -> List (Element.Attribute Msg) -> List (Element Msg) -> Element Msg

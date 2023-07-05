@@ -209,6 +209,7 @@ find keywordStr (KeywordSet dict) =
 
 toList : KeywordSet -> List Keyword
 toList (KeywordSet kwSet) =
+    --let _ = Debug.log "call" "call" in
     kwSet |> Dict.values
 
 
@@ -964,7 +965,7 @@ viewKeywords model sorting =
         filtered =
             case model.query of
                 SearchQuery _ ->
-                    Just (model.keywords |> toList)
+                    model.keywords |> toList |> Just
 
                 SearchWorking _ ->
                     Nothing

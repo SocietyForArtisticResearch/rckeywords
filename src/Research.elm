@@ -81,25 +81,25 @@ sortingToString : KeywordSorting -> String
 sortingToString s =
     case s of
         ByUse ->
-            "ByUse"
+            "byuse"
 
         Alphabetical ->
-            "Alphabetical"
+            "alphabetical"
 
         RandomKeyword ->
-            "RandomKeyword"
+            "randomkeyword"
 
 
 sortingFromString : String -> KeywordSorting
 sortingFromString str =
     case str of
-        "ByUse" ->
+        "byuse" ->
             ByUse
 
-        "Alphabetical" ->
+        "alphabetical" ->
             Alphabetical
 
-        "Random" ->
+        "randomkeyword" ->
             RandomKeyword
 
         _ ->
@@ -115,13 +115,13 @@ type TitleSorting
 titleSortingFromString : String -> TitleSorting
 titleSortingFromString string =
     case string of
-        "Random" ->
+        "random" ->
             Random
 
-        "OldestFirst" ->
+        "oldestfirst" ->
             OldestFirst
 
-        "NewestFirst" ->
+        "newestfirst" ->
             NewestFirst
 
         _ ->
@@ -132,13 +132,13 @@ titleSortingToString : TitleSorting -> String
 titleSortingToString sorting =
     case sorting of
         Random ->
-            "Random"
+            "random"
 
         OldestFirst ->
-            "OldestFirst"
+            "oldestfirst"
 
         NewestFirst ->
-            "NewestFirst"
+            "newestfirst"
 
 
 type Keyword

@@ -12,7 +12,7 @@ import Element.Input
 import Element.Lazy
 import Element.Region
 import Html exposing (Html, s)
-import Html.Attributes as Attr 
+import Html.Attributes as Attr
 import Http
 import Iso8601
 import Json.Decode exposing (Decoder, field, int, maybe, string)
@@ -25,7 +25,7 @@ import Process
 import RCStyles
 import Random
 import Random.List exposing (shuffle)
-import Research as RC exposing (Research)
+import Research as RC exposing (KeywordSorting(..), Research, sortingFromString)
 import String
 import Task
 import Time
@@ -65,16 +65,6 @@ subscriptions _ =
 
 
 
-
-
-
-
-
-
-
-
-
-
 -- | Portal
 
 
@@ -98,6 +88,7 @@ type View
 type KeywordsViewState
     = KeywordMainView RC.KeywordSorting
     | KeywordDetail RC.Keyword RC.TitleSorting -- could be opaque type?
+
 
 
 -- type Search
@@ -172,46 +163,27 @@ init { width, height } url key =
 
 
 
-
-
-
-
-
-
-
-
 -- find : String -> KeywordSet -> Maybe Keyword
 -- find keywordStr (KeywordSet set) =
 --     set.dict |> Dict.get keywordStr
-
-
 -- toList : KeywordSet -> List Keyword
 -- toList (KeywordSet kwSet) =
 --     kwSet.list
-
-
 -- emptyKeywordSet : KeywordSet
 -- emptyKeywordSet =
 --     KeywordSet { dict = Dict.empty, list = [] }
-
-
 -- use : Keyword -> Keyword
 -- use (Keyword kw) =
 --     Keyword { kw | count = kw.count + 1 }
-
-
 -- newKey : String -> Keyword
 -- newKey str =
 --     Keyword { count = 1, name = str }
-
-
 -- insert : String -> KeywordSet -> KeywordSet
 -- insert k (KeywordSet set) =
 --     let
 --         dict : Dict String Keyword
 --         dict =
 --             set.dict
-
 --         result : Maybe Keyword
 --         result =
 --             Dict.get k dict
@@ -221,26 +193,18 @@ init { width, height } url key =
 --             let
 --                 used =
 --                     use (Keyword kw)
-
 --                 newDict =
 --                     Dict.insert kw.name used dict
 --             in
 --             KeywordSet { set | dict = newDict, list = Dict.values newDict }
-
 --         Nothing ->
 --             let
 --                 new =
 --                     newKey k
 --             in
 --             KeywordSet { set | dict = Dict.insert k new dict, list = new :: set.list }
-
-
-
 -- type Title
 --     = Title String
-
-
-
 
 
 searchKeywords : String -> RC.KeywordSorting -> List RC.Keyword -> Cmd Msg
@@ -358,13 +322,12 @@ handleUrl url model =
             let
                 sorting : RC.KeywordSorting
                 sorting =
-                    url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.withDefault "ByUse" |> RC.sortingFromString
+                    url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.withDefault "byuse" |> RC.sortingFromString
             in
-            noCmd
-                { model
-                    | search = Idle
+                ({ model
+                    | search = Searching
                     , view = KeywordsView (KeywordMainView sorting)
-                }
+                }, sendQuery ("", RC.sortingToString sorting))
 
         [ "keywords", "search" ] ->
             let
@@ -380,7 +343,7 @@ handleUrl url model =
                             Cmd.none
 
                         someQ ->
-                            sendQuery (someQ, RC.sortingToString sorting)
+                            sendQuery ( someQ, RC.sortingToString sorting )
             in
             ( { model
                 | query = q
@@ -428,7 +391,7 @@ handleUrl url model =
                         Just [ srting ] ->
                             RC.titleSortingFromString srting
 
-                        _ -> 
+                        _ ->
                             RC.NewestFirst
             in
             noCmd { model | view = ScreenView zoom sorting }
@@ -880,9 +843,9 @@ view model =
 toggleSorting : RC.KeywordSorting -> Element Msg
 toggleSorting sorting =
     Element.row [ paddingXY 0 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (sorting == RC.ByUse) SmallLink) { url = "/#/keywords?sorting=ByUse", label = Element.text "by use" }
-        , Element.link (linkStyle (sorting == RC.Alphabetical) SmallLink) { url = "/#/keywords?sorting=Alphabetical", label = Element.text "alphabetical" }
-        , Element.link (linkStyle (sorting == RC.RandomKeyword) SmallLink) { url = "/#/keywords?sorting=Random", label = Element.text "random" }
+        [ Element.link (linkStyle (sorting == RC.ByUse) SmallLink) { url = "/#/keywords?sorting=" ++ RC.sortingToString RC.ByUse, label = Element.text "by use" }
+        , Element.link (linkStyle (sorting == RC.Alphabetical) SmallLink) { url = "/#/keywords?sorting=" ++ RC.sortingToString RC.Alphabetical, label = Element.text "alphabetical" }
+        , Element.link (linkStyle (sorting == RC.RandomKeyword) SmallLink) { url = "/#/keywords?sorting=" ++ RC.sortingToString RC.RandomKeyword, label = Element.text "random" }
         ]
 
 
@@ -1010,10 +973,7 @@ viewKeywords model sorting =
                     }
                 ]
 
-        sorted =
-            model.keywords |> RC.toList |> RC.sortKeywordLst sorting
-
-        lazyf all result kwcount date searchbox =
+        lazyf result kwcount date searchbox =
             Element.column [ width fill, spacingXY 0 15 ]
                 [ Element.row [ Element.spacingXY 25 25, width fill ]
                     [ Element.el [ width shrink ] (toggleSorting sorting)
@@ -1026,7 +986,7 @@ viewKeywords model sorting =
                         List.map (viewKeywordAsButton 16) results |> makeColumns 4 [ width fill, spacingXY 25 25 ]
 
                     Idle ->
-                        List.map (viewKeywordAsButton 16) all |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                        Element.text "idle"
 
                     Searching ->
                         Element.column []
@@ -1034,9 +994,8 @@ viewKeywords model sorting =
                             ]
                 ]
     in
-    Element.Lazy.lazy5
+    Element.Lazy.lazy4
         lazyf
-        sorted
         model.search
         keywordCount
         lastDate
@@ -1050,33 +1009,6 @@ makeColumns n attrs lst =
             |> makeNumColumns n
             |> List.map (\rowItems -> Element.row [ width fill, spacing 25 ] rowItems)
         )
-
-
-
--- Html.div
---     [ Attr.style "font-family" "Helvetica-Neue"
---     --, Attr.style "padding" ""
---     , Attr.style "width" "100%"
---     , Attr.style "text-align" "justify"
---     ]
---     [ Html.p [] [ Html.text ("This was generated on: " ++ lastDate) ]
---     , Html.div []
---         [ Html.h1 [] [ Html.text "Keywords" ]
---         , toggleSorting model
---         , Html.p [] [ Html.text keywordCount ]
---         , Html.input [ Attr.placeholder "Search for keyword", Attr.value model.query, Events.onInput ChangedQuery ] []
---         , Html.div [ Attr.style "white-space" "normal" ] <| List.map viewKeyword keywordLst
---         ]
--- , Html.div []
---     [ Html.h1 [] [ Html.text "titles" ]
---     , Html.p [] <| List.map viewTitle researchLst
---     ]
-
-
-
-
-
-
 
 
 dateFromString : String -> Maybe Time.Posix
@@ -1118,21 +1050,9 @@ findLastDate lst =
         |> Maybe.withDefault (Time.millisToPosix 0)
 
 
-type PublicationStatus
-    = InProgress
-    | Published
-    | Undecided
-
-
 decodeResearch : Decoder (List Research)
 decodeResearch =
     Json.Decode.list RC.exposition
-
-
-
-
-
-
 
 
 lazyImageWithErrorHandling : Int -> { w : Int, h : Int } -> Research -> Html Msg

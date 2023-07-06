@@ -3195,13 +3195,21 @@
     };
     var $author$project$Worker$findKeywords_fn = function (query, sorting, keywords) {
         var lst = $author$project$Research$toList(keywords);
-        var filtered = $elm$core$List$filter_fn(A2($elm$core$Basics$composeR, $author$project$Research$kwName, $elm$core$String$contains(query)), lst);
+        var filtered = function () {
+            if (query === "") {
+                return lst;
+            }
+            else {
+                var nonEmptyQ = query;
+                return $elm$core$List$filter_fn(A2($elm$core$Basics$composeR, $author$project$Research$kwName, $elm$core$String$contains(nonEmptyQ)), lst);
+            }
+        }();
         var ordered = function () {
             switch (sorting) {
                 case 0:
-                    return _List_sortBy_fn(function (kw) {
+                    return $elm$core$List$reverse(_List_sortBy_fn(function (kw) {
                         return $author$project$Research$getCount(kw);
-                    }, filtered);
+                    }, filtered));
                 case 1:
                     return _List_sortBy_fn(function (kw) {
                         return $author$project$Research$kwName(kw);
@@ -3264,11 +3272,11 @@
     var $author$project$Research$RandomKeyword = 2;
     var $author$project$Research$sortingFromString = function (str) {
         switch (str) {
-            case "ByUse":
+            case "byuse":
                 return 0;
-            case "Alphabetical":
+            case "alphabetical":
                 return 1;
-            case "Random":
+            case "randomkeyword":
                 return 2;
             default:
                 return 0;

@@ -74,13 +74,17 @@ findKeywords query sorting keywords =
             RC.toList keywords
 
         filtered =
-            lst |> List.filter (RC.kwName >> String.contains query)
+            case query of
+                "" -> lst
+
+                nonEmptyQ -> 
+                    lst |> List.filter (RC.kwName >> String.contains nonEmptyQ)
 
 
         ordered =
             case sorting of
                 RC.ByUse ->
-                    List.sortBy (\kw -> RC.getCount kw) filtered
+                    List.sortBy (\kw -> RC.getCount kw) filtered |> List.reverse
 
                 RC.Alphabetical ->
                     List.sortBy (\kw -> RC.kwName kw) filtered

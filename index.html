@@ -107,16 +107,12 @@
             let h = window.innerHeight;
 
             console.log("w & h :", [w, h]);
+            
+            const worker = new Worker('build/worker.js')
             var app = Elm.Main.init({ node: document.getElementById("elm"), flags: { width: w, height: h } });
             if (document.getElementById("elm")) {
                 document.getElementById("elm").innerText = 'This is a headless program, meaning there is nothing to show here.\\n\\nI started the program anyway though, and you can access it as `app` in the developer console.';
             }
-
-            const worker = new Worker('worker.js')
-
-            const app = Elm.Main.init({
-                node: document.getElementById('app')
-            });
 
             // listen for keyword queries form the main app:
             app.ports.sendQuery.subscribe(function(query) {

@@ -380,7 +380,7 @@ handleUrl url model =
                             Cmd.none
 
                         someQ ->
-                            searchKeywords someQ sorting (model.keywords |> RC.toList)
+                            sendQuery (someQ, RC.sortingToString sorting)
             in
             ( { model
                 | query = q

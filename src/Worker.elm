@@ -39,7 +39,12 @@ update msg model =
         LoadData res ->
             case res of
                 Ok data ->
-                    ( { model | research = data }, Cmd.none )
+                    ( { model
+                        | research = data
+                        , keywords = RC.keywordSet data
+                      }
+                    , Cmd.none
+                    )
 
                 Err e ->
                     ( problemize (LoadError e) model, Cmd.none )
@@ -71,6 +76,7 @@ findKeywords query sorting keywords =
         filtered =
             lst |> List.filter (RC.kwName >> String.contains query)
 
+
         ordered =
             case sorting of
                 RC.ByUse ->
@@ -81,6 +87,7 @@ findKeywords query sorting keywords =
 
                 RC.RandomKeyword ->
                     shuffleWithSeed 42 filtered
+
     in
     ordered
 

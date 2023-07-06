@@ -1,4 +1,4 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import AppUrl exposing (AppUrl)
 import Browser
@@ -11,8 +11,8 @@ import Element.Font as Font
 import Element.Input
 import Element.Lazy
 import Element.Region
-import Html exposing (Html)
-import Html.Attributes as Attr
+import Html exposing (Html, s)
+import Html.Attributes as Attr 
 import Http
 import Iso8601
 import Json.Decode exposing (Decoder, field, int, maybe, string)
@@ -25,6 +25,7 @@ import Process
 import RCStyles
 import Random
 import Random.List exposing (shuffle)
+import Research as RC exposing (Research)
 import String
 import Task
 import Time
@@ -34,6 +35,12 @@ import Url exposing (Url)
 
 -- TODO:
 -- move sorting to main model, since it also applies to list.
+
+
+port receiveResults : (Json.Decode.Value -> msg) -> Sub msg
+
+
+port sendQuery : ( String, String ) -> Cmd msg
 
 
 type alias ExpositionID =
@@ -54,48 +61,17 @@ main =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    receiveResults ReceiveResults
 
 
-type KeywordSorting
-    = ByUse
-    | Alphabetical
-    | RandomKeyword
 
 
-sortingToString : KeywordSorting -> String
-sortingToString s =
-    case s of
-        ByUse ->
-            "ByUse"
-
-        Alphabetical ->
-            "Alphabetical"
-
-        RandomKeyword ->
-            "RandomKeyword"
 
 
-sortingFromString : String -> KeywordSorting
-sortingFromString str =
-    case str of
-        "ByUse" ->
-            ByUse
-
-        "Alphabetical" ->
-            Alphabetical
-
-        "Random" ->
-            RandomKeyword
-
-        _ ->
-            ByUse
 
 
-type TitleSorting
-    = Random
-    | OldestFirst
-    | NewestFirst
+
+
 
 
 
@@ -110,49 +86,36 @@ type Scale
 
 
 type ListViewState
-    = ListViewMain
+    = ListViewMain RC.TitleSorting
 
 
 type View
     = KeywordsView KeywordsViewState
     | ListView ListViewState
-    | ScreenView Scale TitleSorting
+    | ScreenView Scale RC.TitleSorting
 
 
 type KeywordsViewState
-    = KeywordMainView KeywordSorting
-    | KeywordDetail Keyword -- could be opaque type?
+    = KeywordMainView RC.KeywordSorting
+    | KeywordDetail RC.Keyword RC.TitleSorting -- could be opaque type?
 
 
-type Search
-    = SearchQuery String
-    | SearchWorking String
-    | SearchResult String (List Keyword)
-
-
-getQuery : Search -> String
-getQuery search =
-    case search of
-        SearchQuery q ->
-            q
-
-        SearchWorking q ->
-            q
-
-        SearchResult q _ ->
-            q
+-- type Search
+--     = SearchQuery String
+--     | SearchWorking String
+--     | SearchResult String (List RC.Keyword)
 
 
 type SearchAction
     = Idle
     | Searching
-    | FoundResults (List Keyword)
+    | FoundResults (List RC.Keyword)
 
 
 type alias Model =
     { research : List Research
     , reverseKeywordDict : Dict String (List Research) -- keys are Keywords, values are a list of Expositions that have that
-    , keywords : KeywordSet
+    , keywords : RC.KeywordSet
     , query : String
     , search : SearchAction
     , screenDimensions : { w : Int, h : Int }
@@ -166,10 +129,11 @@ type alias Model =
 type Msg
     = GotResearch (Result Http.Error (List Research))
     | ChangedQuery String
-    | FoundKeywords (List Keyword)
+    | FoundKeywords (List RC.Keyword)
     | LoadMore
     | UrlChanged Url.Url
     | LinkClicked Browser.UrlRequest
+    | ReceiveResults Json.Decode.Value
 
 
 type alias Flags =
@@ -188,11 +152,11 @@ init { width, height } url key =
         ( model, cmd ) =
             { research = []
             , reverseKeywordDict = Dict.empty
-            , keywords = emptyKeywordSet
+            , keywords = RC.emptyKeywordSet
             , query = ""
             , search = Idle
             , screenDimensions = { w = width, h = height }
-            , view = ScreenView Medium Random
+            , view = ScreenView Medium RC.Random
             , numberOfResults = 8
             , url = initUrl
             , key = key
@@ -207,95 +171,68 @@ init { width, height } url key =
     )
 
 
-keywordSet : List Research -> KeywordSet
-keywordSet researchlist =
-    List.foldr
-        (\research set ->
-            List.foldr insert set research.keywords
-        )
-        emptyKeywordSet
-        researchlist
 
 
-type Keyword
-    = Keyword { count : Int, name : String }
 
 
-kwName : Keyword -> String
-kwName (Keyword kw) =
-    kw.name
 
 
-getCount : Keyword -> Int
-getCount (Keyword kw) =
-    kw.count
 
 
-totalNumber : KeywordSet -> Int
-totalNumber (KeywordSet set) =
-    set.dict |> Dict.keys |> List.length
+
+-- find : String -> KeywordSet -> Maybe Keyword
+-- find keywordStr (KeywordSet set) =
+--     set.dict |> Dict.get keywordStr
 
 
-type KeywordSet
-    = KeywordSet
-        { dict : Dict String Keyword
-        , list : List Keyword
-        }
+-- toList : KeywordSet -> List Keyword
+-- toList (KeywordSet kwSet) =
+--     kwSet.list
 
 
-find : String -> KeywordSet -> Maybe Keyword
-find keywordStr (KeywordSet set) =
-    set.dict |> Dict.get keywordStr
+-- emptyKeywordSet : KeywordSet
+-- emptyKeywordSet =
+--     KeywordSet { dict = Dict.empty, list = [] }
 
 
-toList : KeywordSet -> List Keyword
-toList (KeywordSet kwSet) =
-    kwSet.list
+-- use : Keyword -> Keyword
+-- use (Keyword kw) =
+--     Keyword { kw | count = kw.count + 1 }
 
 
-emptyKeywordSet : KeywordSet
-emptyKeywordSet =
-    KeywordSet { dict = Dict.empty, list = [] }
+-- newKey : String -> Keyword
+-- newKey str =
+--     Keyword { count = 1, name = str }
 
 
-use : Keyword -> Keyword
-use (Keyword kw) =
-    Keyword { kw | count = kw.count + 1 }
+-- insert : String -> KeywordSet -> KeywordSet
+-- insert k (KeywordSet set) =
+--     let
+--         dict : Dict String Keyword
+--         dict =
+--             set.dict
 
+--         result : Maybe Keyword
+--         result =
+--             Dict.get k dict
+--     in
+--     case result of
+--         Just (Keyword kw) ->
+--             let
+--                 used =
+--                     use (Keyword kw)
 
-newKey : String -> Keyword
-newKey str =
-    Keyword { count = 1, name = str }
+--                 newDict =
+--                     Dict.insert kw.name used dict
+--             in
+--             KeywordSet { set | dict = newDict, list = Dict.values newDict }
 
-
-insert : String -> KeywordSet -> KeywordSet
-insert k (KeywordSet set) =
-    let
-        dict : Dict String Keyword
-        dict =
-            set.dict
-
-        result : Maybe Keyword
-        result =
-            Dict.get k dict
-    in
-    case result of
-        Just (Keyword kw) ->
-            let
-                used =
-                    use (Keyword kw)
-
-                newDict =
-                    Dict.insert kw.name used dict
-            in
-            KeywordSet { set | dict = newDict, list = Dict.values newDict }
-
-        Nothing ->
-            let
-                new =
-                    newKey k
-            in
-            KeywordSet { set | dict = Dict.insert k new dict, list = new :: set.list }
+--         Nothing ->
+--             let
+--                 new =
+--                     newKey k
+--             in
+--             KeywordSet { set | dict = Dict.insert k new dict, list = new :: set.list }
 
 
 
@@ -303,37 +240,20 @@ insert k (KeywordSet set) =
 --     = Title String
 
 
-shuffleWithSeed : Int -> List a -> List a
-shuffleWithSeed seed lst =
-    Random.initialSeed seed
-        |> Random.step (shuffle lst)
-        |> Tuple.first
 
 
-sortKeywordLst : KeywordSorting -> List Keyword -> List Keyword
-sortKeywordLst sorting lst =
-    case sorting of
-        ByUse ->
-            lst |> List.sortBy getCount |> List.reverse
 
-        Alphabetical ->
-            lst |> List.sortBy kwName
-
-        RandomKeyword ->
-            lst |> shuffleWithSeed 42
-
-
-searchKeywords : String -> KeywordSorting -> List Keyword -> Cmd Msg
+searchKeywords : String -> RC.KeywordSorting -> List RC.Keyword -> Cmd Msg
 searchKeywords q sorting lst =
     let
         wait =
             Process.sleep 1
 
         filter ls =
-            wait |> Task.andThen (\_ -> Task.succeed (ls |> List.filter (kwName >> String.contains q)))
+            wait |> Task.andThen (\_ -> Task.succeed (ls |> List.filter (RC.kwName >> String.contains q)))
 
         sort ls =
-            wait |> Task.andThen (\_ -> Task.succeed (ls |> sortKeywordLst sorting))
+            wait |> Task.andThen (\_ -> Task.succeed (ls |> RC.sortKeywordLst sorting))
     in
     Task.perform FoundKeywords (Task.succeed lst |> Task.andThen filter |> Task.andThen sort)
 
@@ -349,9 +269,9 @@ update msg model =
                         reverseDict =
                             reverseKeywordDict lst
 
-                        ks : KeywordSet
+                        ks : RC.KeywordSet
                         ks =
-                            keywordSet lst
+                            RC.keywordSet lst
                     in
                     ( { model
                         | research = lst
@@ -394,6 +314,18 @@ update msg model =
                     , Nav.load url
                     )
 
+        ReceiveResults json ->
+            let
+                result =
+                    Json.Decode.decodeValue (Json.Decode.list RC.decodeKeyword) json
+            in
+            case result of
+                Ok kws ->
+                    ( { model | search = FoundResults kws }, Cmd.none )
+
+                Err e ->
+                    ( model, Cmd.none )
+
 
 
 --We use a fragment, since otherwise the server would have to be configured to serve the same page for all paths
@@ -424,9 +356,9 @@ handleUrl url model =
     case url.path of
         [ "keywords" ] ->
             let
-                sorting : KeywordSorting
+                sorting : RC.KeywordSorting
                 sorting =
-                    url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.withDefault "ByUse" |> sortingFromString
+                    url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.withDefault "ByUse" |> RC.sortingFromString
             in
             noCmd
                 { model
@@ -440,7 +372,7 @@ handleUrl url model =
                     url.queryParameters |> Dict.get "q" |> Maybe.andThen List.head |> Maybe.withDefault ""
 
                 sorting =
-                    url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.map sortingFromString |> Maybe.withDefault ByUse
+                    url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.map RC.sortingFromString |> Maybe.withDefault RC.ByUse
 
                 cmd =
                     case q of
@@ -448,7 +380,7 @@ handleUrl url model =
                             Cmd.none
 
                         someQ ->
-                            searchKeywords someQ sorting (model.keywords |> toList)
+                            searchKeywords someQ sorting (model.keywords |> RC.toList)
             in
             ( { model
                 | query = q
@@ -459,12 +391,16 @@ handleUrl url model =
             )
 
         [ "keywords", keywordAsString ] ->
-            case find keywordAsString model.keywords of
+            let
+                sorting =
+                    url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.map RC.titleSortingFromString |> Maybe.withDefault RC.NewestFirst
+            in
+            case RC.find keywordAsString model.keywords of
                 Just kw ->
-                    noCmd { model | view = KeywordsView (KeywordDetail kw) }
+                    noCmd { model | view = KeywordsView (KeywordDetail kw sorting) }
 
                 Nothing ->
-                    noCmd { model | view = KeywordsView (KeywordMainView ByUse) }
+                    noCmd { model | view = KeywordsView (KeywordMainView RC.ByUse) }
 
         [ "screenshots" ] ->
             let
@@ -486,27 +422,29 @@ handleUrl url model =
                         _ ->
                             Medium
 
-                sorting : TitleSorting
+                sorting : RC.TitleSorting
                 sorting =
                     case Dict.get "sorting" url.queryParameters of
-                        Just [ "random" ] ->
-                            Random
+                        Just [ srting ] ->
+                            RC.titleSortingFromString srting
 
-                        Just [ "oldestfirst" ] ->
-                            OldestFirst
-
-                        Just [ "newestfirst" ] ->
-                            NewestFirst
-
-                        _ ->
-                            Random
+                        _ -> 
+                            RC.NewestFirst
             in
             noCmd { model | view = ScreenView zoom sorting }
 
         [ "list" ] ->
+            let
+                sorting =
+                    url.queryParameters
+                        |> Dict.get "sorting"
+                        |> Maybe.andThen List.head
+                        |> Maybe.map RC.titleSortingFromString
+                        |> Maybe.withDefault RC.NewestFirst
+            in
             noCmd
                 { model
-                    | view = ListView ListViewMain
+                    | view = ListView (ListViewMain sorting)
                 }
 
         _ ->
@@ -575,8 +513,8 @@ viewResearchMicro research =
                                 , width fill
                                 , Element.htmlAttribute (Attr.attribute "style" "text-transform: unset")
                                 ]
-                                [ Element.text <| authorAsString research.author ]
-                        , url = authorUrl research.author
+                                [ Element.text <| RC.authorAsString research.author ]
+                        , url = RC.authorUrl research.author
                         }
                     ]
                 ]
@@ -642,8 +580,8 @@ viewResearch research =
                     , width fill
                     , Element.htmlAttribute (Attr.attribute "style" "text-transform: unset")
                     ]
-                    [ Element.text <| authorAsString research.author ]
-            , url = authorUrl research.author
+                    [ Element.text <| RC.authorAsString research.author ]
+            , url = RC.authorUrl research.author
             }
         , Element.paragraph
             [ padding 5
@@ -679,10 +617,10 @@ shortAbstract abstract =
             ""
 
 
-listView : Model -> Element Msg
-listView model =
+listView : RC.TitleSorting -> Model -> Element Msg
+listView sorting model =
     let
-        filtered : List { id : ExpositionID, title : String, keywords : List String, created : String, author : Author, issueId : Maybe Int, publicationStatus : PublicationStatus, publication : Maybe String, abstract : Maybe String, defaultPage : String, thumbnail : Maybe String }
+        filtered : List Research
         filtered =
             List.filter
                 (\r ->
@@ -695,23 +633,35 @@ listView model =
                 )
                 model.research
 
+        -- researchInProgress =
+        --     List.filter (\r -> r.publicationStatus == InProgress) model.research
+        published : List Research
+        published =
+            List.filter (\r -> r.publicationStatus == RC.Published || r.publicationStatus == RC.InProgress) filtered
+
+        sorted : List Research
+        sorted =
+            case sorting of
+                RC.Random ->
+                    RC.shuffleWithSeed 42 published
+
+                RC.NewestFirst ->
+                    List.sortBy (\r -> r.created) published
+
+                RC.OldestFirst ->
+                    List.sortBy (\r -> r.created) published |> List.reverse
+
         researchColumn : List Research -> Element Msg
         researchColumn lst =
             Element.column [ Element.spacing 5, Element.alignTop, width fill, Element.paddingXY 5 5 ]
                 (List.map viewResearchMicro lst)
-
-        -- researchInProgress =
-        --     List.filter (\r -> r.publicationStatus == InProgress) model.research
-        published : List { id : ExpositionID, title : String, keywords : List String, created : String, author : Author, issueId : Maybe Int, publication : Maybe String, abstract : Maybe String, defaultPage : String, thumbnail : Maybe String, publicationStatus : PublicationStatus }
-        published =
-            List.filter (\r -> r.publicationStatus == Published) filtered
     in
     Element.column [ Element.spacingXY 0 25, Element.paddingXY 0 25 ]
         [ Element.row
             []
-            [ published |> List.take model.numberOfResults |> researchColumn
-            , published |> List.drop (model.numberOfResults * 2) |> List.take model.numberOfResults |> researchColumn
-            , published |> List.drop (model.numberOfResults * 3) |> List.take model.numberOfResults |> researchColumn
+            [ sorted |> List.take model.numberOfResults |> researchColumn
+            , sorted |> List.drop (model.numberOfResults * 2) |> List.take model.numberOfResults |> researchColumn
+            , sorted |> List.drop (model.numberOfResults * 3) |> List.take model.numberOfResults |> researchColumn
             ]
         , Element.column [ width fill ]
             [ Element.Input.button
@@ -753,12 +703,30 @@ isKeywordView v =
             False
 
 
-screenViewOrderSwitch : TitleSorting -> Element Msg
+screenViewOrderSwitch : RC.TitleSorting -> Element Msg
 screenViewOrderSwitch titleSorting =
     Element.row [ paddingXY 0 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (titleSorting == Random) SmallLink) { url = "/#/screenshots?sorting=random", label = Element.text "random" }
-        , Element.link (linkStyle (titleSorting == OldestFirst) SmallLink) { url = "/#/screenshots?sorting=oldestfirst", label = Element.text "old first" }
-        , Element.link (linkStyle (titleSorting == NewestFirst) SmallLink) { url = "/#/screenshots?sorting=newestfirst", label = Element.text "new first" }
+        [ Element.link (linkStyle (titleSorting == RC.Random) SmallLink) { url = "/#/screenshots?sorting=random", label = Element.text "random" }
+        , Element.link (linkStyle (titleSorting == RC.OldestFirst) SmallLink) { url = "/#/screenshots?sorting=oldestfirst", label = Element.text "old first" }
+        , Element.link (linkStyle (titleSorting == RC.NewestFirst) SmallLink) { url = "/#/screenshots?sorting=newestfirst", label = Element.text "new first" }
+        ]
+
+
+listViewOrderSwitch : RC.TitleSorting -> Element Msg
+listViewOrderSwitch titleSorting =
+    Element.row [ paddingXY 0 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+        [ Element.link (linkStyle (titleSorting == RC.Random) SmallLink) { url = "/#/list?sorting=random", label = Element.text "random" }
+        , Element.link (linkStyle (titleSorting == RC.OldestFirst) SmallLink) { url = "/#/list?sorting=oldestfirst", label = Element.text "old first" }
+        , Element.link (linkStyle (titleSorting == RC.NewestFirst) SmallLink) { url = "/#/list?sorting=newestfirst", label = Element.text "new first" }
+        ]
+
+
+detailViewOrderSwitch : RC.Keyword -> RC.TitleSorting -> Element Msg
+detailViewOrderSwitch keyword titleSorting =
+    Element.row [ paddingXY 0 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+        [ Element.link (linkStyle (titleSorting == RC.Random) SmallLink) { url = "/#/keywords/" ++ RC.kwName keyword ++ "?sorting=random", label = Element.text "random" }
+        , Element.link (linkStyle (titleSorting == RC.OldestFirst) SmallLink) { url = "/#/keywords/" ++ RC.kwName keyword ++ "?sorting=oldestfirst", label = Element.text "old first" }
+        , Element.link (linkStyle (titleSorting == RC.NewestFirst) SmallLink) { url = "/#/keywords/" ++ RC.kwName keyword ++ "?sorting=newestfirst", label = Element.text "new first" }
         ]
 
 
@@ -860,10 +828,10 @@ view model =
         body : Element Msg
         body =
             case model.view of
-                ListView ListViewMain ->
+                ListView (ListViewMain sorting) ->
                     Element.column [ width fill ]
-                        [ Element.row [ Element.spacingXY 0 25 ] [ screenViewOrderSwitch Random ]
-                        , listView model
+                        [ Element.row [ Element.spacingXY 0 25 ] [ listViewOrderSwitch sorting ]
+                        , listView sorting model
                         ]
 
                 KeywordsView kwtype ->
@@ -873,8 +841,8 @@ view model =
                                 [ viewKeywords model sorting
                                 ]
 
-                        KeywordDetail k ->
-                            viewKeywordDetail k model
+                        KeywordDetail k sorting ->
+                            viewKeywordDetail k sorting model
 
                 ScreenView scale sorting ->
                     Element.column [ width fill ]
@@ -909,59 +877,63 @@ view model =
 --         ]
 
 
-toggleSorting : KeywordSorting -> Element Msg
+toggleSorting : RC.KeywordSorting -> Element Msg
 toggleSorting sorting =
     Element.row [ paddingXY 0 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (sorting == ByUse) SmallLink) { url = "/#/keywords?sorting=ByUse", label = Element.text "by use" }
-        , Element.link (linkStyle (sorting == Alphabetical) SmallLink) { url = "/#/keywords?sorting=Alphabetical", label = Element.text "alphabetical" }
-        , Element.link (linkStyle (sorting == RandomKeyword) SmallLink) { url = "/#/keywords?sorting=Random", label = Element.text "random" }
+        [ Element.link (linkStyle (sorting == RC.ByUse) SmallLink) { url = "/#/keywords?sorting=ByUse", label = Element.text "by use" }
+        , Element.link (linkStyle (sorting == RC.Alphabetical) SmallLink) { url = "/#/keywords?sorting=Alphabetical", label = Element.text "alphabetical" }
+        , Element.link (linkStyle (sorting == RC.RandomKeyword) SmallLink) { url = "/#/keywords?sorting=Random", label = Element.text "random" }
         ]
 
 
-getKeywordsOfResearch : KeywordSet -> Research -> List Keyword
+getKeywordsOfResearch : RC.KeywordSet -> Research -> List RC.Keyword
 getKeywordsOfResearch keywordset research =
     research.keywords
-        |> List.map (\str -> find str keywordset)
+        |> List.map (\str -> RC.find str keywordset)
         |> values
 
 
-viewKeywordDetail : Keyword -> Model -> Element Msg
-viewKeywordDetail kw model =
+viewKeywordDetail : RC.Keyword -> RC.TitleSorting -> Model -> Element Msg
+viewKeywordDetail kw sorting model =
     let
         researchWithKeyword : List Research
         researchWithKeyword =
-            Dict.get (kwName kw) model.reverseKeywordDict |> Maybe.withDefault []
+            Dict.get (RC.kwName kw) model.reverseKeywordDict |> Maybe.withDefault []
 
         -- the keywords that research with the same keyword uses:
-        relatedKeywords : List Keyword
+        relatedKeywords : List RC.Keyword
         relatedKeywords =
             researchWithKeyword
                 |> List.concatMap (getKeywordsOfResearch model.keywords)
                 |> List.Extra.unique
-                |> List.sortBy getCount
+                |> List.sortBy RC.getCount
                 |> List.reverse
     in
     -- generate a simple layout with two columns using Element
     Element.column [ width fill, Element.spacingXY 0 0 ]
-        [ Element.row [ Element.spacingXY 25 5, width fill ] [ screenViewOrderSwitch NewestFirst ]
-        , Element.link [] { url = "/keywords", label = Element.text "Back" }
-        , Element.column [ Font.size 36, paddingXY 0 25, width fill ] [ Element.text (kwName kw), Element.el [ Font.size 14 ] <| Element.text ((getCount kw |> String.fromInt) ++ " expositions use this keyword") ]
+        [ Element.row [ Element.spacingXY 25 5, width fill ] [ detailViewOrderSwitch kw sorting ]
+        , Element.link [] { url = "/#/keywords", label = Element.text "Back" }
+        , Element.column
+            [ Font.size 36, paddingXY 0 25, width fill, spacingXY 0 10 ]
+            [ Element.text (RC.kwName kw)
+            , Element.el [ Font.size 14 ] <| Element.text ((RC.getCount kw |> String.fromInt) ++ " expositions use this keyword")
+            ]
         , Element.el [] (Element.text "related keywords : ")
         , relatedKeywords |> List.take 12 |> List.map (viewKeywordAsButton 15) |> makeColumns 6 [ width fill, spacing 5, Element.paddingXY 0 25, Font.size 9 ]
-        , researchWithKeyword |> List.map viewResearch |> makeColumns 3 [ width fill, spacing 25, Element.paddingXY 0 25 ]
+        , researchWithKeyword |> sortResearch sorting |> List.map viewResearch |> makeColumns 3 [ width fill, spacing 25, Element.paddingXY 0 25 ]
         ]
 
 
-viewKeywordAsButton : Int -> Keyword -> Element Msg
-viewKeywordAsButton fontsize (Keyword k) =
+viewKeywordAsButton : Int -> RC.Keyword -> Element Msg
+viewKeywordAsButton fontsize kw =
     let
         name : String
         name =
-            k.name
+            RC.kwName kw
 
         count : Int
         count =
-            k.count
+            RC.getCount kw
     in
     Element.row
         [ Element.spacing 5
@@ -975,7 +947,7 @@ viewKeywordAsButton fontsize (Keyword k) =
         -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
         , width fill
         ]
-        [ Element.link [] { url = AppUrl.fromPath [ "keywords", name ] |> AppUrl.toString, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
+        [ Element.link [] { url = "/#/keywords/" ++ RC.kwName kw, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
 
         -- [ Element.Input.button [ Font.color (rgb 0.0 0.0 1.0), width fill ]
         --     { onPress = Just (ShowKeyword (Keyword k))
@@ -985,7 +957,7 @@ viewKeywordAsButton fontsize (Keyword k) =
         ]
 
 
-viewKeywords : Model -> KeywordSorting -> Element Msg
+viewKeywords : Model -> RC.KeywordSorting -> Element Msg
 viewKeywords model sorting =
     let
         keywordCount : Element msg
@@ -993,7 +965,7 @@ viewKeywords model sorting =
             let
                 count : String
                 count =
-                    (model.keywords |> totalNumber |> String.fromInt) ++ " keywords"
+                    (model.keywords |> RC.totalNumber |> String.fromInt) ++ " keywords"
             in
             el [ Font.size 12 ] (Element.text count)
 
@@ -1008,15 +980,38 @@ viewKeywords model sorting =
 
         keywordSearch : Element Msg
         keywordSearch =
-            Element.Input.search [ width (px 200) ]
-                { onChange = ChangedQuery
-                , text = model.query
-                , placeholder = Just (Element.Input.placeholder [] (Element.text "search for keyword"))
-                , label = Element.Input.labelAbove [] (Element.text "search")
-                }
+            let
+                shouldEnable =
+                    case model.query of
+                        "" ->
+                            True
+
+                        _ ->
+                            False
+
+                url =
+                    case model.query of
+                        "" ->
+                            "/#/keywords?sorting=" ++ RC.sortingToString sorting
+
+                        nonEmpty ->
+                            "/#/keywords/search?q=" ++ nonEmpty ++ "&sorting=" ++ RC.sortingToString sorting
+            in
+            Element.row [ Element.spacingXY 15 0 ]
+                [ Element.Input.search [ width (px 200) ]
+                    { onChange = ChangedQuery
+                    , text = model.query
+                    , placeholder = Just (Element.Input.placeholder [] (Element.text "search for keyword"))
+                    , label = Element.Input.labelAbove [] (Element.text "keyword")
+                    }
+                , Element.link (Element.moveDown 12 :: linkStyle shouldEnable BigLink)
+                    { url = url
+                    , label = Element.text "search"
+                    }
+                ]
 
         sorted =
-            model.keywords |> toList |> sortKeywordLst sorting
+            model.keywords |> RC.toList |> RC.sortKeywordLst sorting
 
         lazyf all result kwcount date searchbox =
             Element.column [ width fill, spacingXY 0 15 ]
@@ -1025,20 +1020,13 @@ viewKeywords model sorting =
                     , Element.el [ width shrink ] kwcount
                     , Element.el [ width shrink ] date
                     ]
-                , Element.el [ width shrink ] searchbox
-                , Element.link (linkStyle True BigLink) { url = "/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ sortingToString sorting, label = Element.text "search" }
+                , searchbox
                 , case result of
                     FoundResults results ->
-                        Element.column []
-                            [ Element.text "results"
-                            , List.map (viewKeywordAsButton 16) results |> makeColumns 4 [ width fill, spacingXY 25 25 ]
-                            ]
+                        List.map (viewKeywordAsButton 16) results |> makeColumns 4 [ width fill, spacingXY 25 25 ]
 
                     Idle ->
-                        Element.column []
-                            [ Element.text "idle"
-                            , List.map (viewKeywordAsButton 16) all |> makeColumns 4 [ width fill, spacingXY 25 25 ]
-                            ]
+                        List.map (viewKeywordAsButton 16) all |> makeColumns 4 [ width fill, spacingXY 25 25 ]
 
                     Searching ->
                         Element.column []
@@ -1085,33 +1073,10 @@ makeColumns n attrs lst =
 --     ]
 
 
-type Author
-    = Author { id : Int, name : String }
 
 
-authorAsString : Author -> String
-authorAsString (Author a) =
-    a.name
 
 
-authorUrl : Author -> String
-authorUrl (Author a) =
-    "https://www.researchcatalogue.net/profile/?person=" ++ String.fromInt a.id
-
-
-type alias Research =
-    { id : ExpositionID
-    , title : String
-    , keywords : List String
-    , created : String
-    , author : Author
-    , issueId : Maybe Int
-    , publicationStatus : PublicationStatus -- should be string?
-    , publication : Maybe String
-    , thumbnail : Maybe String
-    , abstract : Maybe String
-    , defaultPage : String
-    }
 
 
 dateFromString : String -> Maybe Time.Posix
@@ -1161,75 +1126,13 @@ type PublicationStatus
 
 decodeResearch : Decoder (List Research)
 decodeResearch =
-    Json.Decode.list entry
+    Json.Decode.list RC.exposition
 
 
-calcStatus : Research -> PublicationStatus
-calcStatus research =
-    case research.publicationStatus of
-        InProgress ->
-            InProgress
-
-        _ ->
-            case research.issueId of
-                Just _ ->
-                    Published
-
-                Nothing ->
-                    Published
 
 
-entry : Decoder Research
-entry =
-    let
-        researchPublicationStatus : Research -> Research
-        researchPublicationStatus research =
-            { research | publicationStatus = calcStatus research }
-
-        statusFromString : String -> PublicationStatus
-        statusFromString statusString =
-            case statusString of
-                "published" ->
-                    Published
-
-                "progress" ->
-                    InProgress
-
-                _ ->
-                    Undecided
-
-        author : Decoder Author
-        author =
-            let
-                makeAuthor : Int -> String -> Author
-                makeAuthor id name =
-                    Author { id = id, name = name }
-            in
-            Json.Decode.map2
-                makeAuthor
-                (Json.Decode.field "id" Json.Decode.int)
-                (Json.Decode.field "name" Json.Decode.string)
-    in
-    Json.Decode.map researchPublicationStatus <|
-        (Json.Decode.succeed
-            Research
-            |> JDE.andMap (field "id" int)
-            |> JDE.andMap (field "title" string)
-            |> JDE.andMap (field "keywords" (Json.Decode.list string))
-            |> JDE.andMap (field "created" string)
-            |> JDE.andMap (field "author" author)
-            |> JDE.andMap (maybe (field "issue" <| field "id" int))
-            |> JDE.andMap (Json.Decode.map statusFromString (field "status" string))
-            |> JDE.andMap (maybe (field "published" string))
-            |> JDE.andMap (maybe (field "thumb" string))
-            |> JDE.andMap (maybe (field "abstract" string))
-            |> JDE.andMap (field "default-page" string)
-        )
 
 
-getName : Author -> String
-getName (Author author) =
-    author.name
 
 
 lazyImageWithErrorHandling : Int -> { w : Int, h : Int } -> Research -> Html Msg
@@ -1247,7 +1150,7 @@ lazyImageWithErrorHandling groupSize dimensions research =
         height =
             (dimensions.h // (groupSize - 1) |> String.fromInt) ++ "px"
     in
-    Html.a [ Attr.target "_blank", Attr.href research.defaultPage, Attr.title (getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
+    Html.a [ Attr.target "_blank", Attr.href research.defaultPage, Attr.title (RC.getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
         [ Html.node "lazy-image"
             [ Attr.attribute "src" (urlFromId research.id)
 
@@ -1294,20 +1197,20 @@ scaleToGroupSize scale =
             3
 
 
-sortResearch : TitleSorting -> List Research -> List Research
+sortResearch : RC.TitleSorting -> List Research -> List Research
 sortResearch sorting research =
     case sorting of
-        OldestFirst ->
+        RC.OldestFirst ->
             research |> List.sortBy (\r -> r.created)
 
-        Random ->
-            research |> shuffleWithSeed 42
+        RC.Random ->
+            research |> RC.shuffleWithSeed 42
 
-        NewestFirst ->
+        RC.NewestFirst ->
             research |> List.sortBy (\r -> r.created) |> List.reverse
 
 
-viewScreenshots : Scale -> TitleSorting -> Model -> Element Msg
+viewScreenshots : Scale -> RC.TitleSorting -> Model -> Element Msg
 viewScreenshots scale titlesort model =
     let
         groupSize : Int

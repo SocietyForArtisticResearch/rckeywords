@@ -983,14 +983,14 @@ viewKeywords model sorting =
                 , searchbox
                 , case result of
                     FoundResults results ->
-                        List.map (viewKeywordAsButton 16) results |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                        results |> List.take 500 |> List.map (viewKeywordAsButton 16)  |> makeColumns 4 [ width fill, spacingXY 25 25 ]
 
                     Idle ->
                         Element.text "idle"
 
                     Searching ->
                         Element.column []
-                            [ Element.text "searching..."
+                            [ Element.text "working..."
                             ]
                 ]
     in

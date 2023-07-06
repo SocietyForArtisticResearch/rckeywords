@@ -12,7 +12,6 @@ module Research exposing
     , decoder
     , emptyKeywordSet
     , encodeKeyword
-    , exposition
     , find
     , getCount
     , getName
@@ -287,7 +286,7 @@ decoder =
             |> JDE.andMap (field "id" int)
             |> JDE.andMap (field "title" string)
             |> JDE.andMap (field "keywords" (Json.Decode.list string))
-            |> JDE.andMap (field "created" string)
+            |> JDE.andMap (field "created" string |> Json.Decode.map dmyToYmd)
             |> JDE.andMap (field "author" author)
             |> JDE.andMap (maybe (field "issue" <| field "id" int))
             |> JDE.andMap (Json.Decode.map statusFromString (field "status" string))
@@ -297,6 +296,18 @@ decoder =
             |> JDE.andMap (field "default-page" string)
         )
 
+dmyToYmd : String -> String
+dmyToYmd dmy =
+    let
+        parts =
+            String.split "/" dmy
+    in
+    case parts of
+        [ day, month, year ] ->
+            year ++ "/" ++ month ++ "/" ++ day
+
+        _ ->
+            dmy
 
 type alias Research =
     { id : ExpositionID
@@ -311,54 +322,6 @@ type alias Research =
     , abstract : Maybe String
     , defaultPage : String
     }
-
-
-exposition : Decoder Research
-exposition =
-    let
-        researchPublicationStatus : Research -> Research
-        researchPublicationStatus research =
-            { research | publicationStatus = calcStatus research }
-
-        statusFromString : String -> PublicationStatus
-        statusFromString statusString =
-            case statusString of
-                "published" ->
-                    Published
-
-                "progress" ->
-                    InProgress
-
-                _ ->
-                    Undecided
-
-        author : Decoder Author
-        author =
-            let
-                makeAuthor : Int -> String -> Author
-                makeAuthor id name =
-                    Author { id = id, name = name }
-            in
-            Json.Decode.map2
-                makeAuthor
-                (Json.Decode.field "id" Json.Decode.int)
-                (Json.Decode.field "name" Json.Decode.string)
-    in
-    Json.Decode.map researchPublicationStatus <|
-        (Json.Decode.succeed
-            Research
-            |> JDE.andMap (field "id" int)
-            |> JDE.andMap (field "title" string)
-            |> JDE.andMap (field "keywords" (Json.Decode.list string))
-            |> JDE.andMap (field "created" string)
-            |> JDE.andMap (field "author" author)
-            |> JDE.andMap (maybe (field "issue" <| field "id" int))
-            |> JDE.andMap (Json.Decode.map statusFromString (field "status" string))
-            |> JDE.andMap (maybe (field "published" string))
-            |> JDE.andMap (maybe (field "thumb" string))
-            |> JDE.andMap (maybe (field "abstract" string))
-            |> JDE.andMap (field "default-page" string)
-        )
 
 
 encodeKeyword : Keyword -> Json.Encode.Value

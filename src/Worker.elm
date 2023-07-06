@@ -9,6 +9,14 @@ import Random.List exposing (shuffle)
 import Research as RC exposing (Keyword, KeywordSet, Research)
 
 
+
+-- to avoid blocking the main thread, we sort and search keywords in this worker.
+-- We also keep the keyword state here (as a kind of semi-backend)
+
+-- TODO also add in the exposition searching
+-- TODO make it possible to search abstract
+
+
 port searchKeyword : (( String, String ) -> msg) -> Sub msg
 
 
@@ -18,11 +26,23 @@ port returnResults : E.Value -> Cmd msg
 type Msg
     = LoadData (Result Http.Error (List Research))
     | SearchKeyword ( String, String )
-    | FoundKeywords (List Keyword)
 
 
 type Problem
     = LoadError Http.Error
+
+
+type alias LoadedModel =
+    { research : List Research
+    , keywords : KeywordSet
+    , problems : List Problem
+    }
+
+
+type Model
+    = Loading
+    | LoadingWithQuery SearchQuery
+    | Loaded LoadedModel
 
 
 encodeKeywords : List Keyword -> E.Value
@@ -32,32 +52,74 @@ encodeKeywords =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        FoundKeywords lst ->
-            ( model, returnResults (encodeKeywords lst) )
+    case model of
+        Loading ->
+            case msg of
+                LoadData res ->
+                    case res of
+                        Ok data ->
+                            ( Loaded
+                                { research = data
+                                , keywords = RC.keywordSet data
+                                , problems = []
+                                }
+                            , Cmd.none
+                            )
 
-        LoadData res ->
-            case res of
-                Ok data ->
-                    ( { model
-                        | research = data
-                        , keywords = RC.keywordSet data
-                      }
-                    , Cmd.none
-                    )
+                        Err e ->
+                            ( problemize (LoadError e) model, Cmd.none )
 
-                Err e ->
-                    ( problemize (LoadError e) model, Cmd.none )
+                SearchKeyword ( str, sorting ) ->
+                    ( LoadingWithQuery (SearchQuery str (RC.sortingFromString sorting)), Cmd.none )
 
-        SearchKeyword ( str, sorting ) ->
-            let
-                sort =
-                    RC.sortingFromString sorting
+        Loaded lmodel ->
+            case msg of
+                SearchKeyword ( str, sorting ) ->
+                    let
+                        keywords =
+                            findKeywords str (RC.sortingFromString sorting) lmodel.keywords
+                    in
+                    ( Loaded lmodel, returnResults (encodeKeywords keywords) )
 
-                result =
-                    findKeywords str sort model.keywords
-            in
-            ( model, returnResults (encodeKeywords result) )
+                LoadData res ->
+                    case res of
+                        Ok data ->
+                            ( Loaded
+                                { lmodel
+                                    | research = data
+                                    , keywords = RC.keywordSet data
+                                }
+                            , Cmd.none
+                            )
+
+                        Err e ->
+                            ( problemize (LoadError e) (Loaded lmodel), Cmd.none )
+
+        LoadingWithQuery (SearchQuery str sorting) ->
+            case msg of
+                LoadData res ->
+                    case res of
+                        Ok data ->
+                            let
+                                kws =
+                                    RC.keywordSet data
+
+                                keywords =
+                                    findKeywords str sorting kws
+                            in
+                            ( Loaded
+                                { problems = []
+                                , research = data
+                                , keywords = kws
+                                }
+                            , returnResults (encodeKeywords keywords)
+                            )
+
+                        Err e ->
+                            ( problemize (LoadError e) (Loaded { research = [], keywords = RC.emptyKeywordSet, problems = [] }), Cmd.none )
+
+                SearchKeyword ( q, srt ) ->
+                    ( LoadingWithQuery (SearchQuery q (RC.sortingFromString srt)), Cmd.none )
 
 
 shuffleWithSeed : Int -> List a -> List a
@@ -75,11 +137,11 @@ findKeywords query sorting keywords =
 
         filtered =
             case query of
-                "" -> lst
+                "" ->
+                    lst
 
-                nonEmptyQ -> 
-                    lst |> List.filter (RC.kwName >> String.contains nonEmptyQ)
-
+                nonEmptyQ ->
+                    lst |> List.filter (RC.kwName >> String.toLower >> String.contains (String.toLower nonEmptyQ))
 
         ordered =
             case sorting of
@@ -91,29 +153,30 @@ findKeywords query sorting keywords =
 
                 RC.RandomKeyword ->
                     shuffleWithSeed 42 filtered
-
     in
     ordered
 
 
 problemize : Problem -> Model -> Model
 problemize p m =
-    { m | problems = p :: m.problems }
+    case m of
+        Loading ->
+            Loading
+
+        LoadingWithQuery q ->
+            LoadingWithQuery q
+
+        Loaded lm ->
+            Loaded { lm | problems = p :: lm.problems }
 
 
-type alias Model =
-    { research : List Research
-    , keywords : KeywordSet
-    , problems : List Problem
-    }
+type SearchQuery
+    = SearchQuery String RC.KeywordSorting
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { research = []
-      , keywords = RC.emptyKeywordSet
-      , problems = []
-      }
+    ( Loading
     , Http.get
         { url = "/internal_research.json"
         , expect = Http.expectJson LoadData (Json.Decode.list RC.decoder)

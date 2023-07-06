@@ -80,6 +80,87 @@ function A9(fun, a, b, c, d, e, f, g, h, i) {
 console.warn('Compiled in DEV mode. Follow the advice at https://elm-lang.org/0.19.1/optimize for better performance and smaller assets.');
 
 
+var _List_Nil_UNUSED = { $: 0 };
+var _List_Nil = { $: '[]' };
+
+function _List_Cons_UNUSED(hd, tl) { return { $: 1, a: hd, b: tl }; }
+function _List_Cons(hd, tl) { return { $: '::', a: hd, b: tl }; }
+
+
+var _List_cons = F2(_List_Cons);
+
+function _List_fromArray(arr)
+{
+	var out = _List_Nil;
+	for (var i = arr.length; i--; )
+	{
+		out = _List_Cons(arr[i], out);
+	}
+	return out;
+}
+
+function _List_toArray(xs)
+{
+	for (var out = []; xs.b; xs = xs.b) // WHILE_CONS
+	{
+		out.push(xs.a);
+	}
+	return out;
+}
+
+var _List_map2 = F3(function(f, xs, ys)
+{
+	for (var arr = []; xs.b && ys.b; xs = xs.b, ys = ys.b) // WHILE_CONSES
+	{
+		arr.push(A2(f, xs.a, ys.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_map3 = F4(function(f, xs, ys, zs)
+{
+	for (var arr = []; xs.b && ys.b && zs.b; xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
+	{
+		arr.push(A3(f, xs.a, ys.a, zs.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_map4 = F5(function(f, ws, xs, ys, zs)
+{
+	for (var arr = []; ws.b && xs.b && ys.b && zs.b; ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
+	{
+		arr.push(A4(f, ws.a, xs.a, ys.a, zs.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_map5 = F6(function(f, vs, ws, xs, ys, zs)
+{
+	for (var arr = []; vs.b && ws.b && xs.b && ys.b && zs.b; vs = vs.b, ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
+	{
+		arr.push(A5(f, vs.a, ws.a, xs.a, ys.a, zs.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_sortBy = F2(function(f, xs)
+{
+	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
+		return _Utils_cmp(f(a), f(b));
+	}));
+});
+
+var _List_sortWith = F2(function(f, xs)
+{
+	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
+		var ord = A2(f, a, b);
+		return ord === $elm$core$Basics$EQ ? 0 : ord === $elm$core$Basics$LT ? -1 : 1;
+	}));
+});
+
+
+
 var _JsArray_empty = [];
 
 function _JsArray_singleton(value)
@@ -709,87 +790,6 @@ function _Utils_ap(xs, ys)
 	}
 	return root;
 }
-
-
-
-var _List_Nil_UNUSED = { $: 0 };
-var _List_Nil = { $: '[]' };
-
-function _List_Cons_UNUSED(hd, tl) { return { $: 1, a: hd, b: tl }; }
-function _List_Cons(hd, tl) { return { $: '::', a: hd, b: tl }; }
-
-
-var _List_cons = F2(_List_Cons);
-
-function _List_fromArray(arr)
-{
-	var out = _List_Nil;
-	for (var i = arr.length; i--; )
-	{
-		out = _List_Cons(arr[i], out);
-	}
-	return out;
-}
-
-function _List_toArray(xs)
-{
-	for (var out = []; xs.b; xs = xs.b) // WHILE_CONS
-	{
-		out.push(xs.a);
-	}
-	return out;
-}
-
-var _List_map2 = F3(function(f, xs, ys)
-{
-	for (var arr = []; xs.b && ys.b; xs = xs.b, ys = ys.b) // WHILE_CONSES
-	{
-		arr.push(A2(f, xs.a, ys.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_map3 = F4(function(f, xs, ys, zs)
-{
-	for (var arr = []; xs.b && ys.b && zs.b; xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
-	{
-		arr.push(A3(f, xs.a, ys.a, zs.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_map4 = F5(function(f, ws, xs, ys, zs)
-{
-	for (var arr = []; ws.b && xs.b && ys.b && zs.b; ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
-	{
-		arr.push(A4(f, ws.a, xs.a, ys.a, zs.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_map5 = F6(function(f, vs, ws, xs, ys, zs)
-{
-	for (var arr = []; vs.b && ws.b && xs.b && ys.b && zs.b; vs = vs.b, ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
-	{
-		arr.push(A5(f, vs.a, ws.a, xs.a, ys.a, zs.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_sortBy = F2(function(f, xs)
-{
-	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
-		return _Utils_cmp(f(a), f(b));
-	}));
-});
-
-var _List_sortWith = F2(function(f, xs)
-{
-	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
-		var ord = A2(f, a, b);
-		return ord === $elm$core$Basics$EQ ? 0 : ord === $elm$core$Basics$LT ? -1 : 1;
-	}));
-});
 
 
 
@@ -2568,6 +2568,8 @@ var _Bitwise_shiftRightZfBy = F2(function(offset, a)
 {
 	return a >>> offset;
 });
+var $elm$core$Basics$EQ = {$: 'EQ'};
+var $elm$core$Basics$LT = {$: 'LT'};
 var $elm$core$List$cons = _List_cons;
 var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
 var $elm$core$Array$foldr = F3(
@@ -2645,12 +2647,11 @@ var $elm$core$Set$toList = function (_v0) {
 	var dict = _v0.a;
 	return $elm$core$Dict$keys(dict);
 };
-var $elm$core$Basics$EQ = {$: 'EQ'};
 var $elm$core$Basics$GT = {$: 'GT'};
-var $elm$core$Basics$LT = {$: 'LT'};
 var $author$project$Worker$LoadData = function (a) {
 	return {$: 'LoadData', a: a};
 };
+var $author$project$Worker$Loading = {$: 'Loading'};
 var $elm$core$Basics$identity = function (x) {
 	return x;
 };
@@ -3093,6 +3094,19 @@ var $author$project$Research$calcStatus = function (research) {
 		}
 	}
 };
+var $author$project$Research$dmyToYmd = function (dmy) {
+	var parts = A2($elm$core$String$split, '/', dmy);
+	if (((parts.b && parts.b.b) && parts.b.b.b) && (!parts.b.b.b.b)) {
+		var day = parts.a;
+		var _v1 = parts.b;
+		var month = _v1.a;
+		var _v2 = _v1.b;
+		var year = _v2.a;
+		return year + ('/' + (month + ('/' + day)));
+	} else {
+		return dmy;
+	}
+};
 var $elm$json$Json$Decode$field = _Json_decodeField;
 var $elm$json$Json$Decode$int = _Json_decodeInt;
 var $elm$json$Json$Decode$list = _Json_decodeList;
@@ -3174,7 +3188,10 @@ var $author$project$Research$decoder = function () {
 									A2($elm$json$Json$Decode$field, 'author', author),
 									A2(
 										$elm_community$json_extra$Json$Decode$Extra$andMap,
-										A2($elm$json$Json$Decode$field, 'created', $elm$json$Json$Decode$string),
+										A2(
+											$elm$json$Json$Decode$map,
+											$author$project$Research$dmyToYmd,
+											A2($elm$json$Json$Decode$field, 'created', $elm$json$Json$Decode$string)),
 										A2(
 											$elm_community$json_extra$Json$Decode$Extra$andMap,
 											A2(
@@ -3189,13 +3206,6 @@ var $author$project$Research$decoder = function () {
 													A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
 													$elm$json$Json$Decode$succeed($author$project$Research$Research)))))))))))));
 }();
-var $author$project$Research$KeywordSet = function (a) {
-	return {$: 'KeywordSet', a: a};
-};
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
-var $author$project$Research$emptyKeywordSet = $author$project$Research$KeywordSet(
-	{dict: $elm$core$Dict$empty, list: _List_Nil});
 var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
@@ -3216,6 +3226,8 @@ var $elm$http$Http$Sending = function (a) {
 	return {$: 'Sending', a: a};
 };
 var $elm$http$Http$Timeout_ = {$: 'Timeout_'};
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Maybe$isJust = function (maybe) {
 	if (maybe.$ === 'Just') {
 		return true;
@@ -4063,7 +4075,7 @@ var $elm$http$Http$get = function (r) {
 };
 var $author$project$Worker$init = function (_v0) {
 	return _Utils_Tuple2(
-		{keywords: $author$project$Research$emptyKeywordSet, problems: _List_Nil, research: _List_Nil},
+		$author$project$Worker$Loading,
 		$elm$http$Http$get(
 			{
 				expect: A2(
@@ -4098,6 +4110,21 @@ var $author$project$Worker$subscriptions = function (_v0) {
 var $author$project$Worker$LoadError = function (a) {
 	return {$: 'LoadError', a: a};
 };
+var $author$project$Worker$Loaded = function (a) {
+	return {$: 'Loaded', a: a};
+};
+var $author$project$Worker$LoadingWithQuery = function (a) {
+	return {$: 'LoadingWithQuery', a: a};
+};
+var $author$project$Worker$SearchQuery = F2(
+	function (a, b) {
+		return {$: 'SearchQuery', a: a, b: b};
+	});
+var $author$project$Research$KeywordSet = function (a) {
+	return {$: 'KeywordSet', a: a};
+};
+var $author$project$Research$emptyKeywordSet = $author$project$Research$KeywordSet(
+	{dict: $elm$core$Dict$empty, list: _List_Nil});
 var $elm$json$Json$Encode$int = _Json_wrap;
 var $elm$json$Json$Encode$object = function (pairs) {
 	return _Json_wrap(
@@ -4337,6 +4364,7 @@ var $author$project$Research$toList = function (_v0) {
 	var kwSet = _v0.a;
 	return kwSet.list;
 };
+var $elm$core$String$toLower = _String_toLower;
 var $author$project$Worker$findKeywords = F3(
 	function (query, sorting, keywords) {
 		var lst = $author$project$Research$toList(keywords);
@@ -4350,7 +4378,11 @@ var $author$project$Worker$findKeywords = F3(
 					A2(
 						$elm$core$Basics$composeR,
 						$author$project$Research$kwName,
-						$elm$core$String$contains(nonEmptyQ)),
+						A2(
+							$elm$core$Basics$composeR,
+							$elm$core$String$toLower,
+							$elm$core$String$contains(
+								$elm$core$String$toLower(nonEmptyQ)))),
 					lst);
 			}
 		}();
@@ -4443,11 +4475,21 @@ var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Worker$problemize = F2(
 	function (p, m) {
-		return _Utils_update(
-			m,
-			{
-				problems: A2($elm$core$List$cons, p, m.problems)
-			});
+		switch (m.$) {
+			case 'Loading':
+				return $author$project$Worker$Loading;
+			case 'LoadingWithQuery':
+				var q = m.a;
+				return $author$project$Worker$LoadingWithQuery(q);
+			default:
+				var lm = m.a;
+				return $author$project$Worker$Loaded(
+					_Utils_update(
+						lm,
+						{
+							problems: A2($elm$core$List$cons, p, lm.problems)
+						}));
+		}
 	});
 var $author$project$Worker$returnResults = _Platform_outgoingPort('returnResults', $elm$core$Basics$identity);
 var $author$project$Research$Alphabetical = {$: 'Alphabetical'};
@@ -4467,44 +4509,116 @@ var $author$project$Research$sortingFromString = function (str) {
 };
 var $author$project$Worker$update = F2(
 	function (msg, model) {
-		switch (msg.$) {
-			case 'FoundKeywords':
-				var lst = msg.a;
-				return _Utils_Tuple2(
-					model,
-					$author$project$Worker$returnResults(
-						$author$project$Worker$encodeKeywords(lst)));
-			case 'LoadData':
-				var res = msg.a;
-				if (res.$ === 'Ok') {
-					var data = res.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								keywords: $author$project$Research$keywordSet(data),
-								research: data
-							}),
-						$elm$core$Platform$Cmd$none);
+		switch (model.$) {
+			case 'Loading':
+				if (msg.$ === 'LoadData') {
+					var res = msg.a;
+					if (res.$ === 'Ok') {
+						var data = res.a;
+						return _Utils_Tuple2(
+							$author$project$Worker$Loaded(
+								{
+									keywords: $author$project$Research$keywordSet(data),
+									problems: _List_Nil,
+									research: data
+								}),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						var e = res.a;
+						return _Utils_Tuple2(
+							A2(
+								$author$project$Worker$problemize,
+								$author$project$Worker$LoadError(e),
+								model),
+							$elm$core$Platform$Cmd$none);
+					}
 				} else {
-					var e = res.a;
+					var _v3 = msg.a;
+					var str = _v3.a;
+					var sorting = _v3.b;
 					return _Utils_Tuple2(
-						A2(
-							$author$project$Worker$problemize,
-							$author$project$Worker$LoadError(e),
-							model),
+						$author$project$Worker$LoadingWithQuery(
+							A2(
+								$author$project$Worker$SearchQuery,
+								str,
+								$author$project$Research$sortingFromString(sorting))),
 						$elm$core$Platform$Cmd$none);
 				}
+			case 'Loaded':
+				var lmodel = model.a;
+				if (msg.$ === 'SearchKeyword') {
+					var _v5 = msg.a;
+					var str = _v5.a;
+					var sorting = _v5.b;
+					var keywords = A3(
+						$author$project$Worker$findKeywords,
+						str,
+						$author$project$Research$sortingFromString(sorting),
+						lmodel.keywords);
+					return _Utils_Tuple2(
+						$author$project$Worker$Loaded(lmodel),
+						$author$project$Worker$returnResults(
+							$author$project$Worker$encodeKeywords(keywords)));
+				} else {
+					var res = msg.a;
+					if (res.$ === 'Ok') {
+						var data = res.a;
+						return _Utils_Tuple2(
+							$author$project$Worker$Loaded(
+								_Utils_update(
+									lmodel,
+									{
+										keywords: $author$project$Research$keywordSet(data),
+										research: data
+									})),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						var e = res.a;
+						return _Utils_Tuple2(
+							A2(
+								$author$project$Worker$problemize,
+								$author$project$Worker$LoadError(e),
+								$author$project$Worker$Loaded(lmodel)),
+							$elm$core$Platform$Cmd$none);
+					}
+				}
 			default:
-				var _v2 = msg.a;
-				var str = _v2.a;
-				var sorting = _v2.b;
-				var sort = $author$project$Research$sortingFromString(sorting);
-				var result = A3($author$project$Worker$findKeywords, str, sort, model.keywords);
-				return _Utils_Tuple2(
-					model,
-					$author$project$Worker$returnResults(
-						$author$project$Worker$encodeKeywords(result)));
+				var _v7 = model.a;
+				var str = _v7.a;
+				var sorting = _v7.b;
+				if (msg.$ === 'LoadData') {
+					var res = msg.a;
+					if (res.$ === 'Ok') {
+						var data = res.a;
+						var kws = $author$project$Research$keywordSet(data);
+						var keywords = A3($author$project$Worker$findKeywords, str, sorting, kws);
+						return _Utils_Tuple2(
+							$author$project$Worker$Loaded(
+								{keywords: kws, problems: _List_Nil, research: data}),
+							$author$project$Worker$returnResults(
+								$author$project$Worker$encodeKeywords(keywords)));
+					} else {
+						var e = res.a;
+						return _Utils_Tuple2(
+							A2(
+								$author$project$Worker$problemize,
+								$author$project$Worker$LoadError(e),
+								$author$project$Worker$Loaded(
+									{keywords: $author$project$Research$emptyKeywordSet, problems: _List_Nil, research: _List_Nil})),
+							$elm$core$Platform$Cmd$none);
+					}
+				} else {
+					var _v10 = msg.a;
+					var q = _v10.a;
+					var srt = _v10.b;
+					return _Utils_Tuple2(
+						$author$project$Worker$LoadingWithQuery(
+							A2(
+								$author$project$Worker$SearchQuery,
+								q,
+								$author$project$Research$sortingFromString(srt))),
+						$elm$core$Platform$Cmd$none);
+				}
 		}
 	});
 var $elm$core$Platform$worker = _Platform_worker;

@@ -13,6 +13,7 @@ import Element.Lazy
 import Element.Region
 import Html exposing (Html, s)
 import Html.Attributes as Attr
+import Html.Events
 import Http
 import Iso8601
 import Json.Decode exposing (Decoder, field, int, maybe, string)
@@ -25,7 +26,7 @@ import Process
 import RCStyles
 import Random
 import Random.List exposing (shuffle)
-import Research as RC exposing (KeywordSorting(..), Research, sortingFromString)
+import Research as RC exposing (KeywordSorting(..), Research, sortingFromString, titleSortingToString)
 import String
 import Task
 import Time
@@ -73,6 +74,41 @@ type Scale
     | Small
     | Medium
     | Large
+
+
+scaleFromString : String -> Scale
+scaleFromString str =
+    case str of
+        "micro" ->
+            Micro
+
+        "small" ->
+            Small
+
+        "medium" ->
+            Medium
+
+        "large" ->
+            Large
+
+        _ ->
+            Medium
+
+
+scaleToString : Scale -> String
+scaleToString scale =
+    case scale of
+        Micro ->
+            "micro"
+
+        Small ->
+            "small"
+
+        Medium ->
+            "medium"
+
+        Large ->
+            "large"
 
 
 type ListViewState
@@ -125,6 +161,7 @@ type Msg
     | UrlChanged Url.Url
     | LinkClicked Browser.UrlRequest
     | ReceiveResults Json.Decode.Value
+    | HitEnter
 
 
 type alias Flags =
@@ -207,21 +244,6 @@ init { width, height } url key =
 --     = Title String
 
 
-searchKeywords : String -> RC.KeywordSorting -> List RC.Keyword -> Cmd Msg
-searchKeywords q sorting lst =
-    let
-        wait =
-            Process.sleep 1
-
-        filter ls =
-            wait |> Task.andThen (\_ -> Task.succeed (ls |> List.filter (RC.kwName >> String.contains q)))
-
-        sort ls =
-            wait |> Task.andThen (\_ -> Task.succeed (ls |> RC.sortKeywordLst sorting))
-    in
-    Task.perform FoundKeywords (Task.succeed lst |> Task.andThen filter |> Task.andThen sort)
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -290,6 +312,19 @@ update msg model =
                 Err e ->
                     ( model, Cmd.none )
 
+        HitEnter ->
+            case model.view of
+                KeywordsView (KeywordMainView sorting) ->
+                    ( model
+                    , Cmd.batch
+                        [ sendQuery ( model.query, RC.sortingToString sorting )
+                        , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)
+                        ]
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
 
 
 --We use a fragment, since otherwise the server would have to be configured to serve the same page for all paths
@@ -324,10 +359,12 @@ handleUrl url model =
                 sorting =
                     url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.withDefault "byuse" |> RC.sortingFromString
             in
-                ({ model
-                    | search = Searching
-                    , view = KeywordsView (KeywordMainView sorting)
-                }, sendQuery ("", RC.sortingToString sorting))
+            ( { model
+                | search = Searching
+                , view = KeywordsView (KeywordMainView sorting)
+              }
+            , sendQuery ( "", RC.sortingToString sorting )
+            )
 
         [ "keywords", "search" ] ->
             let
@@ -666,12 +703,26 @@ isKeywordView v =
             False
 
 
-screenViewOrderSwitch : RC.TitleSorting -> Element Msg
-screenViewOrderSwitch titleSorting =
+screenshotLink : Scale -> RC.TitleSorting -> String
+screenshotLink scale sorting =
+    { path = [ "screenshots" ]
+    , queryParameters = Dict.fromList [ ( "sorting", List.singleton (RC.titleSortingToString sorting) ), ( "zoom", List.singleton (scaleToString scale) ) ]
+    , fragment = Nothing
+    }
+        |> AppUrl.toString
+        |> (\s -> "/#" ++ s)
+
+
+screenViewOrderSwitch : Scale -> RC.TitleSorting -> Element Msg
+screenViewOrderSwitch scale titleSorting =
+    let
+        withSorting =
+            screenshotLink scale
+    in
     Element.row [ paddingXY 0 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (titleSorting == RC.Random) SmallLink) { url = "/#/screenshots?sorting=random", label = Element.text "random" }
-        , Element.link (linkStyle (titleSorting == RC.OldestFirst) SmallLink) { url = "/#/screenshots?sorting=oldestfirst", label = Element.text "old first" }
-        , Element.link (linkStyle (titleSorting == RC.NewestFirst) SmallLink) { url = "/#/screenshots?sorting=newestfirst", label = Element.text "new first" }
+        [ Element.link (linkStyle (titleSorting == RC.Random) SmallLink) { url = withSorting RC.Random, label = Element.text "random" }
+        , Element.link (linkStyle (titleSorting == RC.OldestFirst) SmallLink) { url = withSorting RC.OldestFirst, label = Element.text "old first" }
+        , Element.link (linkStyle (titleSorting == RC.NewestFirst) SmallLink) { url = withSorting RC.NewestFirst, label = Element.text "new first" }
         ]
 
 
@@ -693,13 +744,17 @@ detailViewOrderSwitch keyword titleSorting =
         ]
 
 
-viewScaleSwitch : Scale -> Element Msg
-viewScaleSwitch scale =
+viewScaleSwitch : RC.TitleSorting -> Scale -> Element Msg
+viewScaleSwitch titleSorting scale =
+    let
+        withScale s =
+            screenshotLink s titleSorting
+    in
     Element.row [ padding 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (scale == Micro) SmallLink) { url = "/#/screenshots?zoom=micro", label = Element.text "micro" }
-        , Element.link (linkStyle (scale == Small) SmallLink) { url = "/#/screenshots?zoom=small", label = Element.text "small" }
-        , Element.link (linkStyle (scale == Medium) SmallLink) { url = "/#/screenshots?zoom=medium", label = Element.text "medium" }
-        , Element.link (linkStyle (scale == Large) SmallLink) { url = "/#/screenshots?zoom=large", label = Element.text "large" }
+        [ Element.link (linkStyle (scale == Micro) SmallLink) { url = withScale Micro, label = Element.text "micro" }
+        , Element.link (linkStyle (scale == Small) SmallLink) { url = withScale Small, label = Element.text "small" }
+        , Element.link (linkStyle (scale == Medium) SmallLink) { url = withScale Medium, label = Element.text "medium" }
+        , Element.link (linkStyle (scale == Large) SmallLink) { url = withScale Large, label = Element.text "large" }
         ]
 
 
@@ -810,8 +865,8 @@ view model =
                 ScreenView scale sorting ->
                     Element.column [ width fill ]
                         [ Element.row [ Element.spacing 25 ]
-                            [ screenViewOrderSwitch sorting
-                            , viewScaleSwitch scale
+                            [ screenViewOrderSwitch scale sorting
+                            , viewScaleSwitch sorting scale
                             ]
                         , viewScreenshots scale sorting model
                         ]
@@ -920,15 +975,34 @@ viewKeywordAsButton fontsize kw =
         ]
 
 
+{-| on Enter
+-}
+onEnter : msg -> Element.Attribute msg
+onEnter msg =
+    Element.htmlAttribute
+        (Html.Events.on "keyup"
+            (Json.Decode.field "key" Json.Decode.string
+                |> Json.Decode.andThen
+                    (\key ->
+                        if key == "Enter" then
+                            Json.Decode.succeed msg
+
+                        else
+                            Json.Decode.fail "Not the enter key"
+                    )
+            )
+        )
+
+
 viewKeywords : Model -> RC.KeywordSorting -> Element Msg
 viewKeywords model sorting =
     let
-        keywordCount : Element msg
-        keywordCount =
+        viewCount : List RC.Keyword -> Element msg
+        viewCount lst =
             let
                 count : String
                 count =
-                    (model.keywords |> RC.totalNumber |> String.fromInt) ++ " keywords"
+                    (lst |> List.length |> String.fromInt) ++ " keywords"
             in
             el [ Font.size 12 ] (Element.text count)
 
@@ -961,7 +1035,7 @@ viewKeywords model sorting =
                             "/#/keywords/search?q=" ++ nonEmpty ++ "&sorting=" ++ RC.sortingToString sorting
             in
             Element.row [ Element.spacingXY 15 0 ]
-                [ Element.Input.search [ width (px 200) ]
+                [ Element.Input.search [ width (px 200), onEnter HitEnter ]
                     { onChange = ChangedQuery
                     , text = model.query
                     , placeholder = Just (Element.Input.placeholder [] (Element.text "search for keyword"))
@@ -973,17 +1047,19 @@ viewKeywords model sorting =
                     }
                 ]
 
-        lazyf result kwcount date searchbox =
+        lazyf result date searchbox =
             Element.column [ width fill, spacingXY 0 15 ]
                 [ Element.row [ Element.spacingXY 25 25, width fill ]
                     [ Element.el [ width shrink ] (toggleSorting sorting)
-                    , Element.el [ width shrink ] kwcount
                     , Element.el [ width shrink ] date
                     ]
                 , searchbox
                 , case result of
                     FoundResults results ->
-                        results |> List.take 500 |> List.map (viewKeywordAsButton 16)  |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                        Element.column [ Element.spacing 15 ]
+                            [ viewCount results
+                            , results |> List.map (viewKeywordAsButton 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                            ]
 
                     Idle ->
                         Element.text "idle"
@@ -994,10 +1070,9 @@ viewKeywords model sorting =
                             ]
                 ]
     in
-    Element.Lazy.lazy4
+    Element.Lazy.lazy3
         lazyf
         model.search
-        keywordCount
         lastDate
         keywordSearch
 
@@ -1052,7 +1127,7 @@ findLastDate lst =
 
 decodeResearch : Decoder (List Research)
 decodeResearch =
-    Json.Decode.list RC.exposition
+    Json.Decode.list RC.decoder
 
 
 lazyImageWithErrorHandling : Int -> { w : Int, h : Int } -> Research -> Html Msg
@@ -1121,7 +1196,11 @@ sortResearch : RC.TitleSorting -> List Research -> List Research
 sortResearch sorting research =
     case sorting of
         RC.OldestFirst ->
-            research |> List.sortBy (\r -> r.created)
+            let
+                oldest =
+                    research |> List.sortBy (\r -> r.created)
+            in
+            oldest
 
         RC.Random ->
             research |> RC.shuffleWithSeed 42

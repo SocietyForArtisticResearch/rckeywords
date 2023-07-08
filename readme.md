@@ -16,8 +16,15 @@ In a terminal, run
 sh build.sh
 ```
 
-this will also copy the latest RC export JSON.
-Note that a build will work for 24 hours, because of the timeout on image links.
+This will also copy the latest RC export JSON (internal_research.json). Note that a build will work for 24 hours, because of the timeout on image links. On the deployed version this file is updated automatically.
+
+For an optimized build, you run
+```bash
+sh build-opt.sh
+```
+
+This will make a more compact .js file and apply elm-optimize-level-2 for better perfomance.
+
 
 # Changing
 

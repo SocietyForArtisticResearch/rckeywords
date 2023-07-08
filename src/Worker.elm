@@ -1,7 +1,7 @@
 port module Worker exposing (main)
 
 import Http
-import Json.Decode exposing (Decoder)
+import Json.Decode
 import Json.Encode as E
 import Platform
 import Random
@@ -12,7 +12,6 @@ import Research as RC exposing (Keyword, KeywordSet, Research)
 
 -- to avoid blocking the main thread, we sort and search keywords in this worker.
 -- We also keep the keyword state here (as a kind of semi-backend)
-
 -- TODO also add in the exposition searching
 -- TODO make it possible to search abstract
 
@@ -76,6 +75,7 @@ update msg model =
             case msg of
                 SearchKeyword ( str, sorting ) ->
                     let
+                        keywords : List Keyword
                         keywords =
                             findKeywords str (RC.sortingFromString sorting) lmodel.keywords
                     in
@@ -101,9 +101,11 @@ update msg model =
                     case res of
                         Ok data ->
                             let
+                                kws : KeywordSet
                                 kws =
                                     RC.keywordSet data
 
+                                keywords : List Keyword
                                 keywords =
                                     findKeywords str sorting kws
                             in
@@ -132,9 +134,11 @@ shuffleWithSeed seed lst =
 findKeywords : String -> RC.KeywordSorting -> KeywordSet -> List Keyword
 findKeywords query sorting keywords =
     let
+        lst : List Keyword
         lst =
             RC.toList keywords
 
+        filtered : List Keyword
         filtered =
             case query of
                 "" ->
@@ -142,19 +146,16 @@ findKeywords query sorting keywords =
 
                 nonEmptyQ ->
                     lst |> List.filter (RC.kwName >> String.toLower >> String.contains (String.toLower nonEmptyQ))
-
-        ordered =
-            case sorting of
-                RC.ByUse ->
-                    List.sortBy (\kw -> RC.getCount kw) filtered |> List.reverse
-
-                RC.Alphabetical ->
-                    List.sortBy (\kw -> RC.kwName kw) filtered
-
-                RC.RandomKeyword ->
-                    shuffleWithSeed 42 filtered
     in
-    ordered
+    case sorting of
+        RC.ByUse ->
+            List.sortBy (\kw -> RC.getCount kw) filtered |> List.reverse
+
+        RC.Alphabetical ->
+            List.sortBy (\kw -> RC.kwName kw) filtered
+
+        RC.RandomKeyword ->
+            shuffleWithSeed 42 filtered
 
 
 problemize : Problem -> Model -> Model

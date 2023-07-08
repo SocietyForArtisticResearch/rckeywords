@@ -7,7 +7,8 @@ module Research exposing
     , PublicationStatus(..)
     , Research
     , TitleSorting(..)
-    , calcStatus
+    , authorAsString
+    , authorUrl
     , decodeKeyword
     , decoder
     , emptyKeywordSet
@@ -15,21 +16,14 @@ module Research exposing
     , find
     , getCount
     , getName
-    , insert
     , keywordSet
     , kwName
-    , newKey
     , shuffleWithSeed
-    , sortKeywordLst
     , sortingFromString
     , sortingToString
     , titleSortingFromString
     , titleSortingToString
     , toList
-    , totalNumber
-    , use
-    , authorAsString
-    , authorUrl
     )
 
 import Dict exposing (Dict)
@@ -46,6 +40,7 @@ type alias ExpositionID =
 
 type Author
     = Author { id : Int, name : String }
+
 
 authorAsString : Author -> String
 authorAsString (Author a) =
@@ -193,9 +188,11 @@ insert k (KeywordSet set) =
     case result of
         Just (Keyword kw) ->
             let
+                used : Keyword
                 used =
                     use (Keyword kw)
 
+                newDict : Dict String Keyword
                 newDict =
                     Dict.insert kw.name used dict
             in
@@ -203,6 +200,7 @@ insert k (KeywordSet set) =
 
         Nothing ->
             let
+                new : Keyword
                 new =
                     newKey k
             in
@@ -224,29 +222,11 @@ getName (Author author) =
     author.name
 
 
-totalNumber : KeywordSet -> Int
-totalNumber (KeywordSet set) =
-    set.dict |> Dict.keys |> List.length
-
-
 shuffleWithSeed : Int -> List a -> List a
 shuffleWithSeed seed lst =
     Random.initialSeed seed
         |> Random.step (Random.List.shuffle lst)
         |> Tuple.first
-
-
-sortKeywordLst : KeywordSorting -> List Keyword -> List Keyword
-sortKeywordLst sorting lst =
-    case sorting of
-        ByUse ->
-            lst |> List.sortBy getCount |> List.reverse
-
-        Alphabetical ->
-            lst |> List.sortBy kwName
-
-        RandomKeyword ->
-            lst |> shuffleWithSeed 42
 
 
 decoder : Decoder Research
@@ -296,9 +276,11 @@ decoder =
             |> JDE.andMap (field "default-page" string)
         )
 
+
 dmyToYmd : String -> String
 dmyToYmd dmy =
     let
+        parts : List String
         parts =
             String.split "/" dmy
     in
@@ -308,6 +290,7 @@ dmyToYmd dmy =
 
         _ ->
             dmy
+
 
 type alias Research =
     { id : ExpositionID
@@ -335,6 +318,7 @@ encodeKeyword (Keyword kw) =
 decodeKeyword : Decoder Keyword
 decodeKeyword =
     let
+        keyword : String -> Int -> Keyword
         keyword n c =
             Keyword { name = n, count = c }
     in
@@ -351,9 +335,4 @@ calcStatus research =
             InProgress
 
         _ ->
-            case research.issueId of
-                Just _ ->
-                    Published
-
-                Nothing ->
-                    Published
+            Published

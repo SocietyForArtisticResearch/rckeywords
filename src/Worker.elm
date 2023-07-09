@@ -1,9 +1,10 @@
 port module Worker exposing (main)
 
 import Http
-import Json.Decode
+import Json.Decode as D
 import Json.Encode as E
 import Platform
+import Queries exposing (SearchQuery(..))
 import Random
 import Random.List exposing (shuffle)
 import Research as RC exposing (Keyword, KeywordSet, Research)
@@ -16,7 +17,7 @@ import Research as RC exposing (Keyword, KeywordSet, Research)
 -- TODO make it possible to search abstract
 
 
-port searchKeyword : (( String, String ) -> msg) -> Sub msg
+port searchKeyword : (D.Value -> msg) -> Sub msg
 
 
 port returnResults : E.Value -> Cmd msg
@@ -24,11 +25,12 @@ port returnResults : E.Value -> Cmd msg
 
 type Msg
     = LoadData (Result Http.Error (List Research))
-    | SearchKeyword ( String, String )
+    | SearchKeyword E.Value
 
 
 type Problem
     = LoadError Http.Error
+    | DecodeError
 
 
 type alias LoadedModel =
@@ -68,18 +70,23 @@ update msg model =
                         Err e ->
                             ( problemize (LoadError e) model, Cmd.none )
 
-                SearchKeyword ( str, sorting ) ->
-                    ( LoadingWithQuery (SearchQuery str (RC.sortingFromString sorting)), Cmd.none )
+                SearchKeyword json ->
+                    case D.decodeValue Queries.decodeSearchQuery json of
+                        Ok query ->
+                            ( LoadingWithQuery query, Cmd.none )
+
+                        Err _ ->
+                            ( problemize DecodeError model, Cmd.none )
 
         Loaded lmodel ->
             case msg of
-                SearchKeyword ( str, sorting ) ->
-                    let
-                        keywords : List Keyword
-                        keywords =
-                            findKeywords str (RC.sortingFromString sorting) lmodel.keywords
-                    in
-                    ( Loaded lmodel, returnResults (encodeKeywords keywords) )
+                SearchKeyword json ->
+                    case D.decodeValue Queries.decodeSearchQuery json of
+                        Ok searchQuery ->
+                            ( Loaded lmodel, (findKeywords searchQuery lmodel.keywords) |> encodeKeywords |> returnResults )
+
+                        Err _ ->
+                            ( problemize DecodeError (Loaded lmodel), Cmd.none )
 
                 LoadData res ->
                     case res of
@@ -95,7 +102,7 @@ update msg model =
                         Err e ->
                             ( problemize (LoadError e) (Loaded lmodel), Cmd.none )
 
-        LoadingWithQuery (SearchQuery str sorting) ->
+        LoadingWithQuery q ->
             case msg of
                 LoadData res ->
                     case res of
@@ -107,7 +114,7 @@ update msg model =
 
                                 keywords : List Keyword
                                 keywords =
-                                    findKeywords str sorting kws
+                                    findKeywords q kws
                             in
                             ( Loaded
                                 { problems = []
@@ -120,8 +127,13 @@ update msg model =
                         Err e ->
                             ( problemize (LoadError e) (Loaded { research = [], keywords = RC.emptyKeywordSet, problems = [] }), Cmd.none )
 
-                SearchKeyword ( q, srt ) ->
-                    ( LoadingWithQuery (SearchQuery q (RC.sortingFromString srt)), Cmd.none )
+                SearchKeyword json ->
+                    case D.decodeValue Queries.decodeSearchQuery json of
+                        Ok query ->
+                            ( LoadingWithQuery query, Cmd.none )
+
+                        Err _ ->
+                            ( problemize DecodeError model, Cmd.none )
 
 
 shuffleWithSeed : Int -> List a -> List a
@@ -131,8 +143,8 @@ shuffleWithSeed seed lst =
         |> Tuple.first
 
 
-findKeywords : String -> RC.KeywordSorting -> KeywordSet -> List Keyword
-findKeywords query sorting keywords =
+findKeywords : Queries.SearchQuery -> KeywordSet -> List Keyword
+findKeywords (FindKeywords query sorting) keywords =
     let
         lst : List Keyword
         lst =
@@ -171,8 +183,6 @@ problemize p m =
             Loaded { lm | problems = p :: lm.problems }
 
 
-type SearchQuery
-    = SearchQuery String RC.KeywordSorting
 
 
 init : () -> ( Model, Cmd Msg )
@@ -180,7 +190,7 @@ init _ =
     ( Loading
     , Http.get
         { url = "/internal_research.json"
-        , expect = Http.expectJson LoadData (Json.Decode.list RC.decoder)
+        , expect = Http.expectJson LoadData (D.list RC.decoder)
         }
     )
 

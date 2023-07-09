@@ -17,10 +17,12 @@ import Html.Events
 import Http
 import Iso8601
 import Json.Decode exposing (Decoder)
+import Json.Encode
 import List
 import List.Extra
 import Maybe.Extra exposing (values)
 import Parser
+import Queries exposing (SearchQuery(..))
 import RCStyles
 import Research as RC exposing (Research)
 import String
@@ -36,7 +38,7 @@ import Url exposing (Url)
 port receiveResults : (Json.Decode.Value -> msg) -> Sub msg
 
 
-port sendQuery : ( String, String ) -> Cmd msg
+port sendQuery : Json.Encode.Value -> Cmd msg
 
 
 main : Program Flags Model Msg
@@ -233,7 +235,7 @@ update msg model =
                 KeywordsView (KeywordMainView sorting) ->
                     ( model
                     , Cmd.batch
-                        [ sendQuery ( model.query, RC.sortingToString sorting )
+                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting))
                         , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)
                         ]
                     )
@@ -275,7 +277,7 @@ handleUrl url model =
                 | search = Searching
                 , view = KeywordsView (KeywordMainView sorting)
               }
-            , sendQuery ( "", RC.sortingToString sorting )
+            , sendQuery (Queries.encodeSearchQuery (FindKeywords "" sorting))
             )
 
         [ "keywords", "search" ] ->
@@ -289,10 +291,12 @@ handleUrl url model =
                 cmd =
                     case q of
                         "" ->
-                            Cmd.none
+                            sendQuery (Queries.encodeSearchQuery (FindKeywords "" sorting))
 
                         someQ ->
-                            sendQuery ( someQ, RC.sortingToString sorting )
+                            sendQuery (Queries.encodeSearchQuery (FindKeywords someQ sorting))
+
+                --( someQ, RC.sortingToString sorting )
             in
             ( { model
                 | query = q

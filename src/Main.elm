@@ -11,7 +11,7 @@ import Element.Font as Font
 import Element.Input
 import Element.Lazy
 import Element.Region
-import Html exposing (Html)
+import Html exposing (Html, a)
 import Html.Attributes as Attr
 import Html.Events
 import Http
@@ -95,8 +95,22 @@ type View
     | ScreenView Scale RC.TitleSorting
 
 
+type Page
+    = Page Int
+
+
+pageSize : Int
+pageSize =
+    128
+
+
+pageFromInt : Int -> Page
+pageFromInt p =
+    Page p
+
+
 type KeywordsViewState
-    = KeywordMainView RC.KeywordSorting
+    = KeywordMainView RC.KeywordSorting Page
     | KeywordDetail RC.Keyword RC.TitleSorting -- could be opaque type?
 
 
@@ -142,6 +156,9 @@ init { width, height } url key =
         initUrl : AppUrl
         initUrl =
             urlWhereFragmentIsPath url
+
+        _ = 
+            Debug.log "width and height" (width, height)
 
         ( model, cmd ) =
             { research = []
@@ -232,7 +249,7 @@ update msg model =
 
         HitEnter ->
             case model.view of
-                KeywordsView (KeywordMainView sorting) ->
+                KeywordsView (KeywordMainView sorting (Page p)) ->
                     ( model
                     , Cmd.batch
                         [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting))
@@ -272,10 +289,13 @@ handleUrl url model =
                 sorting : RC.KeywordSorting
                 sorting =
                     url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.withDefault "byuse" |> RC.sortingFromString
+
+                page =
+                    url.queryParameters |> Dict.get "page" |> Maybe.andThen List.head |> Maybe.andThen String.toInt |> Maybe.withDefault 0 |> pageFromInt
             in
             ( { model
                 | search = Searching
-                , view = KeywordsView (KeywordMainView sorting)
+                , view = KeywordsView (KeywordMainView sorting page)
               }
             , sendQuery (Queries.encodeSearchQuery (FindKeywords "" sorting))
             )
@@ -287,6 +307,9 @@ handleUrl url model =
 
                 sorting =
                     url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.map RC.sortingFromString |> Maybe.withDefault RC.ByUse
+
+                page =
+                    url.queryParameters |> Dict.get "page" |> Maybe.andThen List.head |> Maybe.andThen String.toInt |> Maybe.withDefault 0 |> pageFromInt
 
                 cmd =
                     case q of
@@ -300,7 +323,7 @@ handleUrl url model =
             in
             ( { model
                 | query = q
-                , view = KeywordsView (KeywordMainView sorting)
+                , view = KeywordsView (KeywordMainView sorting page)
                 , search = Searching
               }
             , cmd
@@ -316,9 +339,9 @@ handleUrl url model =
                     noCmd { model | view = KeywordsView (KeywordDetail kw sorting) }
 
                 Nothing ->
-                    noCmd { model | view = KeywordsView (KeywordMainView RC.ByUse) }
+                    noCmd { model | view = KeywordsView (KeywordMainView RC.ByUse (Page 0)) }
 
-        [ "screenshots" ] ->
+        [ "visual" ] ->
             let
                 zoom : Scale
                 zoom =
@@ -379,6 +402,30 @@ image src =
             []
 
 
+microLinkStyle : List (Element.Attribute msg)
+microLinkStyle =
+    [ Font.family [ Font.typeface "Open Sans", Font.sansSerif ]
+    , Font.size 16
+    , Font.regular
+    , Element.Region.heading 2
+    , padding 5
+    , width fill
+    , Element.htmlAttribute (Attr.attribute "style" "text-transform: unset")
+    ]
+
+
+lightLink : List (Element.Attribute msg)
+lightLink =
+    [ Font.family [ Font.typeface "Open Sans", Font.sansSerif ]
+    , Font.size 16
+    , Font.light
+    , Element.Region.heading 2
+    , padding 5
+    , width fill
+    , Element.htmlAttribute (Attr.attribute "style" "text-transform: unset")
+    ]
+
+
 viewResearchMicro : Research -> Element Msg
 viewResearchMicro research =
     let
@@ -408,30 +455,18 @@ viewResearchMicro research =
                     [ Element.link [ width fill, Element.alignLeft ] <|
                         { label =
                             Element.paragraph
-                                [ Font.family [ Font.typeface "Open Sans", Font.sansSerif ]
-                                , Font.color (Element.rgb 0.0 0.1 0.0)
-                                , Font.size 16
-                                , Element.Region.heading 1
-                                , padding 5
-                                , width fill
-                                ]
+                                microLinkStyle
                                 [ Element.text research.title ]
                         , url = research.defaultPage
                         }
                     , Element.link [ width fill ] <|
                         { label =
                             Element.paragraph
-                                [ Font.family [ Font.typeface "Open Sans", Font.sansSerif ]
-                                , Font.size 16
-                                , Font.regular
-                                , Element.Region.heading 2
-                                , padding 5
-                                , width fill
-                                , Element.htmlAttribute (Attr.attribute "style" "text-transform: unset")
-                                ]
+                                microLinkStyle
                                 [ Element.text <| RC.authorAsString research.author ]
                         , url = RC.authorUrl research.author
                         }
+                    , Element.el lightLink (Element.text research.created)
                     ]
                 ]
 
@@ -562,10 +597,10 @@ listView sorting model =
                     RC.shuffleWithSeed 42 published
 
                 RC.NewestFirst ->
-                    List.sortBy (\r -> r.created) published
+                    List.sortBy (\r -> r.created) published |> List.reverse
 
                 RC.OldestFirst ->
-                    List.sortBy (\r -> r.created) published |> List.reverse
+                    List.sortBy (\r -> r.created) published
 
         researchColumn : List Research -> Element Msg
         researchColumn lst =
@@ -621,7 +656,7 @@ isKeywordView v =
 
 screenshotLink : Scale -> RC.TitleSorting -> String
 screenshotLink scale sorting =
-    { path = [ "screenshots" ]
+    { path = [ "visual" ]
     , queryParameters = Dict.fromList [ ( "sorting", List.singleton (RC.titleSortingToString sorting) ), ( "zoom", List.singleton (scaleToString scale) ) ]
     , fragment = Nothing
     }
@@ -736,7 +771,7 @@ linkStyle active style =
 viewNav : View -> Element Msg
 viewNav currentView =
     Element.row [ paddingXY 0 5, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (isScreenview currentView) BigLink) { url = "/#/screenshots", label = Element.text "screenshots" }
+        [ Element.link (linkStyle (isScreenview currentView) BigLink) { url = "/#/visual", label = Element.text "visual" }
         , Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "keywords" }
         , Element.link (linkStyle (isListView currentView) BigLink) { url = "/#/list", label = Element.text "list" }
         ]
@@ -756,9 +791,9 @@ view model =
 
                 KeywordsView kwtype ->
                     case kwtype of
-                        KeywordMainView sorting ->
+                        KeywordMainView sorting p ->
                             Element.column [ width fill ]
-                                [ viewKeywords model sorting
+                                [ viewKeywords model sorting p
                                 ]
 
                         KeywordDetail k sorting ->
@@ -886,8 +921,8 @@ onEnter msg =
         )
 
 
-viewKeywords : Model -> RC.KeywordSorting -> Element Msg
-viewKeywords model sorting =
+viewKeywords : Model -> RC.KeywordSorting -> Page -> Element Msg
+viewKeywords model sorting page =
     let
         viewCount : List RC.Keyword -> Element msg
         viewCount lst =
@@ -941,6 +976,35 @@ viewKeywords model sorting =
                     }
                 ]
 
+        pageNavigation : Int -> List a -> Page -> Element Msg
+        pageNavigation screenwidth lst (Page p) =
+            let
+                total =
+                    lst |> List.length |> (\n -> n // pageSize)
+
+                pageLink n =
+                    Element.link (linkStyle (n == p) SmallLink)
+                        { url = "/#/keywords?sorting=" ++ RC.sortingToString sorting ++ "&page=" ++ (n |> String.fromInt)
+                        , label = Element.text (n |> String.fromInt)
+                        }
+
+                pageLinks =
+                    List.range 0 total |> List.map pageLink
+
+                nextLink =
+                    Element.el [] ( 
+                    Element.link ([Element.Background.color (Element.rgb 1.0 0.0 0.0),Element.spacingXY 15 0] ++linkStyle False SmallLink)
+                        { url = "/#/keywords?sorting=" ++ RC.sortingToString sorting ++ "&page=" ++ (p + 1 |> String.fromInt)
+                        , label = Element.text "next"
+                        })
+            in
+            if total >= p then
+                Element.paragraph [ width (px (model.screenDimensions.w * 90 // 100)), Element.spacing 25, Element.paddingXY 0 25 ]
+                    (pageLinks ++ [ nextLink ])
+
+            else
+                Element.text "---"
+
         lazyf : SearchAction -> Element Msg -> Element Msg -> Element Msg
         lazyf result date searchbox =
             Element.column [ width fill, spacingXY 0 15 ]
@@ -951,9 +1015,15 @@ viewKeywords model sorting =
                 , searchbox
                 , case result of
                     FoundResults results ->
-                        Element.column [ Element.spacing 15 ]
+                        let
+                            currentPage : List RC.Keyword
+                            currentPage =
+                                pageOfList page results
+                        in
+                        Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))),Element.spacing 15 ]
                             [ viewCount results
-                            , results |> List.map (viewKeywordAsButton 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                            , currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                            , pageNavigation model.screenDimensions.w results page
                             ]
 
                     Idle ->
@@ -979,6 +1049,18 @@ makeColumns n attrs lst =
             |> makeNumColumns n
             |> List.map (\rowItems -> Element.row [ width fill, spacing 25 ] rowItems)
         )
+
+
+pageOfList : Page -> List a -> List a
+pageOfList (Page i) lst =
+    let
+        start : Int
+        start =
+            i * pageSize
+    in
+    lst
+        |> List.drop start
+        |> List.take pageSize
 
 
 dateFromString : String -> Maybe Time.Posix

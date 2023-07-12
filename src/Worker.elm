@@ -83,7 +83,7 @@ update msg model =
                 SearchKeyword json ->
                     case D.decodeValue Queries.decodeSearchQuery json of
                         Ok searchQuery ->
-                            ( Loaded lmodel, (findKeywords searchQuery lmodel.keywords) |> encodeKeywords |> returnResults )
+                            ( Loaded lmodel, findKeywords searchQuery lmodel.keywords |> encodeKeywords |> returnResults )
 
                         Err _ ->
                             ( problemize DecodeError (Loaded lmodel), Cmd.none )
@@ -181,8 +181,6 @@ problemize p m =
 
         Loaded lm ->
             Loaded { lm | problems = p :: lm.problems }
-
-
 
 
 init : () -> ( Model, Cmd Msg )

@@ -26,6 +26,10 @@ module Research exposing
     , toList
     )
 
+-- TODO, change a date to really a date type 
+-- Type Date = Dmy Int Int Int 
+-- also allow sorting on that
+
 import Dict exposing (Dict)
 import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE

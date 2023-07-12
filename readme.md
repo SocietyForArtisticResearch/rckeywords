@@ -73,3 +73,8 @@ viewResearch : Research -> Element Msg
 
 # Todo
 
+- optimize keywords page 
+    if all keywords are shown, can crash certain devices because too many elements
+    
+- also move sorting of research external
+

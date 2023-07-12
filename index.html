@@ -116,13 +116,13 @@
 
             // listen for keyword queries form the main app:
             app.ports.sendQuery.subscribe(function(query) {
-                console.log("query", query);
+                //console.log("query", query);
                 worker.postMessage(query);
             });
 
             // send the result from the worker to the main app:
             worker.onmessage = function(event) {
-                console.log("results", event.data);
+                //console.log("results", event.data);
                 app.ports.receiveResults.send(event.data);
             };
 

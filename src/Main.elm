@@ -157,8 +157,6 @@ init { width, height } url key =
         initUrl =
             urlWhereFragmentIsPath url
 
-      
-
         ( model, cmd ) =
             { research = []
             , reverseKeywordDict = Dict.empty
@@ -919,6 +917,8 @@ onEnter msg =
             )
         )
 
+pageToInt : Page -> Int
+pageToInt (Page p) = p 
 
 viewKeywords : Model -> RC.KeywordSorting -> Page -> Element Msg
 viewKeywords model sorting page =
@@ -926,11 +926,17 @@ viewKeywords model sorting page =
         viewCount : List RC.Keyword -> Element msg
         viewCount lst =
             let
-                count : String
+                count : Int
                 count =
-                    (lst |> List.length |> String.fromInt) ++ " keywords"
+                    (lst |> List.length) 
+
+                p =
+                    page |> pageToInt 
+
+                showing =
+                    ["results ", (p * pageSize |> String.fromInt), "-", min ((p+1) * pageSize) count |> String.fromInt , " (total: ", count |> String.fromInt, ")"] |> String.join ""
             in
-            el [ Font.size 12 ] (Element.text count)
+            el [ Font.size 12 ] (Element.text showing)
 
         lastDate : Element msg
         lastDate =
@@ -975,8 +981,8 @@ viewKeywords model sorting page =
                     }
                 ]
 
-        pageNavigation : Int -> List a -> Page -> Element Msg
-        pageNavigation screenwidth lst (Page p) =
+        pageNavigation : List a -> Page -> Element Msg
+        pageNavigation lst (Page p) =
             let
                 total =
                     lst |> List.length |> (\n -> n // pageSize)
@@ -991,11 +997,12 @@ viewKeywords model sorting page =
                     List.range 0 total |> List.map pageLink
 
                 nextLink =
-                    Element.el [] ( 
-                    Element.link ([Element.Background.color (Element.rgb 1.0 0.0 0.0),Element.spacingXY 15 0] ++linkStyle False SmallLink)
-                        { url = "/#/keywords?sorting=" ++ RC.sortingToString sorting ++ "&page=" ++ (p + 1 |> String.fromInt)
-                        , label = Element.text "next"
-                        })
+                    Element.el []
+                        (Element.link ([ Element.Background.color (Element.rgb 1.0 0.0 0.0), Element.spacingXY 15 0 ] ++ linkStyle False SmallLink)
+                            { url = "/#/keywords?sorting=" ++ RC.sortingToString sorting ++ "&page=" ++ (p + 1 |> String.fromInt)
+                            , label = Element.text "next"
+                            }
+                        )
             in
             if total >= p then
                 Element.paragraph [ width (px (model.screenDimensions.w * 90 // 100)), Element.spacing 25, Element.paddingXY 0 25 ]
@@ -1019,10 +1026,10 @@ viewKeywords model sorting page =
                             currentPage =
                                 pageOfList page results
                         in
-                        Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))),Element.spacing 15 ]
+                        Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
                             [ viewCount results
                             , currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
-                            , pageNavigation model.screenDimensions.w results page
+                            , pageNavigation results page
                             ]
 
                     Idle ->

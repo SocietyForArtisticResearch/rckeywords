@@ -4200,7 +4200,6 @@ var $author$project$Research$kwName = function (_v0) {
 	var kw = _v0.a;
 	return kw.name;
 };
-var $elm$core$Debug$log = _Debug_log;
 var $elm$random$Random$Seed = F2(
 	function (a, b) {
 		return {$: 'Seed', a: a, b: b};
@@ -4406,7 +4405,6 @@ var $author$project$Worker$findKeywords = F2(
 					lst);
 			}
 		}();
-		var _v1 = A2($elm$core$Debug$log, 'results', lst);
 		switch (sorting.$) {
 			case 'ByUse':
 				return $elm$core$List$reverse(
@@ -4512,10 +4510,6 @@ var $author$project$Worker$problemize = F2(
 var $author$project$Worker$returnResults = _Platform_outgoingPort('returnResults', $elm$core$Basics$identity);
 var $author$project$Worker$update = F2(
 	function (msg, model) {
-		var _v0 = A2(
-			$elm$core$Debug$log,
-			'msg and model',
-			_Utils_Tuple2(msg, model));
 		switch (model.$) {
 			case 'Loading':
 				if (msg.$ === 'LoadData') {
@@ -4541,9 +4535,9 @@ var $author$project$Worker$update = F2(
 					}
 				} else {
 					var json = msg.a;
-					var _v4 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
-					if (_v4.$ === 'Ok') {
-						var query = _v4.a;
+					var _v3 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
+					if (_v3.$ === 'Ok') {
+						var query = _v3.a;
 						return _Utils_Tuple2(
 							$author$project$Worker$LoadingWithQuery(query),
 							$elm$core$Platform$Cmd$none);
@@ -4557,10 +4551,9 @@ var $author$project$Worker$update = F2(
 				var lmodel = model.a;
 				if (msg.$ === 'SearchKeyword') {
 					var json = msg.a;
-					var _v6 = A2($elm$core$Debug$log, 'are you sure', json);
-					var _v7 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
-					if (_v7.$ === 'Ok') {
-						var searchQuery = _v7.a;
+					var _v5 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
+					if (_v5.$ === 'Ok') {
+						var searchQuery = _v5.a;
 						return _Utils_Tuple2(
 							$author$project$Worker$Loaded(lmodel),
 							$author$project$Worker$returnResults(
@@ -4622,9 +4615,9 @@ var $author$project$Worker$update = F2(
 					}
 				} else {
 					var json = msg.a;
-					var _v11 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
-					if (_v11.$ === 'Ok') {
-						var query = _v11.a;
+					var _v9 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
+					if (_v9.$ === 'Ok') {
+						var query = _v9.a;
 						return _Utils_Tuple2(
 							$author$project$Worker$LoadingWithQuery(query),
 							$elm$core$Platform$Cmd$none);

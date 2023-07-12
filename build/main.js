@@ -16244,6 +16244,10 @@ var $author$project$Main$pageOfList = F2(
 			$author$project$Main$pageSize,
 			A2($elm$core$List$drop, start, lst));
 	});
+var $author$project$Main$pageToInt = function (_v0) {
+	var p = _v0.a;
+	return p;
+};
 var $mdgriffith$elm_ui$Element$Input$Placeholder = F2(
 	function (a, b) {
 		return {$: 'Placeholder', a: a, b: b};
@@ -17126,18 +17130,32 @@ var $author$project$Main$toggleSorting = function (sorting) {
 var $author$project$Main$viewKeywords = F3(
 	function (model, sorting, page) {
 		var viewCount = function (lst) {
-			var count = $elm$core$String$fromInt(
-				$elm$core$List$length(lst)) + ' keywords';
+			var p = $author$project$Main$pageToInt(page);
+			var count = $elm$core$List$length(lst);
+			var showing = A2(
+				$elm$core$String$join,
+				'',
+				_List_fromArray(
+					[
+						'results ',
+						$elm$core$String$fromInt(p * $author$project$Main$pageSize),
+						'-',
+						$elm$core$String$fromInt(
+						A2($elm$core$Basics$min, (p + 1) * $author$project$Main$pageSize, count)),
+						' (total: ',
+						$elm$core$String$fromInt(count),
+						')'
+					]));
 			return A2(
 				$mdgriffith$elm_ui$Element$el,
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$Font$size(12)
 					]),
-				$mdgriffith$elm_ui$Element$text(count));
+				$mdgriffith$elm_ui$Element$text(showing));
 		};
-		var pageNavigation = F3(
-			function (screenwidth, lst, _v3) {
+		var pageNavigation = F2(
+			function (lst, _v3) {
 				var p = _v3.a;
 				var total = function (n) {
 					return (n / $author$project$Main$pageSize) | 0;
@@ -17256,7 +17274,7 @@ var $author$project$Main$viewKeywords = F3(
 													$elm$core$List$map,
 													$author$project$Main$viewKeywordAsButton(16),
 													currentPage)),
-												A3(pageNavigation, model.screenDimensions.w, results, page)
+												A2(pageNavigation, results, page)
 											]));
 								case 'Idle':
 									return $mdgriffith$elm_ui$Element$text('idle');

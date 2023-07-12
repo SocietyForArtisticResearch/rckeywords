@@ -157,8 +157,7 @@ init { width, height } url key =
         initUrl =
             urlWhereFragmentIsPath url
 
-        _ = 
-            Debug.log "width and height" (width, height)
+      
 
         ( model, cmd ) =
             { research = []

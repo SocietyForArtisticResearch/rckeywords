@@ -24,7 +24,7 @@ import Maybe.Extra exposing (values)
 import Parser
 import Queries exposing (SearchQuery(..))
 import RCStyles
-import Research as RC exposing (Research)
+import Research as RC exposing (Research, sortingFromString)
 import String
 import Time
 import Url exposing (Url)
@@ -110,8 +110,33 @@ pageFromInt p =
 
 
 type KeywordsViewState
-    = KeywordMainView RC.KeywordSorting Page
+    = KeywordMainView RC.KeywordSorting Page -- query, sorting, page
+    | KeywordSearch String RC.KeywordSorting Page
     | KeywordDetail RC.Keyword RC.TitleSorting -- could be opaque type?
+
+nextPage : KeywordsViewState -> KeywordsViewState
+nextPage current =
+    case current of
+        KeywordMainView sorting (Page p) ->
+            KeywordMainView sorting (Page (p + 1))
+
+        KeywordSearch q sorting (Page p) -> 
+            KeywordSearch q sorting (Page (p + 1))
+
+        KeywordDetail kw sorting ->
+            KeywordDetail kw sorting
+
+gotoPage :  Page ->KeywordsViewState -> KeywordsViewState
+gotoPage  page current =
+    case current of
+        KeywordMainView sorting _ ->
+            KeywordMainView sorting page
+
+        KeywordSearch q sorting _ -> 
+            KeywordSearch q sorting page
+
+        KeywordDetail kw sorting ->
+            KeywordDetail kw sorting
 
 
 type SearchAction
@@ -246,8 +271,16 @@ update msg model =
 
         HitEnter ->
             case model.view of
-                KeywordsView (KeywordMainView sorting (Page p)) ->
-                    ( model
+                KeywordsView (KeywordMainView sorting _) ->
+                    (  { model | view = KeywordsView (KeywordMainView sorting (Page 0)) }
+                    , Cmd.batch
+                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting))
+                        , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)
+                        ]
+                    )
+
+                KeywordsView (KeywordSearch _ sorting _) ->
+                    ( { model | view = KeywordsView (KeywordMainView sorting (Page 0)) }
                     , Cmd.batch
                         [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting))
                         , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)
@@ -320,7 +353,7 @@ handleUrl url model =
             in
             ( { model
                 | query = q
-                , view = KeywordsView (KeywordMainView sorting page)
+                , view = KeywordsView (KeywordSearch q sorting page)
                 , search = Searching
               }
             , cmd
@@ -788,13 +821,17 @@ view model =
 
                 KeywordsView kwtype ->
                     case kwtype of
-                        KeywordMainView sorting p ->
-                            Element.column [ width fill ]
-                                [ viewKeywords model sorting p
-                                ]
-
                         KeywordDetail k sorting ->
                             viewKeywordDetail k sorting model
+
+                        _ ->
+                            Element.column [ width fill ]
+                                [ viewKeywords model kwtype
+                                ]
+
+                      
+
+                        
 
                 ScreenView scale sorting ->
                     Element.column [ width fill ]
@@ -917,24 +954,86 @@ onEnter msg =
             )
         )
 
-pageToInt : Page -> Int
-pageToInt (Page p) = p 
 
-viewKeywords : Model -> RC.KeywordSorting -> Page -> Element Msg
-viewKeywords model sorting page =
+pageToInt : Page -> Int
+pageToInt (Page p) =
+    p
+
+
+appUrlFromKeywordViewState : KeywordsViewState -> String
+appUrlFromKeywordViewState kwview =
     let
+        withParameters : List ( String, String ) -> AppUrl.AppUrl -> AppUrl.AppUrl
+        withParameters pars u =
+            let
+                singles =
+                    pars |> List.map (Tuple.mapSecond List.singleton)
+            in
+            { u | queryParameters = Dict.fromList singles }
+
+        url =
+            case kwview of
+                KeywordMainView sorting (Page p) ->
+                    AppUrl.fromPath [ "keywords" ]
+                        |> withParameters
+                            [ ( "sorting", RC.sortingToString sorting )
+                            , ( "page", p |> String.fromInt )
+                            ]
+
+                KeywordSearch q sorting (Page p) ->
+                    AppUrl.fromPath [ "keywords", "search" ]
+                        |> withParameters
+                            [ ( "q", q )
+                            , ( "sorting", RC.sortingToString sorting )
+                            , ( "page", p |> String.fromInt )
+                            ]
+
+                KeywordDetail kw titleSort ->
+                    AppUrl.fromPath [ "keywords", kw |> RC.kwName ]
+                        |> withParameters
+                            [ ( "titleSort", RC.titleSortingToString titleSort )
+                            ]
+    in
+    AppUrl.toString url |> (\u -> "/#" ++ u)
+
+
+viewKeywords : Model -> KeywordsViewState -> Element Msg
+viewKeywords model keywordview =
+    let
+        page =
+            case keywordview of
+                KeywordMainView _ p ->
+                    p
+
+                KeywordSearch _ _ p ->
+                    p
+
+                KeywordDetail _ _ ->
+                    Page 0
+
+        sorting = 
+            case keywordview of
+                KeywordMainView s _ ->
+                    s
+
+                KeywordSearch _ s _ ->
+                    s
+
+                KeywordDetail _ _ ->
+                    RC.ByUse
+
         viewCount : List RC.Keyword -> Element msg
         viewCount lst =
             let
                 count : Int
                 count =
-                    (lst |> List.length) 
+                    lst |> List.length
 
                 p =
-                    page |> pageToInt 
+                    page |> pageToInt
 
                 showing =
-                    ["results ", (p * pageSize |> String.fromInt), "-", min ((p+1) * pageSize) count |> String.fromInt , " (total: ", count |> String.fromInt, ")"] |> String.join ""
+                    [ "results ", p * pageSize |> String.fromInt, "-", min ((p + 1) * pageSize) count |> String.fromInt, " (total: ", count |> String.fromInt, ")" ] |> String.join ""
             in
             el [ Font.size 12 ] (Element.text showing)
 
@@ -963,10 +1062,10 @@ viewKeywords model sorting page =
                 url =
                     case model.query of
                         "" ->
-                            "/#/keywords?sorting=" ++ RC.sortingToString sorting
+                           KeywordMainView RC.ByUse (Page 0)  |> appUrlFromKeywordViewState
 
                         nonEmpty ->
-                            "/#/keywords/search?q=" ++ nonEmpty ++ "&sorting=" ++ RC.sortingToString sorting
+                            KeywordSearch nonEmpty RC.ByUse (Page 0) |> appUrlFromKeywordViewState
             in
             Element.row [ Element.spacingXY 15 0 ]
                 [ Element.Input.search [ width (px 200), onEnter HitEnter ]
@@ -989,7 +1088,7 @@ viewKeywords model sorting page =
 
                 pageLink n =
                     Element.link (linkStyle (n == p) SmallLink)
-                        { url = "/#/keywords?sorting=" ++ RC.sortingToString sorting ++ "&page=" ++ (n |> String.fromInt)
+                        { url = keywordview |> gotoPage (Page n) |> appUrlFromKeywordViewState
                         , label = Element.text (n |> String.fromInt)
                         }
 
@@ -999,7 +1098,7 @@ viewKeywords model sorting page =
                 nextLink =
                     Element.el []
                         (Element.link ([ Element.Background.color (Element.rgb 1.0 0.0 0.0), Element.spacingXY 15 0 ] ++ linkStyle False SmallLink)
-                            { url = "/#/keywords?sorting=" ++ RC.sortingToString sorting ++ "&page=" ++ (p + 1 |> String.fromInt)
+                            { url = keywordview |> nextPage |> appUrlFromKeywordViewState
                             , label = Element.text "next"
                             }
                         )
@@ -1009,7 +1108,7 @@ viewKeywords model sorting page =
                     (pageLinks ++ [ nextLink ])
 
             else
-                Element.text "---"
+                Element.none
 
         lazyf : SearchAction -> Element Msg -> Element Msg -> Element Msg
         lazyf result date searchbox =

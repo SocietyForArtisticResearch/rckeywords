@@ -53,7 +53,6 @@ encodeKeywords =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-
     case model of
         Loading ->
             case msg of
@@ -82,7 +81,6 @@ update msg model =
         Loaded lmodel ->
             case msg of
                 SearchKeyword json ->
-       
                     case D.decodeValue Queries.decodeSearchQuery json of
                         Ok searchQuery ->
                             ( Loaded lmodel, findKeywords searchQuery lmodel.keywords |> encodeKeywords |> returnResults )
@@ -160,8 +158,6 @@ findKeywords (FindKeywords query sorting) keywords =
 
                 nonEmptyQ ->
                     lst |> List.filter (RC.kwName >> String.toLower >> String.contains (String.toLower nonEmptyQ))
-
-
     in
     case sorting of
         RC.ByUse ->

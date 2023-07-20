@@ -1,3 +1,8 @@
+-- TODO, change a date to really a date type
+-- Type Date = Dmy Int Int Int
+-- also allow sorting on that
+
+
 module Research exposing
     ( Author(..)
     , ExpositionID
@@ -6,29 +11,33 @@ module Research exposing
     , KeywordSorting(..)
     , PublicationStatus(..)
     , Research
+    , ReverseKeywordDict
     , TitleSorting(..)
     , authorAsString
     , authorUrl
+    , calcStatus
     , decodeKeyword
     , decoder
+    , dmyToYmd
     , emptyKeywordSet
     , encodeKeyword
     , find
     , getCount
     , getName
+    , insert
+    , keyword
     , keywordSet
     , kwName
+    , newKey
+    , reverseKeywordDict
     , shuffleWithSeed
     , sortingFromString
     , sortingToString
     , titleSortingFromString
     , titleSortingToString
     , toList
+    , use
     )
-
--- TODO, change a date to really a date type 
--- Type Date = Dmy Int Int Int 
--- also allow sorting on that
 
 import Dict exposing (Dict)
 import Json.Decode exposing (Decoder, field, int, maybe, string)
@@ -141,6 +150,36 @@ titleSortingToString sorting =
 
 type Keyword
     = Keyword { count : Int, name : String }
+
+
+keyword : Int -> String -> Keyword
+keyword count name =
+    Keyword { count = count, name = name }
+
+
+encodeKeyword : Keyword -> Json.Encode.Value
+encodeKeyword (Keyword kw) =
+    Json.Encode.object
+        [ ( "type", Json.Encode.string "keyword" )
+        , ( "count", Json.Encode.int kw.count )
+        , ( "name", Json.Encode.string kw.name )
+        ]
+
+
+decodeKeyword : Json.Decode.Decoder Keyword
+decodeKeyword =
+    Json.Decode.field "type" Json.Decode.string
+        |> Json.Decode.andThen
+            (\typ ->
+                case typ of
+                    "keyword" ->
+                        Json.Decode.map2 keyword
+                            (Json.Decode.field "count" Json.Decode.int)
+                            (Json.Decode.field "name" Json.Decode.string)
+
+                    _ ->
+                        Json.Decode.fail "this is not a keyword"
+            )
 
 
 keywordSet : List Research -> KeywordSet
@@ -340,3 +379,31 @@ calcStatus research =
 
         _ ->
             Published
+
+
+type alias ReverseKeywordDict =
+    Dict String (List Research)
+
+
+reverseKeywordDict : List Research -> Dict String (List Research)
+reverseKeywordDict research =
+    let
+        addExpToKeyword : Research -> String -> Dict String (List Research) -> Dict String (List Research)
+        addExpToKeyword exposition keyword currentDict =
+            Dict.update keyword
+                (\value ->
+                    case value of
+                        Nothing ->
+                            Just [ exposition ]
+
+                        Just lst ->
+                            Just (exposition :: lst)
+                )
+                currentDict
+
+        addResearchToDict : Research -> Dict String (List Research) -> Dict String (List Research)
+        addResearchToDict exp currentDict =
+            -- this exposition has keywords k1 k2 k3
+            List.foldl (addExpToKeyword exp) currentDict exp.keywords
+    in
+    List.foldl addResearchToDict Dict.empty research

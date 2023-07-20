@@ -7,6 +7,7 @@ import Research as RC exposing (Keyword)
 
 type SearchQuery
     = FindKeywords String RC.KeywordSorting
+    | FindResearch (List RC.Keyword)
 
 
 encodeKeywordSorting : RC.KeywordSorting -> Json.Encode.Value
@@ -66,4 +67,14 @@ encodeSearchQuery query =
                 [ ( "type", Json.Encode.string "FindKeywords" )
                 , ( "keywords", Json.Encode.string keywords )
                 , ( "sorting", encodeKeywordSorting sorting )
+                ]
+
+        FindResearch keywords ->
+            let
+                kwStrings =
+                    keywords |> List.map RC.kwName
+            in
+            Json.Encode.object
+                [ ( "type", Json.Encode.string "FindResearch" )
+                , ( "keywords", Json.Encode.list Json.Encode.string kwStrings )
                 ]

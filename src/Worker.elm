@@ -59,9 +59,13 @@ update msg model =
                 LoadData res ->
                     case res of
                         Ok data ->
+                            let
+                                keywordSet =
+                                    RC.keywordSet data
+                            in
                             ( Loaded
                                 { research = data
-                                , keywords = RC.keywordSet data
+                                , keywords = keywordSet
                                 , problems = []
                                 }
                             , Cmd.none
@@ -168,6 +172,18 @@ findKeywords (FindKeywords query sorting) keywords =
 
         RC.RandomKeyword ->
             shuffleWithSeed 42 filtered
+
+
+findExpositionsWithKeywords : List RC.Keyword -> List RC.Research -> List RC.Research
+findExpositionsWithKeywords keywords expositions =
+    let
+        hasKeyword keyword exposition =
+            List.member (keyword |> RC.kwName) exposition.keywords
+
+        filterForKeyword keyword =
+            expositions |> List.filter (hasKeyword keyword)
+    in
+    keywords |> List.concatMap (\kw -> filterForKeyword kw)
 
 
 problemize : Problem -> Model -> Model

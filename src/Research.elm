@@ -16,7 +16,10 @@ module Research exposing
     , authorAsString
     , authorUrl
     , calcStatus
+    , decodeExposition
+    , encodeExposition
     , decodeKeyword
+    , decodePublicationStatus
     , decoder
     , dmyToYmd
     , emptyKeywordSet
@@ -35,17 +38,19 @@ module Research exposing
     , sortingToString
     , titleSortingFromString
     , titleSortingToString
+    , matchMultipleKeywords
     , toList
     , use
     )
 
 import Dict exposing (Dict)
+import Html.Attributes exposing (id)
 import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
 import Json.Encode
 import Random
 import Random.List
-
+import List.Extra
 
 type alias ExpositionID =
     Int
@@ -60,6 +65,11 @@ authorAsString (Author a) =
     a.name
 
 
+getAuthorId : Author -> Int
+getAuthorId (Author a) =
+    a.id
+
+
 authorUrl : Author -> String
 authorUrl (Author a) =
     "https://www.researchcatalogue.net/profile/?person=" ++ String.fromInt a.id
@@ -69,6 +79,40 @@ type PublicationStatus
     = InProgress
     | Published
     | Undecided
+
+
+publicationstatus : PublicationStatus -> Json.Encode.Value
+publicationstatus status =
+    Json.Encode.string
+        (case status of
+            InProgress ->
+                "inprogress"
+
+            Published ->
+                "published"
+
+            Undecided ->
+                "undecided"
+        )
+
+
+decodePublicationStatus : Json.Decode.Decoder PublicationStatus
+decodePublicationStatus =
+    Json.Decode.field "publicationStatus" Json.Decode.string
+        |> Json.Decode.andThen
+            (\str ->
+                Json.Decode.succeed
+                    (case str of
+                        "inprogress" ->
+                            InProgress
+
+                        "published" ->
+                            Published
+
+                        _ ->
+                            Undecided
+                    )
+            )
 
 
 type KeywordSet
@@ -261,8 +305,8 @@ getCount (Keyword kw) =
 
 
 getName : Author -> String
-getName (Author author) =
-    author.name
+getName (Author data) =
+    data.name
 
 
 shuffleWithSeed : Int -> List a -> List a
@@ -270,6 +314,156 @@ shuffleWithSeed seed lst =
     Random.initialSeed seed
         |> Random.step (Random.List.shuffle lst)
         |> Tuple.first
+
+
+author : Decoder Author
+author =
+    let
+        makeAuthor : Int -> String -> Author
+        makeAuthor id name =
+            Author { id = id, name = name }
+    in
+    Json.Decode.map2
+        makeAuthor
+        (Json.Decode.field "id" Json.Decode.int)
+        (Json.Decode.field "name" Json.Decode.string)
+
+
+decodeExposition : Decoder Research
+decodeExposition =
+    let
+        ( field, succeed ) =
+            ( Json.Decode.field, Json.Decode.succeed )
+
+        int =
+            Json.Decode.int
+
+        string =
+            Json.Decode.string
+
+        andMap =
+            JDE.andMap
+
+        mkExp :
+            ExpositionID
+            -> String
+            -> List String
+            -> String
+            -> Author
+            -> Maybe Int
+            -> PublicationStatus
+            -> Maybe String
+            -> Maybe String
+            -> Maybe String
+            -> String
+            -> Research
+        mkExp i t kw cr au iss pub publ thum abs d =
+            { id = i
+            , title = t
+            , keywords = kw
+            , created = cr
+            , author = au
+            , issueId = iss
+            , publicationStatus = pub
+            , publication = publ
+            , thumbnail = thum
+            , abstract = abs
+            , defaultPage = d
+            }
+    in
+    field "type" string
+        |> Json.Decode.andThen
+            (\typ ->
+                case typ of
+                    "exposition" ->
+                        Json.Decode.map mkExp
+                            (field "id" int)
+                            |> andMap (field "title" string)
+                            |> andMap (field "keywords" (Json.Decode.list string))
+                            |> andMap (field "created" string)
+                            |> andMap (field "author" author)
+                            |> andMap (JDE.optionalField "issueId" int)
+                            |> andMap (field "publicationstatus" decodePublicationStatus)
+                            |> andMap (JDE.optionalField "publication" string)
+                            |> andMap (JDE.optionalField "thumbnail" string)
+                            |> andMap (JDE.optionalField "abstract" string)
+                            |> andMap (field "defaultPage" string)
+
+                    _ ->
+                        Json.Decode.fail "expected an exposition"
+            )
+
+
+encodeAuthor : Author -> Json.Encode.Value
+encodeAuthor au =
+    Json.Encode.object
+        [ ( "name", Json.Encode.string (getName au) )
+        , ( "id", Json.Encode.int (getAuthorId au) )
+        ]
+
+
+encodeExposition : Research -> Json.Encode.Value
+encodeExposition exp =
+    let
+        int =
+            Json.Encode.int
+
+        string =
+            Json.Encode.string
+
+        list =
+            Json.Encode.list
+
+        maybeAppend x xs =
+            case x of
+                Just v ->
+                    v :: xs
+
+                Nothing ->
+                    xs
+
+        issueId =
+            exp.issueId
+                |> Maybe.map
+                    (\id ->
+                        ( "id", int id )
+                    )
+
+        publication =
+            exp.publication
+                |> Maybe.map
+                    (\p ->
+                        ( "publication", string p )
+                    )
+
+        thumbnail =
+            exp.thumbnail
+                |> Maybe.map
+                    (\t ->
+                        ( "thumbanil", string t )
+                    )
+
+        abstract =
+            exp.abstract
+                |> Maybe.map
+                    (\a ->
+                        ( "abstract", string a )
+                    )
+    in
+    Json.Encode.object
+        ([ ( "type", string "exposition" )
+         , ( "id", int exp.id )
+         , ( "title", string exp.title )
+         , ( "keywords", list string exp.keywords )
+         , ( "author", encodeAuthor exp.author )
+         , ( "publicationStatus", publicationstatus exp.publicationStatus )
+         , ( "defaultPage", string exp.defaultPage )
+         ]
+            |> maybeAppend issueId
+            |> maybeAppend publication
+            |> maybeAppend thumbnail
+            |> maybeAppend abstract
+        )
 
 
 decoder : Decoder Research
@@ -290,18 +484,6 @@ decoder =
 
                 _ ->
                     Undecided
-
-        author : Decoder Author
-        author =
-            let
-                makeAuthor : Int -> String -> Author
-                makeAuthor id name =
-                    Author { id = id, name = name }
-            in
-            Json.Decode.map2
-                makeAuthor
-                (Json.Decode.field "id" Json.Decode.int)
-                (Json.Decode.field "name" Json.Decode.string)
     in
     Json.Decode.map researchPublicationStatus <|
         (Json.Decode.succeed
@@ -350,27 +532,6 @@ type alias Research =
     }
 
 
-encodeKeyword : Keyword -> Json.Encode.Value
-encodeKeyword (Keyword kw) =
-    Json.Encode.object
-        [ ( "name", Json.Encode.string kw.name )
-        , ( "count", Json.Encode.int kw.count )
-        ]
-
-
-decodeKeyword : Decoder Keyword
-decodeKeyword =
-    let
-        keyword : String -> Int -> Keyword
-        keyword n c =
-            Keyword { name = n, count = c }
-    in
-    Json.Decode.map2
-        keyword
-        (Json.Decode.field "name" Json.Decode.string)
-        (Json.Decode.field "count" Json.Decode.int)
-
-
 calcStatus : Research -> PublicationStatus
 calcStatus research =
     case research.publicationStatus of
@@ -385,19 +546,19 @@ type alias ReverseKeywordDict =
     Dict String (List Research)
 
 
-reverseKeywordDict : List Research -> Dict String (List Research)
+reverseKeywordDict : List Research -> ReverseKeywordDict
 reverseKeywordDict research =
     let
         addExpToKeyword : Research -> String -> Dict String (List Research) -> Dict String (List Research)
-        addExpToKeyword exposition keyword currentDict =
-            Dict.update keyword
+        addExpToKeyword xpo kw currentDict =
+            Dict.update kw
                 (\value ->
                     case value of
                         Nothing ->
-                            Just [ exposition ]
+                            Just [ xpo ]
 
                         Just lst ->
-                            Just (exposition :: lst)
+                            Just (xpo :: lst)
                 )
                 currentDict
 
@@ -407,3 +568,12 @@ reverseKeywordDict research =
             List.foldl (addExpToKeyword exp) currentDict exp.keywords
     in
     List.foldl addResearchToDict Dict.empty research
+
+
+matchMultipleKeywords : List Keyword -> ReverseKeywordDict -> List Research
+matchMultipleKeywords kw dict =
+    let
+        findKw k =
+            k |> kwName |> (\s -> Dict.get s dict) |> Maybe.withDefault []
+    in
+    kw |> List.concatMap findKw |> List.Extra.uniqueBy (\e -> e.id)

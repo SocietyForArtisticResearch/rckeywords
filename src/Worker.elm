@@ -7,7 +7,7 @@ import Platform
 import Queries exposing (SearchQuery(..))
 import Random
 import Random.List exposing (shuffle)
-import Research as RC exposing (Keyword, KeywordSet, Research)
+import Research as RC exposing (Keyword, KeywordSet, Research, ReverseKeywordDict, reverseKeywordDict)
 
 
 
@@ -17,7 +17,7 @@ import Research as RC exposing (Keyword, KeywordSet, Research)
 -- TODO make it possible to search abstract
 
 
-port searchKeyword : (D.Value -> msg) -> Sub msg
+port searchQuery : (D.Value -> msg) -> Sub msg
 
 
 port returnResults : E.Value -> Cmd msg
@@ -25,7 +25,7 @@ port returnResults : E.Value -> Cmd msg
 
 type Msg
     = LoadData (Result Http.Error (List Research))
-    | SearchKeyword E.Value
+    | SearchQuery E.Value
 
 
 type Problem
@@ -37,6 +37,7 @@ type alias LoadedModel =
     { research : List Research
     , keywords : KeywordSet
     , problems : List Problem
+    , reverseKeywordDict : ReverseKeywordDict
     }
 
 
@@ -44,11 +45,6 @@ type Model
     = Loading
     | LoadingWithQuery SearchQuery
     | Loaded LoadedModel
-
-
-encodeKeywords : List Keyword -> E.Value
-encodeKeywords =
-    E.list RC.encodeKeyword
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -67,6 +63,7 @@ update msg model =
                                 { research = data
                                 , keywords = keywordSet
                                 , problems = []
+                                , reverseKeywordDict = RC.reverseKeywordDict data
                                 }
                             , Cmd.none
                             )
@@ -74,7 +71,7 @@ update msg model =
                         Err e ->
                             ( problemize (LoadError e) model, Cmd.none )
 
-                SearchKeyword json ->
+                SearchQuery json ->
                     case D.decodeValue Queries.decodeSearchQuery json of
                         Ok query ->
                             ( LoadingWithQuery query, Cmd.none )
@@ -84,10 +81,15 @@ update msg model =
 
         Loaded lmodel ->
             case msg of
-                SearchKeyword json ->
+                SearchQuery json ->
                     case D.decodeValue Queries.decodeSearchQuery json of
-                        Ok searchQuery ->
-                            ( Loaded lmodel, findKeywords searchQuery lmodel.keywords |> encodeKeywords |> returnResults )
+                        Ok q ->
+                            case q of
+                                Queries.FindKeywords str kwSorting ->
+                                    ( Loaded lmodel, findKeywords str kwSorting lmodel.keywords |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults )
+
+                                Queries.FindResearch kws ->
+                                    ( Loaded lmodel, findResearch kws lmodel.reverseKeywordDict |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults )
 
                         Err _ ->
                             ( problemize DecodeError (Loaded lmodel), Cmd.none )
@@ -116,22 +118,32 @@ update msg model =
                                 kws =
                                     RC.keywordSet data
 
-                                keywords : List Keyword
-                                keywords =
-                                    findKeywords q kws
+                                reverseKeywordDict : ReverseKeywordDict
+                                reverseKeywordDict =
+                                    RC.reverseKeywordDict data
+
+                                cmd : Cmd msg
+                                cmd =
+                                    case q of
+                                        FindKeywords str kwsorting ->
+                                            findKeywords str kwsorting kws |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults
+
+                                        FindResearch keywords ->
+                                            findResearch keywords reverseKeywordDict |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults
                             in
                             ( Loaded
                                 { problems = []
                                 , research = data
                                 , keywords = kws
+                                , reverseKeywordDict = reverseKeywordDict
                                 }
-                            , returnResults (encodeKeywords keywords)
+                            , cmd
                             )
 
                         Err e ->
-                            ( problemize (LoadError e) (Loaded { research = [], keywords = RC.emptyKeywordSet, problems = [] }), Cmd.none )
+                            ( problemize (LoadError e) (Loaded { research = [], keywords = RC.emptyKeywordSet, problems = [], reverseKeywordDict = RC.reverseKeywordDict [] }), Cmd.none )
 
-                SearchKeyword json ->
+                SearchQuery json ->
                     case D.decodeValue Queries.decodeSearchQuery json of
                         Ok query ->
                             ( LoadingWithQuery query, Cmd.none )
@@ -147,8 +159,8 @@ shuffleWithSeed seed lst =
         |> Tuple.first
 
 
-findKeywords : Queries.SearchQuery -> KeywordSet -> List Keyword
-findKeywords (FindKeywords query sorting) keywords =
+findKeywords : String -> RC.KeywordSorting -> KeywordSet -> List Keyword
+findKeywords query sorting keywords =
     let
         lst : List Keyword
         lst =
@@ -186,6 +198,11 @@ findExpositionsWithKeywords keywords expositions =
     keywords |> List.concatMap (\kw -> filterForKeyword kw)
 
 
+findResearch : List RC.Keyword -> ReverseKeywordDict -> List RC.Research
+findResearch kws reverseDict =
+    RC.matchMultipleKeywords kws reverseDict
+
+
 problemize : Problem -> Model -> Model
 problemize p m =
     case m of
@@ -211,7 +228,7 @@ init _ =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    searchKeyword SearchKeyword
+    searchQuery SearchQuery
 
 
 main : Program () Model Msg

@@ -10,6 +10,45 @@ type SearchQuery
     | FindResearch (List RC.Keyword)
 
 
+type SearchResult
+    = Expositions (List RC.Research)
+    | Keywords (List RC.Keyword)
+
+
+decodeSearchResult : Json.Decode.Decoder SearchResult
+decodeSearchResult =
+    let
+        parseResult typ =
+            case typ of
+                "expositions" ->
+                    Json.Decode.field "expositions" (Json.Decode.list RC.decodeExposition |> Json.Decode.map Expositions)
+
+                "keywords" ->
+                    Json.Decode.field "keywords" (Json.Decode.list RC.decodeKeyword |> Json.Decode.map Keywords)
+
+                _ ->
+                    Json.Decode.fail "expected expositions or keywords"
+    in
+    Json.Decode.field "type" Json.Decode.string |> Json.Decode.andThen parseResult
+
+
+encodeSearchResult : SearchResult -> Json.Encode.Value
+encodeSearchResult result =
+    case result of
+        Expositions exps ->
+            Json.Encode.object
+                [ ( "type", Json.Encode.string "expositions" )
+                , ( "expositions", Json.Encode.list RC.encodeExposition exps )
+                ]
+        
+        Keywords kws ->
+            Json.Encode.object
+            [
+                ("type", Json.Encode.string "keywords" )
+                , ("keywords", Json.Encode.list RC.encodeKeyword kws)
+            ]
+
+
 encodeKeywordSorting : RC.KeywordSorting -> Json.Encode.Value
 encodeKeywordSorting sorting =
     case sorting of
@@ -53,6 +92,10 @@ decodeSearchQuery =
                         Json.Decode.map2 FindKeywords
                             (Json.Decode.field "keywords" Json.Decode.string)
                             (Json.Decode.field "sorting" decodeKeywordSorting)
+
+                    "FindResearch" ->
+                        Json.Decode.map FindResearch
+                            (Json.Decode.field "keywords" (Json.Decode.list RC.decodeKeyword))
 
                     _ ->
                         Json.Decode.fail "Unknown query type"

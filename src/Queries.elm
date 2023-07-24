@@ -1,17 +1,15 @@
 module Queries exposing
     ( SearchQuery(..)
     , SearchResult(..)
-    , decodeKeywordSorting
     , decodeSearchQuery
     , decodeSearchResult
-    , encodeKeywordSorting
     , encodeSearchQuery
     , encodeSearchResult
     )
 
 import Json.Decode
 import Json.Encode
-import Research as RC exposing (Keyword)
+import Research as RC
 
 
 type SearchQuery

@@ -7,7 +7,7 @@ import Platform
 import Queries exposing (SearchQuery(..))
 import Random
 import Random.List exposing (shuffle)
-import Research as RC exposing (Keyword, KeywordSet, Research, ReverseKeywordDict, reverseKeywordDict)
+import Research as RC exposing (Keyword, KeywordSet, Research, ReverseKeywordDict)
 
 
 
@@ -90,7 +90,7 @@ update msg model =
 
                                 Queries.FindResearch kws ->
                                     ( Loaded lmodel, RC.findResearchWithKeywords kws lmodel.reverseKeywordDict lmodel.research |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults )
- 
+
                         Err _ ->
                             ( problemize DecodeError (Loaded lmodel), Cmd.none )
 

@@ -15,24 +15,17 @@ module Research exposing
     , TitleSorting(..)
     , authorAsString
     , authorUrl
-    , calcStatus
     , decodeExposition
     , decodeKeyword
-    , decodePublicationStatus
     , decoder
-    , dmyToYmd
     , emptyKeywordSet
     , encodeExposition
     , encodeKeyword
-    , find
+    , findResearchWithKeywords
     , getCount
     , getName
-    , insert
-    , keyword
     , keywordSet
     , kwName
-    , findResearchWithKeywords
-    , newKey
     , reverseKeywordDict
     , shuffleWithSeed
     , sortingFromString
@@ -40,15 +33,12 @@ module Research exposing
     , titleSortingFromString
     , titleSortingToString
     , toList
-    , use
     )
 
-import Dict exposing (Dict, union)
-import Html.Attributes exposing (id)
+import Dict exposing (Dict)
 import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
 import Json.Encode
-import List.Extra
 import Random
 import Random.List
 import Set
@@ -236,11 +226,6 @@ keywordSet researchlist =
         )
         emptyKeywordSet
         researchlist
-
-
-find : String -> KeywordSet -> Maybe Keyword
-find keywordStr (KeywordSet set) =
-    set.dict |> Dict.get keywordStr
 
 
 toList : KeywordSet -> List Keyword
@@ -584,12 +569,6 @@ findResearchWithKeywords kw dict research =
             exp.id
 
         {- for each keyword, return the id's that have it, now take the union of those sets of ids -}
-        ids =
-            kw
-                |> List.map (findKw >> List.map getId >> Set.fromList)
-                |> List.foldl Set.union Set.empty
-                |> Set.toList
-
         {- use the ids to fetch the expositions -}
     in
     case kw of
@@ -597,4 +576,11 @@ findResearchWithKeywords kw dict research =
             research
 
         _ ->
+            let
+                ids =
+                    kw
+                        |> List.map (findKw >> List.map getId >> Set.fromList)
+                        |> List.foldl Set.union Set.empty
+                        |> Set.toList
+            in
             research |> List.filter (\exp -> List.member exp.id ids)

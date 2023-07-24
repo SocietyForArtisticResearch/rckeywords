@@ -96,6 +96,17 @@ scaleFromString scale =
         _ ->
             Nothing
 
+-- urlWithScale is a function to provide the correct link, so you can reuse this
+-- in different paths and construct the needed link accordingly
+viewScaleSwitch : Scale -> (Scale -> String) -> Element Msg
+viewScaleSwitch scale urlWithScale =
+    Element.row [ padding 25, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+        [ Element.link (linkStyle (scale == Micro) SmallLink) { url = urlWithScale Micro, label = Element.text "micro" }
+        , Element.link (linkStyle (scale == Small) SmallLink) { url = urlWithScale Small, label = Element.text "small" }
+        , Element.link (linkStyle (scale == Medium) SmallLink) { url = urlWithScale Medium, label = Element.text "medium" }
+        , Element.link (linkStyle (scale == Large) SmallLink) { url = urlWithScale Large, label = Element.text "large" }
+        ]
+
 
 type Page
     = Page Int
@@ -1184,9 +1195,21 @@ viewScreenshots screenDimensions scale research =
         viewGroup : List Research -> Html Msg
         viewGroup group =
             Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
+
+        urlWithScale : Scale -> String
+        urlWithScale s =
+            AppUrl.fromPath
+                [ "research"
+                , "search"
+                , "screen"
+                ]
+                |> withParameter ( "scale", scaleToString s )
+                |> AppUrl.toString
+                |> prefixHash
     in
     Element.column []
-        [ Element.el [ Element.Region.heading 1 ] <| text "Visual"
+        [ viewScaleSwitch scale urlWithScale
+        , Element.el [ Element.Region.heading 1 ] <| text "Visual"
         , Element.html (Html.div [] (List.map viewGroup groups))
         ]
 

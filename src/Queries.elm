@@ -1,4 +1,13 @@
-module Queries exposing (..)
+module Queries exposing
+    ( SearchQuery(..)
+    , SearchResult(..)
+    , decodeKeywordSorting
+    , decodeSearchQuery
+    , decodeSearchResult
+    , encodeKeywordSorting
+    , encodeSearchQuery
+    , encodeSearchResult
+    )
 
 import Json.Decode
 import Json.Encode
@@ -7,7 +16,7 @@ import Research as RC exposing (Keyword)
 
 type SearchQuery
     = FindKeywords String RC.KeywordSorting
-    | FindResearch (List RC.Keyword)
+    | FindResearch (List String)
 
 
 type SearchResult
@@ -40,13 +49,12 @@ encodeSearchResult result =
                 [ ( "type", Json.Encode.string "expositions" )
                 , ( "expositions", Json.Encode.list RC.encodeExposition exps )
                 ]
-        
+
         Keywords kws ->
             Json.Encode.object
-            [
-                ("type", Json.Encode.string "keywords" )
-                , ("keywords", Json.Encode.list RC.encodeKeyword kws)
-            ]
+                [ ( "type", Json.Encode.string "keywords" )
+                , ( "keywords", Json.Encode.list RC.encodeKeyword kws )
+                ]
 
 
 encodeKeywordSorting : RC.KeywordSorting -> Json.Encode.Value
@@ -95,7 +103,7 @@ decodeSearchQuery =
 
                     "FindResearch" ->
                         Json.Decode.map FindResearch
-                            (Json.Decode.field "keywords" (Json.Decode.list RC.decodeKeyword))
+                            (Json.Decode.field "keywords" (Json.Decode.list Json.Decode.string))
 
                     _ ->
                         Json.Decode.fail "Unknown query type"
@@ -113,11 +121,7 @@ encodeSearchQuery query =
                 ]
 
         FindResearch keywords ->
-            let
-                kwStrings =
-                    keywords |> List.map RC.kwName
-            in
             Json.Encode.object
                 [ ( "type", Json.Encode.string "FindResearch" )
-                , ( "keywords", Json.Encode.list Json.Encode.string kwStrings )
+                , ( "keywords", Json.Encode.list Json.Encode.string keywords )
                 ]

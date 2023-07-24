@@ -89,8 +89,8 @@ update msg model =
                                     ( Loaded lmodel, findKeywords str kwSorting lmodel.keywords |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults )
 
                                 Queries.FindResearch kws ->
-                                    ( Loaded lmodel, findResearch kws lmodel.reverseKeywordDict |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults )
-
+                                    ( Loaded lmodel, RC.findResearchWithKeywords kws lmodel.reverseKeywordDict lmodel.research |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults )
+ 
                         Err _ ->
                             ( problemize DecodeError (Loaded lmodel), Cmd.none )
 
@@ -129,7 +129,7 @@ update msg model =
                                             findKeywords str kwsorting kws |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults
 
                                         FindResearch keywords ->
-                                            findResearch keywords reverseKeywordDict |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults
+                                            RC.findResearchWithKeywords keywords reverseKeywordDict data |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults
                             in
                             ( Loaded
                                 { problems = []
@@ -184,23 +184,6 @@ findKeywords query sorting keywords =
 
         RC.RandomKeyword ->
             shuffleWithSeed 42 filtered
-
-
-findExpositionsWithKeywords : List RC.Keyword -> List RC.Research -> List RC.Research
-findExpositionsWithKeywords keywords expositions =
-    let
-        hasKeyword keyword exposition =
-            List.member (keyword |> RC.kwName) exposition.keywords
-
-        filterForKeyword keyword =
-            expositions |> List.filter (hasKeyword keyword)
-    in
-    keywords |> List.concatMap (\kw -> filterForKeyword kw)
-
-
-findResearch : List RC.Keyword -> ReverseKeywordDict -> List RC.Research
-findResearch kws reverseDict =
-    RC.matchMultipleKeywords kws reverseDict
 
 
 problemize : Problem -> Model -> Model

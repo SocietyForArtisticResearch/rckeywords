@@ -17,12 +17,12 @@ module Research exposing
     , authorUrl
     , calcStatus
     , decodeExposition
-    , encodeExposition
     , decodeKeyword
     , decodePublicationStatus
     , decoder
     , dmyToYmd
     , emptyKeywordSet
+    , encodeExposition
     , encodeKeyword
     , find
     , getCount
@@ -31,6 +31,7 @@ module Research exposing
     , keyword
     , keywordSet
     , kwName
+    , findResearchWithKeywords
     , newKey
     , reverseKeywordDict
     , shuffleWithSeed
@@ -38,19 +39,20 @@ module Research exposing
     , sortingToString
     , titleSortingFromString
     , titleSortingToString
-    , matchMultipleKeywords
     , toList
     , use
     )
 
-import Dict exposing (Dict)
+import Dict exposing (Dict, union)
 import Html.Attributes exposing (id)
 import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
 import Json.Encode
+import List.Extra
 import Random
 import Random.List
-import List.Extra
+import Set
+
 
 type alias ExpositionID =
     Int
@@ -98,7 +100,7 @@ publicationstatus status =
 
 decodePublicationStatus : Json.Decode.Decoder PublicationStatus
 decodePublicationStatus =
-    Json.Decode.field "publicationStatus" Json.Decode.string
+    Json.Decode.string
         |> Json.Decode.andThen
             (\str ->
                 Json.Decode.succeed
@@ -332,8 +334,8 @@ author =
 decodeExposition : Decoder Research
 decodeExposition =
     let
-        ( field, succeed ) =
-            ( Json.Decode.field, Json.Decode.succeed )
+        field =
+            Json.Decode.field
 
         int =
             Json.Decode.int
@@ -383,7 +385,7 @@ decodeExposition =
                             |> andMap (field "created" string)
                             |> andMap (field "author" author)
                             |> andMap (JDE.optionalField "issueId" int)
-                            |> andMap (field "publicationstatus" decodePublicationStatus)
+                            |> andMap (field "publicationStatus" decodePublicationStatus)
                             |> andMap (JDE.optionalField "publication" string)
                             |> andMap (JDE.optionalField "thumbnail" string)
                             |> andMap (JDE.optionalField "abstract" string)
@@ -440,7 +442,7 @@ encodeExposition exp =
             exp.thumbnail
                 |> Maybe.map
                     (\t ->
-                        ( "thumbanil", string t )
+                        ( "thumbnail", string t )
                     )
 
         abstract =
@@ -453,6 +455,7 @@ encodeExposition exp =
     Json.Encode.object
         ([ ( "type", string "exposition" )
          , ( "id", int exp.id )
+         , ( "created", string exp.created )
          , ( "title", string exp.title )
          , ( "keywords", list string exp.keywords )
          , ( "author", encodeAuthor exp.author )
@@ -570,10 +573,28 @@ reverseKeywordDict research =
     List.foldl addResearchToDict Dict.empty research
 
 
-matchMultipleKeywords : List Keyword -> ReverseKeywordDict -> List Research
-matchMultipleKeywords kw dict =
+findResearchWithKeywords : List String -> ReverseKeywordDict -> List Research -> List Research
+findResearchWithKeywords kw dict research =
     let
         findKw k =
-            k |> kwName |> (\s -> Dict.get s dict) |> Maybe.withDefault []
+            k |> (\s -> Dict.get s dict) |> Maybe.withDefault []
+
+        getId : Research -> ExpositionID
+        getId exp =
+            exp.id
+
+        {- for each keyword, return the id's that have it, now take the union of those sets of ids -}
+        ids =
+            kw
+                |> List.map (findKw >> List.map getId >> Set.fromList)
+                |> List.foldl Set.union Set.empty
+                |> Set.toList
+
+        {- use the ids to fetch the expositions -}
     in
-    kw |> List.concatMap findKw |> List.Extra.uniqueBy (\e -> e.id)
+    case kw of
+        [] ->
+            research
+
+        _ ->
+            research |> List.filter (\exp -> List.member exp.id ids)

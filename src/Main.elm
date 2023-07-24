@@ -778,7 +778,7 @@ viewResearchResults dimensions layout v lst keywords sorting (Page p) =
                     Element.column [] (sorted |> List.map viewResearchMicro)
 
                 ScreenLayout scale ->
-                    viewScreenshots dimensions scale sorted
+                    viewScreenshots keywords dimensions scale sorted
     in
     Element.column [] <|
         [ Element.el [] (Element.text "research results"), Element.row [] (keywords |> List.map Element.text), render, pageNav v dimensions sorted (Page p) ]
@@ -1181,8 +1181,8 @@ sortResearch sorting research =
             research |> List.sortBy (\r -> r.created) |> List.reverse
 
 
-viewScreenshots : ScreenDimensions -> Scale -> List Research -> Element Msg
-viewScreenshots screenDimensions scale research =
+viewScreenshots : List String -> ScreenDimensions -> Scale -> List Research -> Element Msg
+viewScreenshots keywords screenDimensions scale research =
     let
         groupSize : Int
         groupSize =
@@ -1196,6 +1196,7 @@ viewScreenshots screenDimensions scale research =
         viewGroup group =
             Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
 
+        -- this is currently missing the keyword context
         urlWithScale : Scale -> String
         urlWithScale s =
             AppUrl.fromPath
@@ -1204,6 +1205,7 @@ viewScreenshots screenDimensions scale research =
                 , "screen"
                 ]
                 |> withParameter ( "scale", scaleToString s )
+                |> withParametersList [("keyword",keywords)]
                 |> AppUrl.toString
                 |> prefixHash
     in

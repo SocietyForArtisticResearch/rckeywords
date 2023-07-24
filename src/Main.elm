@@ -96,8 +96,6 @@ type Page
 
 type View
     = KeywordsView KeywordsViewState
-    | ListView ListViewState
-    | ScreenView Scale RC.TitleSorting
     | SearchView (List String) RC.TitleSorting Page
 
 
@@ -203,7 +201,7 @@ init { width, height } url key =
             , query = ""
             , search = Idle
             , screenDimensions = { w = width, h = height }
-            , view = ScreenView Medium RC.Random
+            , view = SearchView [] RC.Random (Page 0)
             , numberOfResults = 8
             , url = initUrl
             , key = key
@@ -379,51 +377,6 @@ handleUrl url model =
               }
             , cmd
             )
-
-        [ "visual" ] ->
-            let
-                zoom : Scale
-                zoom =
-                    case Dict.get "zoom" url.queryParameters of
-                        Just [ "micro" ] ->
-                            Micro
-
-                        Just [ "small" ] ->
-                            Small
-
-                        Just [ "medium" ] ->
-                            Medium
-
-                        Just [ "large" ] ->
-                            Large
-
-                        _ ->
-                            Medium
-
-                sorting : RC.TitleSorting
-                sorting =
-                    case Dict.get "sorting" url.queryParameters of
-                        Just [ srting ] ->
-                            RC.titleSortingFromString srting
-
-                        _ ->
-                            RC.NewestFirst
-            in
-            noCmd { model | view = ScreenView zoom sorting }
-
-        [ "list" ] ->
-            let
-                sorting =
-                    url.queryParameters
-                        |> Dict.get "sorting"
-                        |> Maybe.andThen List.head
-                        |> Maybe.map RC.titleSortingFromString
-                        |> Maybe.withDefault RC.NewestFirst
-            in
-            noCmd
-                { model
-                    | view = ListView (ListViewMain sorting)
-                }
 
         [ "research", "search" ] ->
             let
@@ -688,26 +641,6 @@ listView sorting model =
         ]
 
 
-isScreenview : View -> Bool
-isScreenview vw =
-    case vw of
-        ScreenView _ _ ->
-            True
-
-        _ ->
-            False
-
-
-isListView : View -> Bool
-isListView v =
-    case v of
-        ListView _ ->
-            True
-
-        _ ->
-            False
-
-
 isKeywordView : View -> Bool
 isKeywordView v =
     case v of
@@ -888,9 +821,7 @@ linkStyle active style =
 viewNav : View -> Element Msg
 viewNav currentView =
     Element.row [ paddingXY 0 5, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (isScreenview currentView) BigLink) { url = "/#/visual", label = Element.text "visual" }
-        , Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "keywords" }
-        , Element.link (linkStyle (isListView currentView) BigLink) { url = "/#/list", label = Element.text "list" }
+        [ Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "keywords" }
         , Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search", label = Element.text "search" }
         ]
 
@@ -911,12 +842,6 @@ view model =
         body : Element Msg
         body =
             case model.view of
-                ListView (ListViewMain sorting) ->
-                    Element.column [ width fill ]
-                        [ Element.row [ Element.spacingXY 0 25 ] [ listViewOrderSwitch sorting ]
-                        , listView sorting model
-                        ]
-
                 KeywordsView kwtype ->
                     case kwtype of
                         KeywordDetail keywords sorting ->
@@ -924,15 +849,6 @@ view model =
 
                         _ ->
                             viewKeywords model kwtype
-
-                ScreenView scale sorting ->
-                    Element.column [ width fill ]
-                        [ Element.row [ Element.spacing 25 ]
-                            [ screenViewOrderSwitch scale sorting
-                            , viewScaleSwitch sorting scale
-                            ]
-                        , viewScreenshots scale sorting model
-                        ]
 
                 SearchView keywords sorting page ->
                     case model.search of
@@ -969,10 +885,6 @@ gotoPageView p v =
         SearchView keywords sorting _ ->
             SearchView keywords sorting p
 
-        -- all other do not have pages just go:
-        _ ->
-            v
-
 
 getPageOfView : View -> Page
 getPageOfView v =
@@ -984,7 +896,7 @@ getPageOfView v =
             page
 
         _ ->
-            Page 0
+            (Page 0)
 
 
 nextPageView : View -> View
@@ -1033,7 +945,7 @@ viewResearchResults v screen lst keywords sorting (Page p) =
         Element.el [] (Element.text "research results")
             :: Element.row [] (keywords |> List.map Element.text)
             :: (sorted |> List.map viewResearchMicro)
-            ++ [pageNav v screen sorted (Page p)]
+            ++ [ pageNav v screen sorted (Page p) ]
 
 
 toggleSorting : RC.KeywordSorting -> Element Msg
@@ -1114,7 +1026,7 @@ viewKeywordAsButton fontsize kw =
         -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
         , width fill
         ]
-        [ Element.link [] { url = "/#/keywords/", label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
+        [ Element.link [] { url = AppUrl.fromPath [ "keywords", name ] |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
 
         -- [ Element.Input.button [ Font.color (rgb 0.0 0.0 1.0), width fill ]
         --     { onPress = Just (ShowKeyword (Keyword k))
@@ -1164,23 +1076,6 @@ appUrlFromView v =
     case v of
         KeywordsView kwstate ->
             appUrlFromKeywordViewState kwstate
-
-        ListView listState ->
-            case listState of
-                ListViewMain sorting ->
-                    AppUrl.fromPath [ "list" ]
-                        |> withParameter ( "sorting", RC.titleSortingToString sorting )
-                        |> AppUrl.toString
-                        |> prefixHash
-
-        ScreenView scale sorting ->
-            AppUrl.fromPath [ "visual" ]
-                |> withParameters
-                    [ ( "zoom", scaleToString scale )
-                    , ( "sorting", RC.titleSortingToString sorting )
-                    ]
-                |> AppUrl.toString
-                |> prefixHash
 
         SearchView keywords sorting page ->
             AppUrl.fromPath [ "research", "search" ]

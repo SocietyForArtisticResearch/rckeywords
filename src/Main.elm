@@ -86,6 +86,25 @@ scaleToString scale =
             "large"
 
 
+scaleFromString : String -> Maybe Scale
+scaleFromString scale =
+    case scale of
+        "micro" ->
+            Just Micro
+
+        "small" ->
+            Just Small
+
+        "medium" ->
+            Just Medium
+
+        "large" ->
+            Just Large
+
+        _ ->
+            Nothing
+
+
 type ListViewState
     = ListViewMain RC.TitleSorting
 
@@ -96,7 +115,16 @@ type Page
 
 type View
     = KeywordsView KeywordsViewState
-    | SearchView (List String) RC.TitleSorting Page
+    | SearchView Layout (List String) RC.TitleSorting Page
+
+
+
+-- TODO: add a table layout later
+
+
+type Layout
+    = ListLayout
+    | ScreenLayout Scale
 
 
 pageAsString : Page -> String
@@ -201,7 +229,7 @@ init { width, height } url key =
             , query = ""
             , search = Idle
             , screenDimensions = { w = width, h = height }
-            , view = SearchView [] RC.Random (Page 0)
+            , view = SearchView ListLayout [] RC.Random (Page 0)
             , numberOfResults = 8
             , url = initUrl
             , key = key
@@ -330,6 +358,14 @@ noCmd model =
     ( model, Cmd.none )
 
 
+getSortingOfUrl : AppUrl -> Maybe RC.TitleSorting
+getSortingOfUrl url =
+    url.queryParameters
+        |> Dict.get "sorting"
+        |> Maybe.andThen List.head
+        |> Maybe.map RC.titleSortingFromString
+
+
 handleUrl : AppUrl.AppUrl -> Model -> ( Model, Cmd Msg )
 handleUrl url model =
     case url.path of
@@ -378,14 +414,10 @@ handleUrl url model =
             , cmd
             )
 
-        [ "research", "search" ] ->
+        [ "research", "search", "list" ] ->
             let
                 sorting =
-                    url.queryParameters
-                        |> Dict.get "sorting"
-                        |> Maybe.andThen List.head
-                        |> Maybe.map RC.titleSortingFromString
-                        |> Maybe.withDefault RC.NewestFirst
+                    getSortingOfUrl url |> Maybe.withDefault RC.NewestFirst
 
                 keywords =
                     url.queryParameters
@@ -395,7 +427,30 @@ handleUrl url model =
                 cmd =
                     sendQuery (Queries.encodeSearchQuery (FindResearch keywords))
             in
-            ( { model | view = SearchView keywords sorting (Page 0) }, cmd )
+            ( { model | view = SearchView ListLayout keywords sorting (Page 0) }, cmd )
+
+        [ "research", "search", "screen" ] ->
+            let
+                sorting =
+                    getSortingOfUrl url
+                        |> Maybe.withDefault RC.NewestFirst
+
+                keywords =
+                    url.queryParameters
+                        |> Dict.get "keyword"
+                        |> Maybe.withDefault []
+
+                scale =
+                    url.queryParameters
+                        |> Dict.get "scale"
+                        |> Maybe.andThen List.head
+                        |> Maybe.andThen scaleFromString
+                        |> Maybe.withDefault Medium
+
+                cmd =
+                    sendQuery (Queries.encodeSearchQuery (FindResearch keywords))
+            in
+            ( { model | view = SearchView (ScreenLayout scale) keywords sorting (Page 0) }, cmd )
 
         _ ->
             noCmd model
@@ -822,14 +877,14 @@ viewNav : View -> Element Msg
 viewNav currentView =
     Element.row [ paddingXY 0 5, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
         [ Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "keywords" }
-        , Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search", label = Element.text "search" }
+        , Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search/list", label = Element.text "search" }
         ]
 
 
 isSearchView : View -> Bool
 isSearchView v =
     case v of
-        SearchView _ _ _ ->
+        SearchView _ _ _ _ ->
             True
 
         _ ->
@@ -850,10 +905,10 @@ view model =
                         _ ->
                             viewKeywords model kwtype
 
-                SearchView keywords sorting page ->
+                SearchView layout keywords sorting page ->
                     case model.search of
                         FoundResearch lst ->
-                            viewResearchResults model.view model.screenDimensions lst keywords sorting page
+                            viewResearchResults model.screenDimensions layout model.view lst keywords sorting page
 
                         _ ->
                             Element.text "search interface"
@@ -882,8 +937,8 @@ gotoPageView p v =
         KeywordsView kwstate ->
             KeywordsView (gotoPage p kwstate)
 
-        SearchView keywords sorting _ ->
-            SearchView keywords sorting p
+        SearchView layout keywords sorting _ ->
+            SearchView layout keywords sorting p
 
 
 getPageOfView : View -> Page
@@ -892,11 +947,11 @@ getPageOfView v =
         KeywordsView (KeywordMainView _ page) ->
             page
 
-        SearchView _ _ page ->
+        SearchView _ _ _ page ->
             page
 
         _ ->
-            (Page 0)
+            Page 0
 
 
 nextPageView : View -> View
@@ -935,17 +990,25 @@ pageNav v screen lst (Page p) =
         Element.none
 
 
-viewResearchResults : View -> ScreenDimensions -> List RC.Research -> List String -> RC.TitleSorting -> Page -> Element Msg
-viewResearchResults v screen lst keywords sorting (Page p) =
+viewResearchResults : ScreenDimensions -> Layout -> View -> List Research -> List String -> RC.TitleSorting -> Page -> Element Msg
+viewResearchResults dimensions layout v lst keywords sorting (Page p) =
     let
         sorted =
             lst |> sortResearch sorting |> List.drop (p * pageSize) |> List.take pageSize
+
+        render =
+            case layout of
+                ListLayout ->
+                    Element.column [] (sorted |> List.map viewResearchMicro)
+
+                ScreenLayout scale ->
+                    viewScreenshots dimensions scale sorted
     in
     Element.column [] <|
         Element.el [] (Element.text "research results")
             :: Element.row [] (keywords |> List.map Element.text)
-            :: (sorted |> List.map viewResearchMicro)
-            ++ [ pageNav v screen sorted (Page p) ]
+            :: render
+            :: [ pageNav v dimensions sorted (Page p) ]
 
 
 toggleSorting : RC.KeywordSorting -> Element Msg
@@ -1026,7 +1089,7 @@ viewKeywordAsButton fontsize kw =
         -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
         , width fill
         ]
-        [ Element.link [] { url = AppUrl.fromPath [ "research", "search" ] |> withParameter ("keyword",name) |> AppUrl.toString |> prefixHash , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
+        [ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
 
         -- [ Element.Input.button [ Font.color (rgb 0.0 0.0 1.0), width fill ]
         --     { onPress = Just (ShowKeyword (Keyword k))
@@ -1077,15 +1140,28 @@ appUrlFromView v =
         KeywordsView kwstate ->
             appUrlFromKeywordViewState kwstate
 
-        SearchView keywords sorting page ->
-            AppUrl.fromPath [ "research", "search" ]
-                |> withParametersList
-                    [ ( "keyword", keywords )
-                    , ( "sorting", [ RC.titleSortingToString sorting ] )
-                    , ( "page", [ pageAsString page ] )
-                    ]
-                |> AppUrl.toString
-                |> prefixHash
+        SearchView layout keywords sorting page ->
+            let
+                appurl =
+                    case layout of
+                        ListLayout ->
+                            AppUrl.fromPath [ "research", "search", "list" ]
+                                |> withParametersList
+                                    [ ( "keyword", keywords )
+                                    , ( "sorting", [ RC.titleSortingToString sorting ] )
+                                    , ( "page", [ pageAsString page ] )
+                                    ]
+
+                        ScreenLayout scale ->
+                            AppUrl.fromPath [ "research", "search", "screen" ]
+                                |> withParametersList
+                                    [ ( "keyword", keywords )
+                                    , ( "sorting", [ RC.titleSortingToString sorting ] )
+                                    , ( "page", [ pageAsString page ] )
+                                    , ( "scale", [ scaleToString scale ] )
+                                    ]
+            in
+            appurl |> AppUrl.toString |> prefixHash
 
 
 appUrlFromKeywordViewState : KeywordsViewState -> String
@@ -1341,7 +1417,7 @@ decodeResearch =
     Json.Decode.list RC.decoder
 
 
-lazyImageWithErrorHandling : Int -> { w : Int, h : Int } -> Research -> Html Msg
+lazyImageWithErrorHandling : Int -> ScreenDimensions -> Research -> Html Msg
 lazyImageWithErrorHandling groupSize dimensions research =
     let
         urlFromId : Int -> String
@@ -1416,8 +1492,8 @@ sortResearch sorting research =
             research |> List.sortBy (\r -> r.created) |> List.reverse
 
 
-viewScreenshots : Scale -> RC.TitleSorting -> Model -> Element Msg
-viewScreenshots scale titlesort model =
+viewScreenshots : ScreenDimensions -> Scale -> List Research -> Element Msg
+viewScreenshots screenDimensions scale research =
     let
         groupSize : Int
         groupSize =
@@ -1425,11 +1501,11 @@ viewScreenshots scale titlesort model =
 
         groups : List (List Research)
         groups =
-            model.research |> sortResearch titlesort |> splitGroupsOf groupSize
+            research |> splitGroupsOf groupSize
 
         viewGroup : List Research -> Html Msg
         viewGroup group =
-            Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize model.screenDimensions exp) group)
+            Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
     in
     Element.column []
         [ Element.el [ Element.Region.heading 1 ] <| text "Visual"

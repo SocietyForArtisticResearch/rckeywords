@@ -5515,13 +5515,14 @@ var $author$project$Main$GotResearch = function (a) {
 	return {$: 'GotResearch', a: a};
 };
 var $author$project$Main$Idle = {$: 'Idle'};
+var $author$project$Main$ListLayout = {$: 'ListLayout'};
 var $author$project$Main$Page = function (a) {
 	return {$: 'Page', a: a};
 };
 var $author$project$Research$Random = {$: 'Random'};
-var $author$project$Main$SearchView = F3(
-	function (a, b, c) {
-		return {$: 'SearchView', a: a, b: b, c: c};
+var $author$project$Main$SearchView = F4(
+	function (a, b, c, d) {
+		return {$: 'SearchView', a: a, b: b, c: c, d: d};
 	});
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $author$project$Research$InProgress = {$: 'InProgress'};
@@ -6483,7 +6484,11 @@ var $author$project$Main$KeywordSearch = F3(
 var $author$project$Main$KeywordsView = function (a) {
 	return {$: 'KeywordsView', a: a};
 };
+var $author$project$Main$Medium = {$: 'Medium'};
 var $author$project$Research$NewestFirst = {$: 'NewestFirst'};
+var $author$project$Main$ScreenLayout = function (a) {
+	return {$: 'ScreenLayout', a: a};
+};
 var $author$project$Main$Searching = {$: 'Searching'};
 var $elm$core$Maybe$andThen = F2(
 	function (callback, maybeValue) {
@@ -6577,12 +6582,51 @@ var $elm$core$Maybe$map = F2(
 			return $elm$core$Maybe$Nothing;
 		}
 	});
+var $author$project$Research$OldestFirst = {$: 'OldestFirst'};
+var $author$project$Research$titleSortingFromString = function (string) {
+	switch (string) {
+		case 'random':
+			return $author$project$Research$Random;
+		case 'oldestfirst':
+			return $author$project$Research$OldestFirst;
+		case 'newestfirst':
+			return $author$project$Research$NewestFirst;
+		default:
+			return $author$project$Research$NewestFirst;
+	}
+};
+var $author$project$Main$getSortingOfUrl = function (url) {
+	return A2(
+		$elm$core$Maybe$map,
+		$author$project$Research$titleSortingFromString,
+		A2(
+			$elm$core$Maybe$andThen,
+			$elm$core$List$head,
+			A2($elm$core$Dict$get, 'sorting', url.queryParameters)));
+};
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Main$noCmd = function (model) {
 	return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 };
 var $author$project$Main$pageFromInt = function (p) {
 	return $author$project$Main$Page(p);
+};
+var $author$project$Main$Large = {$: 'Large'};
+var $author$project$Main$Micro = {$: 'Micro'};
+var $author$project$Main$Small = {$: 'Small'};
+var $author$project$Main$scaleFromString = function (scale) {
+	switch (scale) {
+		case 'micro':
+			return $elm$core$Maybe$Just($author$project$Main$Micro);
+		case 'small':
+			return $elm$core$Maybe$Just($author$project$Main$Small);
+		case 'medium':
+			return $elm$core$Maybe$Just($author$project$Main$Medium);
+		case 'large':
+			return $elm$core$Maybe$Just($author$project$Main$Large);
+		default:
+			return $elm$core$Maybe$Nothing;
+	}
 };
 var $author$project$Main$sendQuery = _Platform_outgoingPort('sendQuery', $elm$core$Basics$identity);
 var $author$project$Research$Alphabetical = {$: 'Alphabetical'};
@@ -6599,19 +6643,6 @@ var $author$project$Research$sortingFromString = function (str) {
 			return $author$project$Research$ByUse;
 	}
 };
-var $author$project$Research$OldestFirst = {$: 'OldestFirst'};
-var $author$project$Research$titleSortingFromString = function (string) {
-	switch (string) {
-		case 'random':
-			return $author$project$Research$Random;
-		case 'oldestfirst':
-			return $author$project$Research$OldestFirst;
-		case 'newestfirst':
-			return $author$project$Research$NewestFirst;
-		default:
-			return $author$project$Research$NewestFirst;
-	}
-};
 var $elm$core$Maybe$withDefault = F2(
 	function (_default, maybe) {
 		if (maybe.$ === 'Just') {
@@ -6624,7 +6655,7 @@ var $elm$core$Maybe$withDefault = F2(
 var $author$project$Main$handleUrl = F2(
 	function (url, model) {
 		var _v0 = url.path;
-		_v0$3:
+		_v0$4:
 		while (true) {
 			if (_v0.b) {
 				if (!_v0.b.b) {
@@ -6660,12 +6691,12 @@ var $author$project$Main$handleUrl = F2(
 								$author$project$Queries$encodeSearchQuery(
 									A2($author$project$Queries$FindKeywords, '', sorting))));
 					} else {
-						break _v0$3;
+						break _v0$4;
 					}
 				} else {
-					if ((_v0.b.a === 'search') && (!_v0.b.b.b)) {
-						switch (_v0.a) {
-							case 'keywords':
+					if (_v0.b.a === 'search') {
+						if (!_v0.b.b.b) {
+							if (_v0.a === 'keywords') {
 								var _v1 = _v0.b;
 								var sorting = A2(
 									$elm$core$Maybe$withDefault,
@@ -6717,45 +6748,87 @@ var $author$project$Main$handleUrl = F2(
 												A3($author$project$Main$KeywordSearch, q, sorting, page))
 										}),
 									cmd);
-							case 'research':
-								var _v3 = _v0.b;
-								var sorting = A2(
-									$elm$core$Maybe$withDefault,
-									$author$project$Research$NewestFirst,
-									A2(
-										$elm$core$Maybe$map,
-										$author$project$Research$titleSortingFromString,
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$List$head,
-											A2($elm$core$Dict$get, 'sorting', url.queryParameters))));
-								var keywords = A2(
-									$elm$core$Maybe$withDefault,
-									_List_Nil,
-									A2($elm$core$Dict$get, 'keyword', url.queryParameters));
-								var cmd = $author$project$Main$sendQuery(
-									$author$project$Queries$encodeSearchQuery(
-										$author$project$Queries$FindResearch(keywords)));
-								return _Utils_Tuple2(
-									_Utils_update(
-										model,
-										{
-											view: A3(
-												$author$project$Main$SearchView,
-												keywords,
-												sorting,
-												$author$project$Main$Page(0))
-										}),
-									cmd);
-							default:
-								break _v0$3;
+							} else {
+								break _v0$4;
+							}
+						} else {
+							if ((_v0.a === 'research') && (!_v0.b.b.b.b)) {
+								switch (_v0.b.b.a) {
+									case 'list':
+										var _v3 = _v0.b;
+										var _v4 = _v3.b;
+										var sorting = A2(
+											$elm$core$Maybe$withDefault,
+											$author$project$Research$NewestFirst,
+											$author$project$Main$getSortingOfUrl(url));
+										var keywords = A2(
+											$elm$core$Maybe$withDefault,
+											_List_Nil,
+											A2($elm$core$Dict$get, 'keyword', url.queryParameters));
+										var cmd = $author$project$Main$sendQuery(
+											$author$project$Queries$encodeSearchQuery(
+												$author$project$Queries$FindResearch(keywords)));
+										return _Utils_Tuple2(
+											_Utils_update(
+												model,
+												{
+													view: A4(
+														$author$project$Main$SearchView,
+														$author$project$Main$ListLayout,
+														keywords,
+														sorting,
+														$author$project$Main$Page(0))
+												}),
+											cmd);
+									case 'screen':
+										var _v5 = _v0.b;
+										var _v6 = _v5.b;
+										var sorting = A2(
+											$elm$core$Maybe$withDefault,
+											$author$project$Research$NewestFirst,
+											$author$project$Main$getSortingOfUrl(url));
+										var scale = A2(
+											$elm$core$Maybe$withDefault,
+											$author$project$Main$Medium,
+											A2(
+												$elm$core$Maybe$andThen,
+												$author$project$Main$scaleFromString,
+												A2(
+													$elm$core$Maybe$andThen,
+													$elm$core$List$head,
+													A2($elm$core$Dict$get, 'scale', url.queryParameters))));
+										var keywords = A2(
+											$elm$core$Maybe$withDefault,
+											_List_Nil,
+											A2($elm$core$Dict$get, 'keyword', url.queryParameters));
+										var cmd = $author$project$Main$sendQuery(
+											$author$project$Queries$encodeSearchQuery(
+												$author$project$Queries$FindResearch(keywords)));
+										return _Utils_Tuple2(
+											_Utils_update(
+												model,
+												{
+													view: A4(
+														$author$project$Main$SearchView,
+														$author$project$Main$ScreenLayout(scale),
+														keywords,
+														sorting,
+														$author$project$Main$Page(0))
+												}),
+											cmd);
+									default:
+										break _v0$4;
+								}
+							} else {
+								break _v0$4;
+							}
 						}
 					} else {
-						break _v0$3;
+						break _v0$4;
 					}
 				}
 			} else {
-				break _v0$3;
+				break _v0$4;
 			}
 		}
 		return $author$project$Main$noCmd(model);
@@ -6926,8 +6999,9 @@ var $author$project$Main$init = F3(
 				screenDimensions: {h: height, w: width},
 				search: $author$project$Main$Idle,
 				url: initUrl,
-				view: A3(
+				view: A4(
 					$author$project$Main$SearchView,
+					$author$project$Main$ListLayout,
 					_List_Nil,
 					$author$project$Research$Random,
 					$author$project$Main$Page(0))
@@ -14491,7 +14565,7 @@ var $author$project$Main$viewKeywordAsButton = F2(
 									_Utils_Tuple2('keyword', name),
 									$lydell$elm_app_url$AppUrl$fromPath(
 										_List_fromArray(
-											['research', 'search'])))))
+											['research', 'search', 'list'])))))
 					}),
 					A2(
 					$mdgriffith$elm_ui$Element$el,
@@ -17330,7 +17404,7 @@ var $author$project$Main$viewNav = function (currentView) {
 					$author$project$Main$BigLink),
 				{
 					label: $mdgriffith$elm_ui$Element$text('search'),
-					url: '/#/research/search'
+					url: '/#/research/search/list'
 				})
 			]));
 };
@@ -17338,17 +17412,30 @@ var $author$project$Main$pageAsString = function (_v0) {
 	var p = _v0.a;
 	return $elm$core$String$fromInt(p);
 };
+var $author$project$Main$scaleToString = function (scale) {
+	switch (scale.$) {
+		case 'Micro':
+			return 'micro';
+		case 'Small':
+			return 'small';
+		case 'Medium':
+			return 'medium';
+		default:
+			return 'large';
+	}
+};
 var $author$project$Main$appUrlFromView = function (v) {
 	if (v.$ === 'KeywordsView') {
 		var kwstate = v.a;
 		return $author$project$Main$appUrlFromKeywordViewState(kwstate);
 	} else {
-		var keywords = v.a;
-		var sorting = v.b;
-		var page = v.c;
-		return $author$project$Main$prefixHash(
-			$lydell$elm_app_url$AppUrl$toString(
-				A2(
+		var layout = v.a;
+		var keywords = v.b;
+		var sorting = v.c;
+		var page = v.d;
+		var appurl = function () {
+			if (layout.$ === 'ListLayout') {
+				return A2(
 					$author$project$Main$withParametersList,
 					_List_fromArray(
 						[
@@ -17368,7 +17455,40 @@ var $author$project$Main$appUrlFromView = function (v) {
 						]),
 					$lydell$elm_app_url$AppUrl$fromPath(
 						_List_fromArray(
-							['research', 'search'])))));
+							['research', 'search', 'list'])));
+			} else {
+				var scale = layout.a;
+				return A2(
+					$author$project$Main$withParametersList,
+					_List_fromArray(
+						[
+							_Utils_Tuple2('keyword', keywords),
+							_Utils_Tuple2(
+							'sorting',
+							_List_fromArray(
+								[
+									$author$project$Research$titleSortingToString(sorting)
+								])),
+							_Utils_Tuple2(
+							'page',
+							_List_fromArray(
+								[
+									$author$project$Main$pageAsString(page)
+								])),
+							_Utils_Tuple2(
+							'scale',
+							_List_fromArray(
+								[
+									$author$project$Main$scaleToString(scale)
+								]))
+						]),
+					$lydell$elm_app_url$AppUrl$fromPath(
+						_List_fromArray(
+							['research', 'search', 'screen'])));
+			}
+		}();
+		return $author$project$Main$prefixHash(
+			$lydell$elm_app_url$AppUrl$toString(appurl));
 	}
 };
 var $author$project$Main$gotoPageView = F2(
@@ -17378,9 +17498,10 @@ var $author$project$Main$gotoPageView = F2(
 			return $author$project$Main$KeywordsView(
 				A2($author$project$Main$gotoPage, p, kwstate));
 		} else {
-			var keywords = v.a;
-			var sorting = v.b;
-			return A3($author$project$Main$SearchView, keywords, sorting, p);
+			var layout = v.a;
+			var keywords = v.b;
+			var sorting = v.c;
+			return A4($author$project$Main$SearchView, layout, keywords, sorting, p);
 		}
 	});
 var $author$project$Main$getPageOfView = function (v) {
@@ -17393,7 +17514,7 @@ var $author$project$Main$getPageOfView = function (v) {
 			return $author$project$Main$Page(0);
 		}
 	} else {
-		var page = v.c;
+		var page = v.d;
 		return page;
 	}
 };
@@ -17605,8 +17726,113 @@ var $author$project$Main$viewResearchMicro = function (research) {
 		return $mdgriffith$elm_ui$Element$none;
 	}
 };
-var $author$project$Main$viewResearchResults = F6(
-	function (v, screen, lst, keywords, sorting, _v0) {
+var $elm$html$Html$a = _VirtualDom_node('a');
+var $author$project$Research$getName = function (_v0) {
+	var data = _v0.a;
+	return data.name;
+};
+var $elm$html$Html$Attributes$target = $elm$html$Html$Attributes$stringProperty('target');
+var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
+var $author$project$Main$lazyImageWithErrorHandling = F3(
+	function (groupSize, dimensions, research) {
+		var width = $elm$core$String$fromInt(((dimensions.w - 180) / groupSize) | 0) + 'px';
+		var urlFromId = function (i) {
+			return function (fileName) {
+				return '/screenshots/' + (fileName + '.jpeg');
+			}(
+				$elm$core$String$fromInt(i));
+		};
+		var height = $elm$core$String$fromInt((dimensions.h / (groupSize - 1)) | 0) + 'px';
+		return A2(
+			$elm$html$Html$a,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$target('_blank'),
+					$elm$html$Html$Attributes$href(research.defaultPage),
+					$elm$html$Html$Attributes$title(
+					$author$project$Research$getName(research.author) + (' - ' + (research.title + (' - ' + research.created))))
+				]),
+			_List_fromArray(
+				[
+					A3(
+					$elm$html$Html$node,
+					'lazy-image',
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$Attributes$attribute,
+							'src',
+							urlFromId(research.id)),
+							A2($elm$html$Html$Attributes$style, 'width', width),
+							A2($elm$html$Html$Attributes$style, 'height', height)
+						]),
+					_List_Nil)
+				]));
+	});
+var $author$project$Main$scaleToGroupSize = function (scale) {
+	switch (scale.$) {
+		case 'Micro':
+			return 16;
+		case 'Small':
+			return 8;
+		case 'Medium':
+			return 4;
+		default:
+			return 3;
+	}
+};
+var $author$project$Main$splitGroupsOf = F2(
+	function (n, lst) {
+		if (!lst.b) {
+			return _List_Nil;
+		} else {
+			var rest = A2($elm$core$List$drop, n, lst);
+			var first = A2($elm$core$List$take, n, lst);
+			return A2(
+				$elm$core$List$cons,
+				first,
+				A2($author$project$Main$splitGroupsOf, n, rest));
+		}
+	});
+var $author$project$Main$viewScreenshots = F3(
+	function (screenDimensions, scale, research) {
+		var groupSize = $author$project$Main$scaleToGroupSize(scale);
+		var groups = A2($author$project$Main$splitGroupsOf, groupSize, research);
+		var viewGroup = function (group) {
+			return A2(
+				$elm$html$Html$div,
+				_List_fromArray(
+					[
+						A2($elm$html$Html$Attributes$style, 'display', 'flex')
+					]),
+				A2(
+					$elm$core$List$map,
+					function (exp) {
+						return A3($author$project$Main$lazyImageWithErrorHandling, groupSize, screenDimensions, exp);
+					},
+					group));
+		};
+		return A2(
+			$mdgriffith$elm_ui$Element$column,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$Region$heading(1)
+						]),
+					$mdgriffith$elm_ui$Element$text('Visual')),
+					$mdgriffith$elm_ui$Element$html(
+					A2(
+						$elm$html$Html$div,
+						_List_Nil,
+						A2($elm$core$List$map, viewGroup, groups)))
+				]));
+	});
+var $author$project$Main$viewResearchResults = F7(
+	function (dimensions, layout, v, lst, keywords, sorting, _v0) {
 		var p = _v0.a;
 		var sorted = A2(
 			$elm$core$List$take,
@@ -17615,6 +17841,17 @@ var $author$project$Main$viewResearchResults = F6(
 				$elm$core$List$drop,
 				p * $author$project$Main$pageSize,
 				A2($author$project$Main$sortResearch, sorting, lst)));
+		var render = function () {
+			if (layout.$ === 'ListLayout') {
+				return A2(
+					$mdgriffith$elm_ui$Element$column,
+					_List_Nil,
+					A2($elm$core$List$map, $author$project$Main$viewResearchMicro, sorted));
+			} else {
+				var scale = layout.a;
+				return A3($author$project$Main$viewScreenshots, dimensions, scale, sorted);
+			}
+		}();
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
 			_List_Nil,
@@ -17630,14 +17867,15 @@ var $author$project$Main$viewResearchResults = F6(
 						$mdgriffith$elm_ui$Element$row,
 						_List_Nil,
 						A2($elm$core$List$map, $mdgriffith$elm_ui$Element$text, keywords)),
-					_Utils_ap(
-						A2($elm$core$List$map, $author$project$Main$viewResearchMicro, sorted),
+					A2(
+						$elm$core$List$cons,
+						render,
 						_List_fromArray(
 							[
 								A4(
 								$author$project$Main$pageNav,
 								v,
-								screen,
+								dimensions,
 								sorted,
 								$author$project$Main$Page(p))
 							])))));
@@ -17655,13 +17893,14 @@ var $author$project$Main$view = function (model) {
 				return A2($author$project$Main$viewKeywords, model, kwtype);
 			}
 		} else {
-			var keywords = _v0.a;
-			var sorting = _v0.b;
-			var page = _v0.c;
+			var layout = _v0.a;
+			var keywords = _v0.b;
+			var sorting = _v0.c;
+			var page = _v0.d;
 			var _v2 = model.search;
 			if (_v2.$ === 'FoundResearch') {
 				var lst = _v2.a;
-				return A6($author$project$Main$viewResearchResults, model.view, model.screenDimensions, lst, keywords, sorting, page);
+				return A7($author$project$Main$viewResearchResults, model.screenDimensions, layout, model.view, lst, keywords, sorting, page);
 			} else {
 				return $mdgriffith$elm_ui$Element$text('search interface');
 			}

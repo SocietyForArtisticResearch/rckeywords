@@ -14486,9 +14486,12 @@ var $author$project$Main$viewKeywordAsButton = F2(
 								])),
 						url: $author$project$Main$prefixHash(
 							$lydell$elm_app_url$AppUrl$toString(
-								$lydell$elm_app_url$AppUrl$fromPath(
-									_List_fromArray(
-										['keywords', name]))))
+								A2(
+									$author$project$Main$withParameter,
+									_Utils_Tuple2('keyword', name),
+									$lydell$elm_app_url$AppUrl$fromPath(
+										_List_fromArray(
+											['research', 'search'])))))
 					}),
 					A2(
 					$mdgriffith$elm_ui$Element$el,

@@ -1026,7 +1026,7 @@ viewKeywordAsButton fontsize kw =
         -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
         , width fill
         ]
-        [ Element.link [] { url = AppUrl.fromPath [ "keywords", name ] |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
+        [ Element.link [] { url = AppUrl.fromPath [ "research", "search" ] |> withParameter ("keyword",name) |> AppUrl.toString |> prefixHash , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
 
         -- [ Element.Input.button [ Font.color (rgb 0.0 0.0 1.0), width fill ]
         --     { onPress = Just (ShowKeyword (Keyword k))

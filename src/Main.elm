@@ -818,9 +818,11 @@ anchor anchorId =
 viewResearchResults : ScreenDimensions -> Layout -> View -> List Research -> List String -> RC.TitleSorting -> Page -> Element Msg
 viewResearchResults dimensions layout v lst keywords sorting (Page p) =
     let
+        sorted : List Research
         sorted =
             lst |> sortResearch sorting |> List.drop ((p - 1) * pageSize) |> List.take pageSize
 
+        render : Element Msg
         render =
             case layout of
                 ListLayout ->
@@ -829,14 +831,14 @@ viewResearchResults dimensions layout v lst keywords sorting (Page p) =
                 ScreenLayout scale ->
                     viewScreenshots keywords dimensions scale sorted
 
-        urlFromLayout : Layout -> String
-        urlFromLayout l =
+        urlFromLayout : RC.TitleSorting -> Layout -> String
+        urlFromLayout s l =
             case l of
                 ListLayout ->
                     AppUrl.fromPath [ "research", "search", "list" ]
                         |> withParametersList
                             [ ( "keywords", keywords )
-                            , ( "sorting", [ RC.titleSortingToString sorting ] )
+                            , ( "sorting", [ RC.titleSortingToString s ] )
                             , ( "page", [ pageAsString (Page p) ] )
                             ]
                         |> AppUrl.toString
@@ -846,19 +848,25 @@ viewResearchResults dimensions layout v lst keywords sorting (Page p) =
                     AppUrl.fromPath [ "research", "search", "screen" ]
                         |> withParametersList
                             [ ( "keywords", keywords )
-                            , ( "sorting", [ RC.titleSortingToString sorting ] )
+                            , ( "sorting", [ RC.titleSortingToString s ] )
                             , ( "scale", [ scaleToString scale ] )
                             , ( "page", [ pageAsString (Page p) ] )
                             ]
                         |> AppUrl.toString
                         |> prefixHash
 
+        urlFromSorting : RC.TitleSorting -> String
+        urlFromSorting s =
+            urlFromLayout s layout
+
+        numberOfPages : Int
         numberOfPages =
             lst |> List.length |> (\n -> n // pageSize)
     in
     Element.column [ anchor "top" ] <|
         [ Element.el RCStyles.defaultPadding (Element.text "search results")
-        , viewLayoutSwitch layout urlFromLayout
+        , viewLayoutSwitch layout (urlFromLayout sorting)
+        , toggleTitleSorting sorting urlFromSorting 
         , case keywords of
             [] ->
                 Element.none
@@ -882,7 +890,13 @@ toggleSorting sorting =
         , Element.link (linkStyle (sorting == RC.RandomKeyword) SmallLink) { url = "/#/keywords?sorting=" ++ RC.sortingToString RC.RandomKeyword, label = Element.text "random" }
         ]
 
-
+toggleTitleSorting : RC.TitleSorting -> (RC.TitleSorting -> String) -> Element Msg
+toggleTitleSorting sorting sortingToUrl =
+    Element.row [ paddingXY 0 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+        [ Element.link (linkStyle (sorting == RC.Random) SmallLink) { url = sortingToUrl RC.Random, label = Element.text "random" }
+        , Element.link (linkStyle (sorting == RC.NewestFirst) SmallLink) { url = sortingToUrl RC.NewestFirst, label = Element.text "newest first"}
+        , Element.link (linkStyle (sorting == RC.OldestFirst) SmallLink) { url = sortingToUrl RC.OldestFirst, label = Element.text "oldest first"}
+        ]
 
 -- viewKeywordDetail : List RC.Keyword -> RC.TitleSorting -> Model -> Element Msg
 -- viewKeywordDetail keywords sorting model =

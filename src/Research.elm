@@ -580,7 +580,7 @@ findResearchWithKeywords kw dict research =
                 ids =
                     kw
                         |> List.map (findKw >> List.map getId >> Set.fromList)
-                        |> List.foldl Set.union Set.empty
+                        |> List.foldl Set.intersect Set.empty
                         |> Set.toList
             in
             research |> List.filter (\exp -> List.member exp.id ids)

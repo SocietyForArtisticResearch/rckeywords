@@ -41,7 +41,7 @@ import Json.Decode.Extra as JDE
 import Json.Encode
 import Random
 import Random.List
-import Set
+import Set exposing (Set)
 
 
 type alias ExpositionID =
@@ -570,6 +570,19 @@ findResearchWithKeywords kw dict research =
 
         {- for each keyword, return the id's that have it, now take the union of those sets of ids -}
         {- use the ids to fetch the expositions -}
+
+        intersectionOfNonempty : Set comparable -> List (Set comparable) -> List comparable
+        intersectionOfNonempty first rest =
+            List.foldl Set.intersect first rest |> Set.toList
+
+        combineResults : List (Set comparable) -> List comparable
+        combineResults results = 
+            case results of 
+                [] -> []
+
+                x :: xs -> 
+                    intersectionOfNonempty x xs 
+
     in
     case kw of
         [] ->
@@ -577,10 +590,10 @@ findResearchWithKeywords kw dict research =
 
         _ ->
             let
+
                 ids =
                     kw
                         |> List.map (findKw >> List.map getId >> Set.fromList)
-                        |> List.foldl Set.intersect Set.empty
-                        |> Set.toList
+                        |> combineResults -- the full set is the mempty of combinatory filters
             in
             research |> List.filter (\exp -> List.member exp.id ids)

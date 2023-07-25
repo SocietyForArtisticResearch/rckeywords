@@ -19,7 +19,7 @@ import Json.Encode
 import List
 import Queries exposing (SearchQuery(..))
 import RCStyles
-import Research as RC exposing (Research, sortingToString)
+import Research as RC exposing (Research)
 import String
 import Url exposing (Url)
 import Task
@@ -438,8 +438,7 @@ handleUrl url model =
                         |> Maybe.andThen String.toInt
                         |> Maybe.withDefault 1
 
-                _ =
-                    Debug.log "state of page now" page
+
 
                 cmd =
                     sendQuery (Queries.encodeSearchQuery (FindResearch keywords))

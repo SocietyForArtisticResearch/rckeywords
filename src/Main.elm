@@ -18,9 +18,12 @@ import Json.Decode
 import Json.Encode
 import List
 import Queries exposing (SearchQuery(..))
-import Research as RC exposing (Research)
+import RCStyles
+import Research as RC exposing (Research, sortingToString)
 import String
 import Url exposing (Url)
+import Task
+import Browser.Dom as Dom
 
 
 
@@ -96,8 +99,12 @@ scaleFromString scale =
         _ ->
             Nothing
 
+
+
 -- urlWithScale is a function to provide the correct link, so you can reuse this
 -- in different paths and construct the needed link accordingly
+
+
 viewScaleSwitch : Scale -> (Scale -> String) -> Element Msg
 viewScaleSwitch scale urlWithScale =
     Element.row [ padding 25, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
@@ -105,6 +112,23 @@ viewScaleSwitch scale urlWithScale =
         , Element.link (linkStyle (scale == Small) SmallLink) { url = urlWithScale Small, label = Element.text "small" }
         , Element.link (linkStyle (scale == Medium) SmallLink) { url = urlWithScale Medium, label = Element.text "medium" }
         , Element.link (linkStyle (scale == Large) SmallLink) { url = urlWithScale Large, label = Element.text "large" }
+        ]
+
+
+viewLayoutSwitch : Layout -> (Layout -> String) -> Element Msg
+viewLayoutSwitch layout makeurl =
+    let
+        isScreenLayout l =
+            case l of
+                ScreenLayout _ ->
+                    True
+
+                _ ->
+                    False
+    in
+    Element.row [ padding 25, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+        [ Element.link (linkStyle (isScreenLayout layout) SmallLink) { url = makeurl (ScreenLayout Medium), label = Element.text "visual" }
+        , Element.link (linkStyle (layout == ListLayout) SmallLink) { url = makeurl ListLayout, label = Element.text "list" }
         ]
 
 
@@ -194,6 +218,7 @@ type Msg
     | LinkClicked Browser.UrlRequest
     | ReceiveResults Json.Decode.Value
     | HitEnter
+    | NoOp
 
 
 type alias Flags =
@@ -212,17 +237,23 @@ init { width, height } url key =
     { query = ""
     , search = Idle
     , screenDimensions = { w = width, h = height }
-    , view = SearchView ListLayout [] RC.Random (Page 0)
+    , view = SearchView ListLayout [] RC.Random (Page 1)
     , numberOfResults = 8
     , url = initUrl
     , key = key
     }
         |> handleUrl initUrl
 
+resetViewport : Cmd Msg
+resetViewport =
+    Task.perform (\_ -> NoOp) (Dom.setViewport 0 0)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        NoOp ->
+            ( model, Cmd.none)
+
         ChangedQuery q ->
             ( { model | query = q }
             , Cmd.none
@@ -239,7 +270,7 @@ update msg model =
                             handleUrl (url |> urlWhereFragmentIsPath) model
                     in
                     ( mdl
-                    , Cmd.batch [ cmd, Nav.pushUrl model.key (Url.toString url) ]
+                    , Cmd.batch [ cmd, Nav.pushUrl model.key (Url.toString url), resetViewport  ]
                     )
 
                 Browser.External url ->
@@ -265,7 +296,7 @@ update msg model =
         HitEnter ->
             case model.view of
                 KeywordsView (KeywordMainView sorting _) ->
-                    ( { model | view = KeywordsView (KeywordMainView sorting (Page 0)) }
+                    ( { model | view = KeywordsView (KeywordMainView sorting (Page 1)) }
                     , Cmd.batch
                         [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting))
                         , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)
@@ -273,7 +304,7 @@ update msg model =
                     )
 
                 KeywordsView (KeywordSearch _ sorting _) ->
-                    ( { model | view = KeywordsView (KeywordMainView sorting (Page 0)) }
+                    ( { model | view = KeywordsView (KeywordMainView sorting (Page 1)) }
                     , Cmd.batch
                         [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting))
                         , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)
@@ -340,7 +371,7 @@ handleUrl url model =
                     url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.map RC.sortingFromString |> Maybe.withDefault RC.ByUse
 
                 page =
-                    url.queryParameters |> Dict.get "page" |> Maybe.andThen List.head |> Maybe.andThen String.toInt |> Maybe.withDefault 0 |> pageFromInt
+                    url.queryParameters |> Dict.get "page" |> Maybe.andThen List.head |> Maybe.andThen String.toInt |> Maybe.withDefault 1 |> pageFromInt
 
                 cmd =
                     case q of
@@ -370,10 +401,17 @@ handleUrl url model =
                         |> Dict.get "keyword"
                         |> Maybe.withDefault []
 
+                page =
+                    url.queryParameters
+                        |> Dict.get "page"
+                        |> Maybe.andThen List.head
+                        |> Maybe.andThen String.toInt
+                        |> Maybe.withDefault 1
+
                 cmd =
                     sendQuery (Queries.encodeSearchQuery (FindResearch keywords))
             in
-            ( { model | view = SearchView ListLayout keywords sorting (Page 0) }, cmd )
+            ( { model | view = SearchView ListLayout keywords sorting (Page page) }, cmd )
 
         [ "research", "search", "screen" ] ->
             let
@@ -393,10 +431,20 @@ handleUrl url model =
                         |> Maybe.andThen scaleFromString
                         |> Maybe.withDefault Medium
 
+                page =
+                    url.queryParameters
+                        |> Dict.get "page"
+                        |> Maybe.andThen List.head
+                        |> Maybe.andThen String.toInt
+                        |> Maybe.withDefault 1
+
+                _ =
+                    Debug.log "state of page now" page
+
                 cmd =
                     sendQuery (Queries.encodeSearchQuery (FindResearch keywords))
             in
-            ( { model | view = SearchView (ScreenLayout scale) keywords sorting (Page 0) }, cmd )
+            ( { model | view = SearchView (ScreenLayout scale) keywords sorting (Page page) }, cmd )
 
         _ ->
             noCmd model
@@ -726,7 +774,7 @@ getPageOfView v =
             page
 
         _ ->
-            Page 0
+            Page 1
 
 
 nextPageView : View -> View
@@ -734,27 +782,24 @@ nextPageView v =
     gotoPageView (getPageOfView v |> (\(Page p) -> p + 1 |> pageFromInt)) v
 
 
-pageNav : View -> ScreenDimensions -> List a -> Page -> Element Msg
-pageNav v screen lst (Page p) =
+pageNav : Int -> View -> ScreenDimensions -> List a -> Page -> Element Msg
+pageNav total v screen lst (Page p) =
     let
-        total =
-            lst |> List.length |> (\n -> n // pageSize)
-
         pageLink n =
             Element.link (linkStyle (n == p) SmallLink)
-                { url = v |> gotoPageView (Page n) |> appUrlFromView
+                { url = (v |> gotoPageView (Page n) |> appUrlFromView) ++ "#top"
                 , label = Element.text (n |> String.fromInt)
                 }
     in
     if total >= p then
         let
             pageLinks =
-                List.range 0 total |> List.map pageLink
+                List.range 1 (total + 1) |> List.map pageLink
 
             nextLink =
                 Element.el []
                     (Element.link ([ Element.Background.color (Element.rgb 1.0 0.0 0.0), Element.spacingXY 15 0 ] ++ linkStyle False SmallLink)
-                        { url = v |> nextPageView |> appUrlFromView
+                        { url = (v |> nextPageView |> appUrlFromView) ++ "#top" 
                         , label = Element.text "next"
                         }
                     )
@@ -766,11 +811,16 @@ pageNav v screen lst (Page p) =
         Element.none
 
 
+anchor : String -> Element.Attribute msg
+anchor anchorId =
+    Element.htmlAttribute (Attr.id anchorId)
+
+
 viewResearchResults : ScreenDimensions -> Layout -> View -> List Research -> List String -> RC.TitleSorting -> Page -> Element Msg
 viewResearchResults dimensions layout v lst keywords sorting (Page p) =
     let
         sorted =
-            lst |> sortResearch sorting |> List.drop (p * pageSize) |> List.take pageSize
+            lst |> sortResearch sorting |> List.drop ((p - 1) * pageSize) |> List.take pageSize
 
         render =
             case layout of
@@ -779,9 +829,50 @@ viewResearchResults dimensions layout v lst keywords sorting (Page p) =
 
                 ScreenLayout scale ->
                     viewScreenshots keywords dimensions scale sorted
+
+        urlFromLayout : Layout -> String
+        urlFromLayout l =
+            case l of
+                ListLayout ->
+                    AppUrl.fromPath [ "research", "search", "list" ]
+                        |> withParametersList
+                            [ ( "keywords", keywords )
+                            , ( "sorting", [ RC.titleSortingToString sorting ] )
+                            , ( "page", [ pageAsString (Page p) ] )
+                            ]
+                        |> AppUrl.toString
+                        |> prefixHash
+
+                ScreenLayout scale ->
+                    AppUrl.fromPath [ "research", "search", "screen" ]
+                        |> withParametersList
+                            [ ( "keywords", keywords )
+                            , ( "sorting", [ RC.titleSortingToString sorting ] )
+                            , ( "scale", [ scaleToString scale ] )
+                            , ( "page", [ pageAsString (Page p) ] )
+                            ]
+                        |> AppUrl.toString
+                        |> prefixHash
+
+        numberOfPages =
+            lst |> List.length |> (\n -> n // pageSize)
     in
-    Element.column [] <|
-        [ Element.el [] (Element.text "research results"), Element.row [] (keywords |> List.map Element.text), render, pageNav v dimensions sorted (Page p) ]
+    Element.column [ anchor "top" ] <|
+        [ Element.el RCStyles.defaultPadding (Element.text "search results")
+        , viewLayoutSwitch layout urlFromLayout
+        , case keywords of
+            [] ->
+                Element.none
+
+            kws ->
+                Element.el [] ("showing research for keywords: " ++ (kws |> String.join ",") |> Element.text)
+        , render
+        , pageNav numberOfPages v dimensions sorted (Page p)
+        ]
+
+
+
+-- TODO: should construct link in a more global way?
 
 
 toggleSorting : RC.KeywordSorting -> Element Msg
@@ -970,7 +1061,7 @@ viewKeywords model keywordview =
                     page |> pageToInt
 
                 showing =
-                    [ "results ", p * pageSize |> String.fromInt, "-", min ((p + 1) * pageSize) count |> String.fromInt, " (total: ", count |> String.fromInt, ")" ] |> String.concat
+                    [ "results ", (p - 1) * pageSize |> String.fromInt, "-", min ((p + 1) * pageSize) count |> String.fromInt, " (total: ", count |> String.fromInt, ")" ] |> String.concat
             in
             el [ Font.size 12 ] (Element.text showing)
 
@@ -998,10 +1089,10 @@ viewKeywords model keywordview =
                 url =
                     case model.query of
                         "" ->
-                            KeywordMainView RC.ByUse (Page 0) |> appUrlFromKeywordViewState
+                            KeywordMainView RC.ByUse (Page 1) |> appUrlFromKeywordViewState
 
                         nonEmpty ->
-                            KeywordSearch nonEmpty RC.ByUse (Page 0) |> appUrlFromKeywordViewState
+                            KeywordSearch nonEmpty RC.ByUse (Page 1) |> appUrlFromKeywordViewState
             in
             Element.row [ Element.spacingXY 15 0 ]
                 [ Element.Input.search [ width (px 200), onEnter HitEnter ]
@@ -1099,7 +1190,7 @@ pageOfList (Page i) lst =
     let
         start : Int
         start =
-            i * pageSize
+            (i - 1) * pageSize
     in
     lst
         |> List.drop start
@@ -1205,7 +1296,7 @@ viewScreenshots keywords screenDimensions scale research =
                 , "screen"
                 ]
                 |> withParameter ( "scale", scaleToString s )
-                |> withParametersList [("keyword",keywords)]
+                |> withParametersList [ ( "keyword", keywords ) ]
                 |> AppUrl.toString
                 |> prefixHash
     in

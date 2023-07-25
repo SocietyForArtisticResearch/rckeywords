@@ -1,7 +1,8 @@
-module RCStyles exposing (Style(..), rcButtonStyle)
+module RCStyles exposing (Style(..), rcButtonStyle, defaultPadding)
 
 import Html exposing (Attribute)
 import Html.Attributes exposing (style)
+import Element 
 
 
 type Style
@@ -11,6 +12,12 @@ type Style
 ofStyle : Style -> Attribute msg
 ofStyle (Style prop val) =
     style prop val
+
+defaultPadding : List (Element.Attribute msg)
+defaultPadding =
+    [ 
+        Element.paddingXY 15 25
+    ]
 
 
 rcButtonStyle : List (Attribute msg)

@@ -388,7 +388,8 @@ encodeAuthor au =
         , ( "id", Json.Encode.int (getAuthorId au) )
         ]
 
-
+-- this is a "local" decoder for communication with the worker.
+-- So here we do not have to calculate the publication status etc..
 encodeExposition : Research -> Json.Encode.Value
 encodeExposition exp =
     let
@@ -453,7 +454,8 @@ encodeExposition exp =
             |> maybeAppend abstract
         )
 
-
+-- This decodes from the RC search output.
+-- Some properties need to be "calculated", like publication status.
 decoder : Decoder Research
 decoder =
     let

@@ -16,7 +16,7 @@ In a terminal, run
 sh build.sh
 ```
 
-This will also copy the latest RC export JSON (internal_research.json). Note that a build will work for 24 hours, because of the timeout on image links. On the deployed version this file is updated automatically.
+This will also copy the latest RC export JSON (internal_research.json). Note that a build will work for 24 hours, because of the timeout on image links. On the deployed version this json file is updated automatically.
 
 For an optimized build, you run
 ```bash
@@ -32,11 +32,12 @@ The main code can be found in src/Main.elm. The important functions for how it l
 
 __Structure:__
 
-```elm 
-entry : Decoder Research
-```
+src/Research.elm 
 
-this is the translator, it takes the data from the RC and turns it into:
+contains all the RC stuff, keyword types, exposition type decoders encoders.
+
+The main type in this application is "research", which contains all the metadata of one exposition, as returned from advanced search.
+
 
 ```elm 
 type alias Research
@@ -73,8 +74,13 @@ viewResearch : Research -> Element Msg
 
 # Todo
 
-- optimize keywords page 
-    if all keywords are shown, can crash certain devices because too many elements
-    
-- also move sorting of research external
+- browse just allows you to see the whole RC, but it is not about searching, it is about choosing a certain layout for all research (by keyword, by date, by portal etc..)
+- implement a search interface with the following fields:
+    * title, string
+    * keywords, autocomplete interface 
+        make it clever so that if you select one keyword, it only shows other keywords that will result in results
+    * author, name
+    * portal 
+    * *geographic location* ?
+- fix alignments etc..
 

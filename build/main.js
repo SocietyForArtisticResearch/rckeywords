@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1690389919018"
+    "1690393188688"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -9398,7 +9398,7 @@ var $author$project$Main$init = F3(
 				query: '',
 				screenDimensions: {h: height, w: width},
 				search: $author$project$Main$Idle,
-				searchPageSize: 128,
+				searchPageSize: 20,
 				url: initUrl,
 				view: A4(
 					$author$project$Main$SearchView,
@@ -9718,7 +9718,7 @@ var $author$project$Main$update = F2(
 							_Utils_update(
 								model,
 								{
-									searchPageSize: 128,
+									searchPageSize: 20,
 									view: $author$project$Main$KeywordsView(
 										A2(
 											$author$project$Main$KeywordMainView,

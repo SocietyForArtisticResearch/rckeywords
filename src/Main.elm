@@ -243,7 +243,7 @@ init { width, height } url key =
     , numberOfResults = 8
     , url = initUrl
     , key = key
-    , searchPageSize = 128
+    , searchPageSize = 20
     }
         |> handleUrl initUrl
 
@@ -299,7 +299,7 @@ update msg model =
         HitEnter ->
             case model.view of
                 KeywordsView (KeywordMainView sorting _) ->
-                    ( { model | view = KeywordsView (KeywordMainView sorting (Page 1)), searchPageSize = 128 }
+                    ( { model | view = KeywordsView (KeywordMainView sorting (Page 1)), searchPageSize = 20 }
                     , Cmd.batch
                         [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting))
                         , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)

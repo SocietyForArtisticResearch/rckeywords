@@ -225,6 +225,7 @@ type Msg
     | NoOp
     | LoadMore
     | AddKeyword String
+    | RemoveKeyword String
 
 
 type alias Flags =
@@ -329,6 +330,11 @@ update msg model =
 
         AddKeyword kw->
             ( { model | keywords = Set.insert kw model.keywords}
+            , Cmd.none
+            )
+
+        RemoveKeyword kw->
+            ( { model | keywords = Set.remove kw model.keywords}
             , Cmd.none
             )
 
@@ -1041,11 +1047,17 @@ viewSelectedKeyword fontsize kw =
         ]
         --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
 
-         [ Element.Input.button [ width fill ]
+         [ 
+            Element.Input.button [ width fill, Element.alignRight, Font.size fontsize ]
+             { onPress = Just (RemoveKeyword name)
+            , label = text "x"
+            },
+            
+            Element.Input.button [ width fill ]
              { onPress = Just (AddKeyword name)
             , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
             }
-        , Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
+        --Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text "x")
         ]
 
 {-| on Enter

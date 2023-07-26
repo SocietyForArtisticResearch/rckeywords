@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1690397173070"
+    "1690398335214"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -9626,6 +9626,12 @@ var $elm$core$Set$insert = F2(
 var $elm$browser$Browser$Navigation$load = _Browser_load;
 var $author$project$Main$pageSize = 128;
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
+var $elm$core$Set$remove = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A2($elm$core$Dict$remove, key, dict));
+	});
 var $author$project$Main$NoOp = {$: 'NoOp'};
 var $elm$browser$Browser$Dom$setViewport = _Browser_setViewport;
 var $author$project$Main$resetViewport = A2(
@@ -9781,13 +9787,22 @@ var $author$project$Main$update = F2(
 						model,
 						{searchPageSize: model.searchPageSize + $author$project$Main$pageSize}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'AddKeyword':
 				var kw = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
 							keywords: A2($elm$core$Set$insert, kw, model.keywords)
+						}),
+					$elm$core$Platform$Cmd$none);
+			default:
+				var kw = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							keywords: A2($elm$core$Set$remove, kw, model.keywords)
 						}),
 					$elm$core$Platform$Cmd$none);
 		}
@@ -17805,6 +17820,9 @@ var $author$project$Main$viewKeywordAsClickable = F2(
 						$elm$core$String$fromInt(count)))
 				]));
 	});
+var $author$project$Main$RemoveKeyword = function (a) {
+	return {$: 'RemoveKeyword', a: a};
+};
 var $author$project$Main$viewSelectedKeyword = F2(
 	function (fontsize, kw) {
 		var name = kw;
@@ -17826,6 +17844,19 @@ var $author$project$Main$viewSelectedKeyword = F2(
 				]),
 			_List_fromArray(
 				[
+					A2(
+					$mdgriffith$elm_ui$Element$Input$button,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							$mdgriffith$elm_ui$Element$alignRight,
+							$mdgriffith$elm_ui$Element$Font$size(fontsize)
+						]),
+					{
+						label: $mdgriffith$elm_ui$Element$text('x'),
+						onPress: $elm$core$Maybe$Just(
+							$author$project$Main$RemoveKeyword(name))
+					}),
 					A2(
 					$mdgriffith$elm_ui$Element$Input$button,
 					_List_fromArray(
@@ -17852,18 +17883,7 @@ var $author$project$Main$viewSelectedKeyword = F2(
 								])),
 						onPress: $elm$core$Maybe$Just(
 							$author$project$Main$AddKeyword(name))
-					}),
-					A2(
-					$mdgriffith$elm_ui$Element$el,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width(
-							$mdgriffith$elm_ui$Element$px(25)),
-							$mdgriffith$elm_ui$Element$alignRight,
-							$mdgriffith$elm_ui$Element$Font$size(fontsize)
-						]),
-					$mdgriffith$elm_ui$Element$text(
-						$elm$core$String$fromInt(count)))
+					})
 				]));
 	});
 var $author$project$Main$viewKeywords = F2(

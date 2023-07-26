@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1690400162857"
+    "1690400538277"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -17882,7 +17882,7 @@ var $author$project$Main$viewSelectedKeyword = F2(
 									$mdgriffith$elm_ui$Element$text(name))
 								])),
 						onPress: $elm$core$Maybe$Just(
-							$author$project$Main$AddKeyword(name))
+							$author$project$Main$RemoveKeyword(name))
 					})
 				]));
 	});

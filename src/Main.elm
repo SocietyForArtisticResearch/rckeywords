@@ -1054,7 +1054,7 @@ viewSelectedKeyword fontsize kw =
             },
             
             Element.Input.button [ width fill ]
-             { onPress = Just (AddKeyword name)
+             { onPress = Just (RemoveKeyword name)
             , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
             }
         --Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text "x")

@@ -209,6 +209,7 @@ type alias Model =
     , numberOfResults : Int
     , key : Nav.Key
     , url : AppUrl
+    , searchPageSize : Int
     }
 
 
@@ -219,6 +220,7 @@ type Msg
     | ReceiveResults Json.Decode.Value
     | HitEnter
     | NoOp
+    | LoadMore
 
 
 type alias Flags =
@@ -241,6 +243,7 @@ init { width, height } url key =
     , numberOfResults = 8
     , url = initUrl
     , key = key
+    , searchPageSize = 128
     }
         |> handleUrl initUrl
 
@@ -296,7 +299,7 @@ update msg model =
         HitEnter ->
             case model.view of
                 KeywordsView (KeywordMainView sorting _) ->
-                    ( { model | view = KeywordsView (KeywordMainView sorting (Page 1)) }
+                    ( { model | view = KeywordsView (KeywordMainView sorting (Page 1)), searchPageSize = 128 }
                     , Cmd.batch
                         [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting))
                         , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)
@@ -313,6 +316,11 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
+
+        LoadMore ->
+            ( { model | searchPageSize = model.searchPageSize + pageSize }
+            , Cmd.none
+            )
 
 
 urlWhereFragmentIsPath : Url -> AppUrl.AppUrl
@@ -986,6 +994,23 @@ onEnter msg =
         )
 
 
+onAnyKey : msg -> Element.Attribute msg
+onAnyKey msg =
+    Element.htmlAttribute
+        (Html.Events.on "keyup"
+            (Json.Decode.field "key" Json.Decode.string
+                |> Json.Decode.andThen
+                    (\key ->
+                        if key == "Enter" then
+                            Json.Decode.fail "Not the enter key"
+
+                        else
+                            Json.Decode.succeed msg
+                    )
+            )
+        )
+
+
 pageToInt : Page -> Int
 pageToInt (Page p) =
     p
@@ -1108,10 +1133,10 @@ viewKeywords model keywordview =
                             KeywordSearch nonEmpty RC.ByUse (Page 1) |> appUrlFromKeywordViewState
             in
             Element.row [ Element.spacingXY 15 0 ]
-                [ Element.Input.search [ width (px 200), onEnter HitEnter ]
+                [ Element.Input.search [ width (px 620), onAnyKey HitEnter ]
                     { onChange = ChangedQuery
                     , text = model.query
-                    , placeholder = Just (Element.Input.placeholder [] (Element.text "search for keyword"))
+                    , placeholder = Just (Element.Input.placeholder [] (Element.text "search for artwork, category, author ..."))
                     , label = Element.Input.labelAbove [] (Element.text "keyword")
                     }
                 , Element.link (Element.moveDown 12 :: linkStyle shouldEnable BigLink)
@@ -1163,13 +1188,33 @@ viewKeywords model keywordview =
                         let
                             currentPage : List RC.Keyword
                             currentPage =
-                                pageOfList page results
+                                pageOfList model page results
                         in
-                        Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
-                            [ viewCount results
-                            , currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
-                            , pageNavigation results page
+                        
+                        Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ][
+                        
+                        Element.row [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
+                            [viewCount results],
+
+                        --scrollable
+                        Element.el
+                            [ Element.width Element.fill
+                            , Element.height Element.fill
                             ]
+                        <|
+                            Element.column [ Element.width Element.shrink
+                            , Element.height <| Element.maximum 330 Element.shrink
+                            , Element.scrollbarY
+                            , Element.clipX
+                            ]
+                                [ 
+                                currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                                , Element.Input.button[Element.paddingXY 0 25, Font.size 12]{ onPress = Just LoadMore
+                                , label = text "Load More"
+                                }
+                                --, pageNavigation results page
+                                ]
+                        ]
 
                     Idle ->
                         Element.text "idle"
@@ -1198,8 +1243,8 @@ makeColumns n attrs lst =
         )
 
 
-pageOfList : Page -> List a -> List a
-pageOfList (Page i) lst =
+pageOfList : Model -> Page -> List a -> List a
+pageOfList model (Page i) lst =
     let
         start : Int
         start =
@@ -1207,7 +1252,7 @@ pageOfList (Page i) lst =
     in
     lst
         |> List.drop start
-        |> List.take pageSize
+        |> List.take model.searchPageSize
 
 
 lazyImageWithErrorHandling : Int -> ScreenDimensions -> Research -> Html Msg

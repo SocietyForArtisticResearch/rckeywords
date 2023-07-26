@@ -4,7 +4,7 @@ import AppUrl exposing (AppUrl)
 import Browser
 import Browser.Navigation as Nav
 import Dict
-import Element exposing (Element, el, fill, fillPortion, height, padding, paddingXY, px, rgb255, shrink, spacing, spacingXY, text, width)
+import Element exposing (Element, el, fill, fillPortion, height, maximum, padding, paddingXY, px, rgb255, shrink, spacing, spacingXY, text, width)
 import Element.Background
 import Element.Border
 import Element.Font as Font
@@ -1043,12 +1043,12 @@ viewSelectedKeyword fontsize kw =
         , Element.clipX
 
         -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
-        , width fill
+        , width (fill |> maximum 200)
         ]
         --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
 
          [ 
-            Element.Input.button [ width fill, Element.alignRight, Font.size fontsize ]
+            Element.Input.button [ Element.alignRight, Font.size fontsize ]
              { onPress = Just (RemoveKeyword name)
             , label = text "x"
             },

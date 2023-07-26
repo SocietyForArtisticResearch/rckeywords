@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1690398335214"
+    "1690400162857"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -17840,7 +17840,8 @@ var $author$project$Main$viewSelectedKeyword = F2(
 					$mdgriffith$elm_ui$Element$Background$color(
 					A3($mdgriffith$elm_ui$Element$rgb255, 250, 250, 250)),
 					$mdgriffith$elm_ui$Element$clipX,
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+					$mdgriffith$elm_ui$Element$width(
+					A2($mdgriffith$elm_ui$Element$maximum, 200, $mdgriffith$elm_ui$Element$fill))
 				]),
 			_List_fromArray(
 				[
@@ -17848,7 +17849,6 @@ var $author$project$Main$viewSelectedKeyword = F2(
 					$mdgriffith$elm_ui$Element$Input$button,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 							$mdgriffith$elm_ui$Element$alignRight,
 							$mdgriffith$elm_ui$Element$Font$size(fontsize)
 						]),

@@ -24,6 +24,8 @@ import String
 import Url exposing (Url)
 import Task
 import Browser.Dom as Dom
+import Set exposing (Set)
+
 
 
 
@@ -210,6 +212,7 @@ type alias Model =
     , key : Nav.Key
     , url : AppUrl
     , searchPageSize : Int
+    , keywords : Set String
     }
 
 
@@ -221,6 +224,7 @@ type Msg
     | HitEnter
     | NoOp
     | LoadMore
+    | AddKeyword String
 
 
 type alias Flags =
@@ -244,6 +248,7 @@ init { width, height } url key =
     , url = initUrl
     , key = key
     , searchPageSize = 20
+    , keywords = Set.empty
     }
         |> handleUrl initUrl
 
@@ -319,6 +324,11 @@ update msg model =
 
         LoadMore ->
             ( { model | searchPageSize = model.searchPageSize + pageSize }
+            , Cmd.none
+            )
+
+        AddKeyword kw->
+            ( { model | keywords = Set.insert kw model.keywords}
             , Cmd.none
             )
 
@@ -975,6 +985,69 @@ viewKeywordAsButton fontsize kw =
         ]
 
 
+viewKeywordAsClickable : Int -> RC.Keyword -> Element Msg
+viewKeywordAsClickable fontsize kw =
+    let
+        name : String
+        name =
+            RC.kwName kw
+
+        count : Int
+        count =
+            RC.getCount kw
+    in
+    Element.row
+        [ Element.spacing 5
+        , Element.padding 5
+        , Element.Border.solid
+        , Element.Border.color (rgb255 144 144 144)
+        , Element.Border.width 1
+        , Element.Background.color (rgb255 250 250 250)
+        , Element.clipX
+
+        -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
+        , width fill
+        ]
+        --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
+
+         [ Element.Input.button [ width fill ]
+             { onPress = Just (AddKeyword name)
+            , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
+            }
+        , Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
+        ]
+
+
+viewSelectedKeyword : Int -> String -> Element Msg
+viewSelectedKeyword fontsize kw =
+    let
+        name : String
+        name = kw
+
+        count : Int
+        count = 0
+    in
+    Element.row
+        [ Element.spacing 5
+        , Element.padding 5
+        , Element.Border.solid
+        , Element.Border.color (rgb255 144 144 144)
+        , Element.Border.width 1
+        , Element.Background.color (rgb255 250 250 250)
+        , Element.clipX
+
+        -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
+        , width fill
+        ]
+        --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
+
+         [ Element.Input.button [ width fill ]
+             { onPress = Just (AddKeyword name)
+            , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
+            }
+        , Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
+        ]
+
 {-| on Enter
 -}
 onEnter : msg -> Element.Attribute msg
@@ -1194,7 +1267,12 @@ viewKeywords model keywordview =
                         Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ][
                         
                         Element.row [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
-                            [viewCount results],
+                            [text ("selected keywords count: " ++ (String.fromInt (Set.size model.keywords)))],
+
+                        Element.row [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
+                            [ 
+                                (Set.toList model.keywords) |> List.map (viewSelectedKeyword 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                            ],
 
                         --scrollable
                         Element.el
@@ -1208,7 +1286,7 @@ viewKeywords model keywordview =
                             , Element.clipX
                             ]
                                 [ 
-                                currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                                currentPage |> List.map (viewKeywordAsClickable 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
                                 , Element.Input.button[Element.paddingXY 0 25, Font.size 12]{ onPress = Just LoadMore
                                 , label = text "Load More"
                                 }

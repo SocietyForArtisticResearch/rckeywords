@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1690393188688"
+    "1690397173070"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -8327,6 +8327,12 @@ var $author$project$Main$SearchView = F4(
 	function (a, b, c, d) {
 		return {$: 'SearchView', a: a, b: b, c: c, d: d};
 	});
+var $elm$core$Set$Set_elm_builtin = function (a) {
+	return {$: 'Set_elm_builtin', a: a};
+};
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
+var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
 var $author$project$Research$ByUse = {$: 'ByUse'};
 var $author$project$Queries$FindKeywords = F2(
 	function (a, b) {
@@ -8748,8 +8754,6 @@ var $author$project$Main$handleUrl = F2(
 		}
 		return $author$project$Main$noCmd(model);
 	});
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$url$Url$percentDecode = _Url_percentDecode;
 var $lydell$elm_app_url$AppUrl$percentDecode = function (string) {
 	return A2(
@@ -9394,6 +9398,7 @@ var $author$project$Main$init = F3(
 			initUrl,
 			{
 				key: key,
+				keywords: $elm$core$Set$empty,
 				numberOfResults: 8,
 				query: '',
 				screenDimensions: {h: height, w: width},
@@ -9612,6 +9617,12 @@ var $author$project$Queries$decodeSearchResult = function () {
 		parseResult,
 		A2($elm$json$Json$Decode$field, 'type', $elm$json$Json$Decode$string));
 }();
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
 var $elm$browser$Browser$Navigation$load = _Browser_load;
 var $author$project$Main$pageSize = 128;
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
@@ -9764,11 +9775,20 @@ var $author$project$Main$update = F2(
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
-			default:
+			case 'LoadMore':
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{searchPageSize: model.searchPageSize + $author$project$Main$pageSize}),
+					$elm$core$Platform$Cmd$none);
+			default:
+				var kw = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							keywords: A2($elm$core$Set$insert, kw, model.keywords)
+						}),
 					$elm$core$Platform$Cmd$none);
 		}
 	});
@@ -9904,10 +9924,6 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 	});
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
 var $elm$html$Html$div = _VirtualDom_node('div');
-var $elm$core$Set$Set_elm_builtin = function (a) {
-	return {$: 'Set_elm_builtin', a: a};
-};
-var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
 var $mdgriffith$elm_ui$Internal$Model$lengthClassName = function (x) {
 	switch (x.$) {
 		case 'Px':
@@ -10057,12 +10073,6 @@ var $mdgriffith$elm_ui$Internal$Model$getStyleName = function (style) {
 				$mdgriffith$elm_ui$Internal$Model$transformClass(x));
 	}
 };
-var $elm$core$Set$insert = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
-	});
 var $elm$core$Dict$member = F2(
 	function (key, dict) {
 		var _v0 = A2($elm$core$Dict$get, key, dict);
@@ -17632,6 +17642,30 @@ var $mdgriffith$elm_ui$Element$Input$search = $mdgriffith$elm_ui$Element$Input$t
 		spellchecked: false,
 		type_: $mdgriffith$elm_ui$Element$Input$TextInputNode('search')
 	});
+var $elm$core$Dict$sizeHelp = F2(
+	function (n, dict) {
+		sizeHelp:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return n;
+			} else {
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$n = A2($elm$core$Dict$sizeHelp, n + 1, right),
+					$temp$dict = left;
+				n = $temp$n;
+				dict = $temp$dict;
+				continue sizeHelp;
+			}
+		}
+	});
+var $elm$core$Dict$size = function (dict) {
+	return A2($elm$core$Dict$sizeHelp, 0, dict);
+};
+var $elm$core$Set$size = function (_v0) {
+	var dict = _v0.a;
+	return $elm$core$Dict$size(dict);
+};
 var $mdgriffith$elm_ui$Element$spacingXY = F2(
 	function (x, y) {
 		return A2(
@@ -17691,6 +17725,9 @@ var $author$project$Main$toggleSorting = function (sorting) {
 				})
 			]));
 };
+var $author$project$Main$AddKeyword = function (a) {
+	return {$: 'AddKeyword', a: a};
+};
 var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
 var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
 var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
@@ -17707,22 +17744,7 @@ var $mdgriffith$elm_ui$Element$rgb255 = F3(
 	function (red, green, blue) {
 		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, red / 255, green / 255, blue / 255, 1);
 	});
-var $author$project$Main$withParameter = F2(
-	function (_v0, appurl) {
-		var key = _v0.a;
-		var value = _v0.b;
-		return _Utils_update(
-			appurl,
-			{
-				queryParameters: A3(
-					$elm$core$Dict$insert,
-					key,
-					_List_fromArray(
-						[value]),
-					appurl.queryParameters)
-			});
-	});
-var $author$project$Main$viewKeywordAsButton = F2(
+var $author$project$Main$viewKeywordAsClickable = F2(
 	function (fontsize, kw) {
 		var name = $author$project$Research$kwName(kw);
 		var count = $author$project$Research$getCount(kw);
@@ -17744,8 +17766,11 @@ var $author$project$Main$viewKeywordAsButton = F2(
 			_List_fromArray(
 				[
 					A2(
-					$mdgriffith$elm_ui$Element$link,
-					_List_Nil,
+					$mdgriffith$elm_ui$Element$Input$button,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+						]),
 					{
 						label: A2(
 							$mdgriffith$elm_ui$Element$paragraph,
@@ -17764,14 +17789,69 @@ var $author$project$Main$viewKeywordAsButton = F2(
 										]),
 									$mdgriffith$elm_ui$Element$text(name))
 								])),
-						url: $author$project$Main$prefixHash(
-							$lydell$elm_app_url$AppUrl$toString(
-								A2(
-									$author$project$Main$withParameter,
-									_Utils_Tuple2('keyword', name),
-									$lydell$elm_app_url$AppUrl$fromPath(
-										_List_fromArray(
-											['research', 'search', 'list'])))))
+						onPress: $elm$core$Maybe$Just(
+							$author$project$Main$AddKeyword(name))
+					}),
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width(
+							$mdgriffith$elm_ui$Element$px(25)),
+							$mdgriffith$elm_ui$Element$alignRight,
+							$mdgriffith$elm_ui$Element$Font$size(fontsize)
+						]),
+					$mdgriffith$elm_ui$Element$text(
+						$elm$core$String$fromInt(count)))
+				]));
+	});
+var $author$project$Main$viewSelectedKeyword = F2(
+	function (fontsize, kw) {
+		var name = kw;
+		var count = 0;
+		return A2(
+			$mdgriffith$elm_ui$Element$row,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$spacing(5),
+					$mdgriffith$elm_ui$Element$padding(5),
+					$mdgriffith$elm_ui$Element$Border$solid,
+					$mdgriffith$elm_ui$Element$Border$color(
+					A3($mdgriffith$elm_ui$Element$rgb255, 144, 144, 144)),
+					$mdgriffith$elm_ui$Element$Border$width(1),
+					$mdgriffith$elm_ui$Element$Background$color(
+					A3($mdgriffith$elm_ui$Element$rgb255, 250, 250, 250)),
+					$mdgriffith$elm_ui$Element$clipX,
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$mdgriffith$elm_ui$Element$Input$button,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+						]),
+					{
+						label: A2(
+							$mdgriffith$elm_ui$Element$paragraph,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$centerX,
+									$mdgriffith$elm_ui$Element$Font$size(fontsize)
+								]),
+							_List_fromArray(
+								[
+									A2(
+									$mdgriffith$elm_ui$Element$el,
+									_List_fromArray(
+										[
+											$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+										]),
+									$mdgriffith$elm_ui$Element$text(name))
+								])),
+						onPress: $elm$core$Maybe$Just(
+							$author$project$Main$AddKeyword(name))
 					}),
 					A2(
 					$mdgriffith$elm_ui$Element$el,
@@ -17949,7 +18029,33 @@ var $author$project$Main$viewKeywords = F2(
 													]),
 												_List_fromArray(
 													[
-														viewCount(results)
+														$mdgriffith$elm_ui$Element$text(
+														'selected keywords count: ' + $elm$core$String$fromInt(
+															$elm$core$Set$size(model.keywords)))
+													])),
+												A2(
+												$mdgriffith$elm_ui$Element$row,
+												_List_fromArray(
+													[
+														$mdgriffith$elm_ui$Element$width(
+														$mdgriffith$elm_ui$Element$px(
+															$elm$core$Basics$floor(model.screenDimensions.w * 0.9))),
+														$mdgriffith$elm_ui$Element$spacing(15)
+													]),
+												_List_fromArray(
+													[
+														A3(
+														$author$project$Main$makeColumns,
+														4,
+														_List_fromArray(
+															[
+																$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+																A2($mdgriffith$elm_ui$Element$spacingXY, 25, 25)
+															]),
+														A2(
+															$elm$core$List$map,
+															$author$project$Main$viewSelectedKeyword(16),
+															$elm$core$Set$toList(model.keywords)))
 													])),
 												A2(
 												$mdgriffith$elm_ui$Element$el,
@@ -17980,7 +18086,7 @@ var $author$project$Main$viewKeywords = F2(
 																]),
 															A2(
 																$elm$core$List$map,
-																$author$project$Main$viewKeywordAsButton(16),
+																$author$project$Main$viewKeywordAsClickable(16),
 																currentPage)),
 															A2(
 															$mdgriffith$elm_ui$Element$Input$button,
@@ -18916,6 +19022,21 @@ var $author$project$Main$viewScaleSwitch = F2(
 						url: urlWithScale($author$project$Main$Large)
 					})
 				]));
+	});
+var $author$project$Main$withParameter = F2(
+	function (_v0, appurl) {
+		var key = _v0.a;
+		var value = _v0.b;
+		return _Utils_update(
+			appurl,
+			{
+				queryParameters: A3(
+					$elm$core$Dict$insert,
+					key,
+					_List_fromArray(
+						[value]),
+					appurl.queryParameters)
+			});
 	});
 var $author$project$Main$viewScreenshots = F4(
 	function (keywords, screenDimensions, scale, research) {

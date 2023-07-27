@@ -42,6 +42,7 @@ import Json.Encode
 import Random
 import Random.List
 import Set exposing (Set)
+import Time
 
 
 type alias ExpositionID =
@@ -388,8 +389,12 @@ encodeAuthor au =
         , ( "id", Json.Encode.int (getAuthorId au) )
         ]
 
+
+
 -- this is a "local" decoder for communication with the worker.
 -- So here we do not have to calculate the publication status etc..
+
+
 encodeExposition : Research -> Json.Encode.Value
 encodeExposition exp =
     let
@@ -454,8 +459,12 @@ encodeExposition exp =
             |> maybeAppend abstract
         )
 
+
+
 -- This decodes from the RC search output.
 -- Some properties need to be "calculated", like publication status.
+
+
 decoder : Decoder Research
 decoder =
     let
@@ -560,7 +569,7 @@ reverseKeywordDict research =
     List.foldl addResearchToDict Dict.empty research
 
 
-findResearchWithKeywords : List String -> ReverseKeywordDict -> List Research -> List Research
+findResearchWithKeywords : Set String -> ReverseKeywordDict -> List Research -> List Research
 findResearchWithKeywords kw dict research =
     let
         findKw k =
@@ -572,30 +581,61 @@ findResearchWithKeywords kw dict research =
 
         {- for each keyword, return the id's that have it, now take the union of those sets of ids -}
         {- use the ids to fetch the expositions -}
-
         intersectionOfNonempty : Set comparable -> List (Set comparable) -> List comparable
         intersectionOfNonempty first rest =
             List.foldl Set.intersect first rest |> Set.toList
 
         combineResults : List (Set comparable) -> List comparable
-        combineResults results = 
-            case results of 
-                [] -> []
+        combineResults results =
+            case results of
+                [] ->
+                    []
 
-                x :: xs -> 
-                    intersectionOfNonempty x xs 
-
+                x :: xs ->
+                    intersectionOfNonempty x xs
     in
-    case kw of
+    case kw |> Set.toList of
         [] ->
             research
 
-        _ ->
+        kws ->
             let
-
                 ids =
-                    kw
+                    kws
                         |> List.map (findKw >> List.map getId >> Set.fromList)
-                        |> combineResults -- the full set is the mempty of combinatory filters
+                        |> combineResults
+
+                -- the full set is the mempty of combinatory filters
             in
             research |> List.filter (\exp -> List.member exp.id ids)
+
+
+findResearchWithTitle : String -> List Research -> List Research
+findResearchWithTitle q lst =
+    let
+        f : Research -> Bool
+        f r =
+            r.title |> String.toLower |> String.contains (String.toLower q)
+    in
+        case q of 
+        "" -> lst 
+
+        _ -> 
+            List.filter f lst
+
+findResearchWithAuthor : String -> List Research -> List Research
+findResearchWithAuthor qauthor lst =
+    let
+        f : Research -> Bool
+        f r =
+            r.author |> getName |> String.toLower |> String.contains (String.toLower qauthor)
+    in
+        case qauthor of 
+        "" -> lst 
+
+        _ -> 
+            List.filter f lst
+
+findResearchAfter : Time.Posix -> List Research -> List Research
+findResearchAfter posix lst =
+    Debug.todo "we need to turn created date into posix to support this"

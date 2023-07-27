@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1690400538277"
+    "1690447289949"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -9428,6 +9428,7 @@ var $author$project$Main$FoundKeywords = function (a) {
 var $author$project$Main$FoundResearch = function (a) {
 	return {$: 'FoundResearch', a: a};
 };
+var $author$project$Main$additionalKeywordsToLoad = 64;
 var $author$project$Queries$Expositions = function (a) {
 	return {$: 'Expositions', a: a};
 };
@@ -9624,7 +9625,6 @@ var $elm$core$Set$insert = F2(
 			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
 	});
 var $elm$browser$Browser$Navigation$load = _Browser_load;
-var $author$project$Main$pageSize = 128;
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $elm$core$Set$remove = F2(
 	function (key, _v0) {
@@ -9785,7 +9785,7 @@ var $author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{searchPageSize: model.searchPageSize + $author$project$Main$pageSize}),
+						{searchPageSize: model.searchPageSize + $author$project$Main$additionalKeywordsToLoad}),
 					$elm$core$Platform$Cmd$none);
 			case 'AddKeyword':
 				var kw = msg.a;
@@ -16789,6 +16789,7 @@ var $mdgriffith$elm_ui$Element$paddingXY = F2(
 					xFloat));
 		}
 	});
+var $author$project$Main$pageSize = 128;
 var $author$project$Main$pageOfList = F3(
 	function (model, _v0, lst) {
 		var i = _v0.a;
@@ -17993,6 +17994,44 @@ var $author$project$Main$viewKeywords = F2(
 					]),
 				$mdgriffith$elm_ui$Element$text(showing));
 		};
+		var viewCountScroll = function (lst) {
+			var p = $author$project$Main$pageToInt(page);
+			var count = $elm$core$List$length(lst);
+			var showing = $elm$core$String$concat(
+				_List_fromArray(
+					[
+						'results ',
+						$elm$core$String$fromInt(0),
+						'-',
+						$elm$core$String$fromInt(
+						A2($elm$core$Basics$min, count, model.searchPageSize)),
+						' (total: ',
+						$elm$core$String$fromInt(count),
+						')'
+					]));
+			return A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$Font$size(12)
+					]),
+				$mdgriffith$elm_ui$Element$text(showing));
+		};
+		var loadMore = function (lst) {
+			var shown = model.searchPageSize;
+			var count = $elm$core$List$length(lst);
+			return (_Utils_cmp(shown, count) < 0) ? A2(
+				$mdgriffith$elm_ui$Element$Input$button,
+				_List_fromArray(
+					[
+						A2($mdgriffith$elm_ui$Element$paddingXY, 0, 25),
+						$mdgriffith$elm_ui$Element$Font$size(12)
+					]),
+				{
+					label: $mdgriffith$elm_ui$Element$text('Load More'),
+					onPress: $elm$core$Maybe$Just($author$project$Main$LoadMore)
+				}) : $mdgriffith$elm_ui$Element$none;
+		};
 		var lazyf = F2(
 			function (result, searchbox) {
 				return A2(
@@ -18038,6 +18077,7 @@ var $author$project$Main$viewKeywords = F2(
 											]),
 										_List_fromArray(
 											[
+												viewCountScroll(results),
 												A2(
 												$mdgriffith$elm_ui$Element$row,
 												_List_fromArray(
@@ -18108,17 +18148,7 @@ var $author$project$Main$viewKeywords = F2(
 																$elm$core$List$map,
 																$author$project$Main$viewKeywordAsClickable(16),
 																currentPage)),
-															A2(
-															$mdgriffith$elm_ui$Element$Input$button,
-															_List_fromArray(
-																[
-																	A2($mdgriffith$elm_ui$Element$paddingXY, 0, 25),
-																	$mdgriffith$elm_ui$Element$Font$size(12)
-																]),
-															{
-																label: $mdgriffith$elm_ui$Element$text('Load More'),
-																onPress: $elm$core$Maybe$Just($author$project$Main$LoadMore)
-															})
+															loadMore(results)
 														])))
 											]));
 								case 'Idle':

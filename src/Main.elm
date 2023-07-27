@@ -161,6 +161,9 @@ pageSize : Int
 pageSize =
     128
 
+additionalKeywordsToLoad : Int
+additionalKeywordsToLoad =
+    64
 
 pageFromInt : Int -> Page
 pageFromInt p =
@@ -324,7 +327,7 @@ update msg model =
                     ( model, Cmd.none )
 
         LoadMore ->
-            ( { model | searchPageSize = model.searchPageSize + pageSize }
+            ( { model | searchPageSize = model.searchPageSize + additionalKeywordsToLoad }
             , Cmd.none
             )
 
@@ -1188,6 +1191,42 @@ viewKeywords model keywordview =
             in
             el [ Font.size 12 ] (Element.text showing)
 
+        viewCountScroll : List RC.Keyword -> Element msg
+        viewCountScroll lst =
+            let
+                count : Int
+                count =
+                    lst |> List.length
+
+                p =
+                    page |> pageToInt
+
+                showing =
+                    [ "results ", 0 |> String.fromInt, "-", min count model.searchPageSize |> String.fromInt, " (total: ", count |> String.fromInt, ")" ] |> String.concat
+            in
+            el [ Font.size 12 ] (Element.text showing)
+
+        loadMore : List RC.Keyword -> Element Msg
+        loadMore lst =
+            let
+                count : Int
+                count =
+                    lst |> List.length
+
+                shown = model.searchPageSize
+            in
+            
+            if shown < count 
+                then 
+                    Element.Input.button[Element.paddingXY 0 25, Font.size 12]
+                        { onPress = Just LoadMore
+                        , label = text "Load More"
+                        }
+                else
+                    Element.none
+            
+
+
         -- lastDate : Element msg
         -- lastDate =
         --     let
@@ -1277,6 +1316,8 @@ viewKeywords model keywordview =
                         in
                         
                         Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ][
+
+                        viewCountScroll results,
                         
                         Element.row [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
                             [text ("selected keywords count: " ++ (String.fromInt (Set.size model.keywords)))],
@@ -1299,9 +1340,7 @@ viewKeywords model keywordview =
                             ]
                                 [ 
                                 currentPage |> List.map (viewKeywordAsClickable 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
-                                , Element.Input.button[Element.paddingXY 0 25, Font.size 12]{ onPress = Just LoadMore
-                                , label = text "Load More"
-                                }
+                                , loadMore results
                                 --, pageNavigation results page
                                 ]
                         ]

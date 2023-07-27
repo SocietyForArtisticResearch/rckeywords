@@ -6582,6 +6582,7 @@ var $author$project$Queries$decodeSearchResult = function () {
 		A2($elm$json$Json$Decode$field, 'type', $elm$json$Json$Decode$string));
 }();
 var $elm$browser$Browser$Navigation$load = _Browser_load;
+var $elm$core$Debug$log = _Debug_log;
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $author$project$Main$NoOp = {$: 'NoOp'};
 var $elm$browser$Browser$Dom$setViewport = _Browser_setViewport;
@@ -6738,6 +6739,32 @@ var $dillonkearns$elm_form$Form$update = F2(
 							maybeMsg)));
 		}
 	});
+var $author$project$Queries$withAuthor = F2(
+	function (author, _v0) {
+		var s = _v0.a;
+		return $author$project$Queries$Search(
+			_Utils_update(
+				s,
+				{author: author}));
+	});
+var $author$project$Queries$withKeywords = F2(
+	function (keywords, _v0) {
+		var s = _v0.a;
+		return $author$project$Queries$Search(
+			_Utils_update(
+				s,
+				{
+					keywords: $elm$core$Set$fromList(keywords)
+				}));
+	});
+var $author$project$Queries$withTitle = F2(
+	function (title, _v0) {
+		var s = _v0.a;
+		return $author$project$Queries$Search(
+			_Utils_update(
+				s,
+				{title: title}));
+	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -6880,7 +6907,37 @@ var $author$project$Main$update = F2(
 					cmd);
 			default:
 				var validated = msg.a;
-				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				if (validated.$ === 'Valid') {
+					var srch = validated.a;
+					var fullSearch = A2(
+						$author$project$Queries$withKeywords,
+						function () {
+							var _v9 = srch.keyword;
+							if (_v9 === '') {
+								return _List_Nil;
+							} else {
+								var nonEmptyStr = _v9;
+								return _List_fromArray(
+									[nonEmptyStr]);
+							}
+						}(),
+						A2(
+							$author$project$Queries$withAuthor,
+							srch.author,
+							A2($author$project$Queries$withTitle, srch.title, $author$project$Queries$emptySearch)));
+					var queryCmd = $author$project$Main$sendQuery(
+						$author$project$Queries$encodeSearchQuery(
+							$author$project$Queries$FindResearch(fullSearch)));
+					return _Utils_Tuple2(model, queryCmd);
+				} else {
+					var m = validated.a;
+					var x = validated.b;
+					var _v10 = A2(
+						$elm$core$Debug$log,
+						'no',
+						_Utils_Tuple2(m, x));
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 		}
 	});
 var $mdgriffith$elm_ui$Internal$Model$Unkeyed = function (a) {
@@ -15913,8 +15970,1158 @@ var $author$project$Main$viewScreenshots = F4(
 						A2($elm$core$List$map, viewGroup, groups)))
 				]));
 	});
-var $author$project$Main$viewResearchResults = F7(
-	function (dimensions, layout, v, lst, keywords, sorting, _v0) {
+var $author$project$Main$FormMsg = function (a) {
+	return {$: 'FormMsg', a: a};
+};
+var $author$project$Main$SubmitSearch = function (a) {
+	return {$: 'SubmitSearch', a: a};
+};
+var $dillonkearns$elm_form$Form$Post = {$: 'Post'};
+var $dillonkearns$elm_form$Form$options = function (id) {
+	return {action: $elm$core$Maybe$Nothing, extras: $elm$core$Maybe$Nothing, id: id, input: _Utils_Tuple0, method: $dillonkearns$elm_form$Form$Post, onSubmit: $elm$core$Maybe$Nothing, serverResponse: $elm$core$Maybe$Nothing};
+};
+var $elm$html$Html$Lazy$lazy4 = $elm$virtual_dom$VirtualDom$lazy4;
+var $dillonkearns$elm_form$Internal$FieldEvent$FormFieldEvent = function (a) {
+	return {$: 'FormFieldEvent', a: a};
+};
+var $dillonkearns$elm_form$Form$Get = {$: 'Get'};
+var $dillonkearns$elm_form$Form$Invalid = F2(
+	function (a, b) {
+		return {$: 'Invalid', a: a, b: b};
+	});
+var $dillonkearns$elm_form$Internal$FieldEvent$Submit = F2(
+	function (a, b) {
+		return {$: 'Submit', a: a, b: b};
+	});
+var $dillonkearns$elm_form$Form$Valid = function (a) {
+	return {$: 'Valid', a: a};
+};
+var $elm$html$Html$Attributes$action = function (uri) {
+	return A2(
+		$elm$html$Html$Attributes$stringProperty,
+		'action',
+		_VirtualDom_noJavaScriptUri(uri));
+};
+var $elm$html$Html$form = _VirtualDom_node('form');
+var $dillonkearns$elm_form$Internal$FieldEvent$alwaysPreventDefault = function (msg) {
+	return _Utils_Tuple2(msg, true);
+};
+var $elm$json$Json$Decode$oneOf = _Json_oneOf;
+var $dillonkearns$elm_form$Internal$FieldEvent$currentForm = F2(
+	function (field_, decoder_) {
+		return $elm$json$Json$Decode$oneOf(
+			_List_fromArray(
+				[
+					A2(
+					$elm$json$Json$Decode$at,
+					_List_fromArray(
+						['submitter', 'form']),
+					decoder_),
+					A2(
+					$elm$json$Json$Decode$at,
+					_List_fromArray(
+						['currentTarget', field_]),
+					decoder_)
+				]));
+	});
+var $elm$json$Json$Decode$maybe = function (decoder) {
+	return $elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder),
+				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
+			]));
+};
+var $elm$json$Json$Decode$index = _Json_decodeIndex;
+var $elm$core$Tuple$pair = F2(
+	function (a, b) {
+		return _Utils_Tuple2(a, b);
+	});
+var $dillonkearns$elm_form$Internal$FieldEvent$tuplesDecoder = $elm$json$Json$Decode$list(
+	A3(
+		$elm$json$Json$Decode$map2,
+		$elm$core$Tuple$pair,
+		A2($elm$json$Json$Decode$index, 0, $elm$json$Json$Decode$string),
+		A2($elm$json$Json$Decode$index, 1, $elm$json$Json$Decode$string)));
+var $dillonkearns$elm_form$Internal$FieldEvent$fieldsDecoder = $elm$json$Json$Decode$maybe(
+	A2($elm$json$Json$Decode$field, 'fields', $dillonkearns$elm_form$Internal$FieldEvent$tuplesDecoder));
+var $elm$json$Json$Decode$map4 = _Json_map4;
+var $dillonkearns$elm_form$Internal$FieldEvent$Get = {$: 'Get'};
+var $dillonkearns$elm_form$Internal$FieldEvent$Post = {$: 'Post'};
+var $elm$core$String$toUpper = _String_toUpper;
+var $dillonkearns$elm_form$Internal$FieldEvent$methodDecoder = A2(
+	$elm$json$Json$Decode$map,
+	function (methodString) {
+		var _v0 = $elm$core$String$toUpper(methodString);
+		switch (_v0) {
+			case 'GET':
+				return $dillonkearns$elm_form$Internal$FieldEvent$Get;
+			case 'POST':
+				return $dillonkearns$elm_form$Internal$FieldEvent$Post;
+			default:
+				return $dillonkearns$elm_form$Internal$FieldEvent$Get;
+		}
+	},
+	$elm$json$Json$Decode$string);
+var $elm$json$Json$Decode$null = _Json_decodeNull;
+var $elm$json$Json$Decode$nullable = function (decoder) {
+	return $elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
+				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder)
+			]));
+};
+var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
+	return {$: 'MayPreventDefault', a: a};
+};
+var $elm$html$Html$Events$preventDefaultOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
+	});
+var $dillonkearns$elm_form$Internal$FieldEvent$formDataOnSubmit = A2(
+	$elm$html$Html$Events$preventDefaultOn,
+	'submit',
+	A2(
+		$elm$json$Json$Decode$map,
+		$dillonkearns$elm_form$Internal$FieldEvent$alwaysPreventDefault,
+		A5(
+			$elm$json$Json$Decode$map4,
+			F4(
+				function (fields, method, action, id) {
+					return {action: action, fields: fields, id: id, method: method};
+				}),
+			$dillonkearns$elm_form$Internal$FieldEvent$fieldsDecoder,
+			A2($dillonkearns$elm_form$Internal$FieldEvent$currentForm, 'method', $dillonkearns$elm_form$Internal$FieldEvent$methodDecoder),
+			A2($dillonkearns$elm_form$Internal$FieldEvent$currentForm, 'action', $elm$json$Json$Decode$string),
+			A2(
+				$dillonkearns$elm_form$Internal$FieldEvent$currentForm,
+				'id',
+				$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)))));
+var $dillonkearns$elm_form$Form$Errors = function (a) {
+	return {$: 'Errors', a: a};
+};
+var $elm$core$Dict$map = F2(
+	function (func, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return $elm$core$Dict$RBEmpty_elm_builtin;
+		} else {
+			var color = dict.a;
+			var key = dict.b;
+			var value = dict.c;
+			var left = dict.d;
+			var right = dict.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				color,
+				key,
+				A2(func, key, value),
+				A2($elm$core$Dict$map, func, left),
+				A2($elm$core$Dict$map, func, right));
+		}
+	});
+var $dillonkearns$elm_form$Form$convert = function (formState) {
+	return {
+		fields: A2(
+			$elm$core$Dict$map,
+			F2(
+				function (_v0, value) {
+					return {
+						status: $dillonkearns$elm_form$Form$statusRank(value.status),
+						value: value.value
+					};
+				}),
+			formState.fields),
+		submitAttempted: formState.submitAttempted
+	};
+};
+var $dillonkearns$elm_form$Form$initFormState = {fields: $elm$core$Dict$empty, submitAttempted: false};
+var $dillonkearns$elm_form$Form$insertIfNonempty = F3(
+	function (key, values, dict) {
+		return $elm$core$List$isEmpty(values) ? dict : A3($elm$core$Dict$insert, key, values, dict);
+	});
+var $elm$core$Dict$merge = F6(
+	function (leftStep, bothStep, rightStep, leftDict, rightDict, initialResult) {
+		var stepState = F3(
+			function (rKey, rValue, _v0) {
+				stepState:
+				while (true) {
+					var list = _v0.a;
+					var result = _v0.b;
+					if (!list.b) {
+						return _Utils_Tuple2(
+							list,
+							A3(rightStep, rKey, rValue, result));
+					} else {
+						var _v2 = list.a;
+						var lKey = _v2.a;
+						var lValue = _v2.b;
+						var rest = list.b;
+						if (_Utils_cmp(lKey, rKey) < 0) {
+							var $temp$rKey = rKey,
+								$temp$rValue = rValue,
+								$temp$_v0 = _Utils_Tuple2(
+								rest,
+								A3(leftStep, lKey, lValue, result));
+							rKey = $temp$rKey;
+							rValue = $temp$rValue;
+							_v0 = $temp$_v0;
+							continue stepState;
+						} else {
+							if (_Utils_cmp(lKey, rKey) > 0) {
+								return _Utils_Tuple2(
+									list,
+									A3(rightStep, rKey, rValue, result));
+							} else {
+								return _Utils_Tuple2(
+									rest,
+									A4(bothStep, lKey, lValue, rValue, result));
+							}
+						}
+					}
+				}
+			});
+		var _v3 = A3(
+			$elm$core$Dict$foldl,
+			stepState,
+			_Utils_Tuple2(
+				$elm$core$Dict$toList(leftDict),
+				initialResult),
+			rightDict);
+		var leftovers = _v3.a;
+		var intermediateResult = _v3.b;
+		return A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v4, result) {
+					var k = _v4.a;
+					var v = _v4.b;
+					return A3(leftStep, k, v, result);
+				}),
+			intermediateResult,
+			leftovers);
+	});
+var $dillonkearns$elm_form$Form$mergeErrors = F2(
+	function (errors1, errors2) {
+		return A6(
+			$elm$core$Dict$merge,
+			F3(
+				function (key, entries, soFar) {
+					return A3($dillonkearns$elm_form$Form$insertIfNonempty, key, entries, soFar);
+				}),
+			F4(
+				function (key, entries1, entries2, soFar) {
+					return A3(
+						$dillonkearns$elm_form$Form$insertIfNonempty,
+						key,
+						_Utils_ap(entries1, entries2),
+						soFar);
+				}),
+			F3(
+				function (key, entries, soFar) {
+					return A3($dillonkearns$elm_form$Form$insertIfNonempty, key, entries, soFar);
+				}),
+			errors1,
+			errors2,
+			$elm$core$Dict$empty);
+	});
+var $dillonkearns$elm_form$Pages$Internal$Form$Validation = F3(
+	function (a, b, c) {
+		return {$: 'Validation', a: a, b: b, c: c};
+	});
+var $dillonkearns$elm_form$Form$mergeResults = function (parsed) {
+	var _v0 = parsed.result;
+	var _v1 = _v0.a;
+	var name = _v1.b;
+	var _v2 = _v1.c;
+	var parsedThing = _v2.a;
+	var combineErrors = _v2.b;
+	var individualFieldErrors = _v0.b;
+	return A3(
+		$dillonkearns$elm_form$Pages$Internal$Form$Validation,
+		$elm$core$Maybe$Nothing,
+		name,
+		_Utils_Tuple2(
+			parsedThing,
+			A2($dillonkearns$elm_form$Form$mergeErrors, combineErrors, individualFieldErrors)));
+};
+var $elm$html$Html$Attributes$name = $elm$html$Html$Attributes$stringProperty('name');
+var $elm$core$Dict$union = F2(
+	function (t1, t2) {
+		return A3($elm$core$Dict$foldl, $elm$core$Dict$insert, t2, t1);
+	});
+var $dillonkearns$elm_form$Form$unwrapValidation = function (_v0) {
+	var _v1 = _v0.c;
+	var maybeParsed = _v1.a;
+	var errors = _v1.b;
+	return _Utils_Tuple2(maybeParsed, errors);
+};
+var $dillonkearns$elm_form$Form$helperValues = F4(
+	function (options_, toHiddenInput, formState, _v0) {
+		var fieldDefinitions = _v0.a;
+		var parser = _v0.b;
+		var toInitialValues = _v0.c;
+		var part2 = A2(
+			$elm$core$Maybe$withDefault,
+			A2(
+				$elm$core$Maybe$withDefault,
+				$dillonkearns$elm_form$Form$initFormState,
+				A2(
+					$elm$core$Maybe$map,
+					function (fields) {
+						return {
+							fields: $elm$core$Dict$fromList(
+								A2(
+									$elm$core$List$map,
+									$elm$core$Tuple$mapSecond(
+										function (value) {
+											return {status: $dillonkearns$elm_form$Form$Validation$NotVisited, value: value};
+										}),
+									fields)),
+							submitAttempted: true
+						};
+					},
+					A2(
+						$elm$core$Maybe$andThen,
+						A2(
+							$elm$core$Basics$composeR,
+							function ($) {
+								return $.persisted;
+							},
+							function ($) {
+								return $.fields;
+							}),
+						options_.serverResponse))),
+			A2($elm$core$Dict$get, options_.id, formState.state)).fields;
+		var initialValues = $elm$core$Dict$fromList(
+			A2(
+				$elm$core$List$filterMap,
+				function (_v8) {
+					var key = _v8.a;
+					var maybeValue = _v8.b;
+					return A2(
+						$elm$core$Maybe$map,
+						function (value) {
+							return _Utils_Tuple2(
+								key,
+								{status: $dillonkearns$elm_form$Form$Validation$NotVisited, value: value});
+						},
+						maybeValue);
+				},
+				toInitialValues(options_.input)));
+		var hiddenInputs = A2(
+			$elm$core$List$filterMap,
+			function (_v6) {
+				var name = _v6.a;
+				var fieldDefinition = _v6.b;
+				if (fieldDefinition.$ === 'HiddenField') {
+					return $elm$core$Maybe$Just(
+						toHiddenInput(
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$name(name),
+									$elm$html$Html$Attributes$type_('hidden'),
+									$elm$html$Html$Attributes$value(
+									A2(
+										$elm$core$Maybe$withDefault,
+										'',
+										A2(
+											$elm$core$Maybe$map,
+											function ($) {
+												return $.value;
+											},
+											A2($elm$core$Dict$get, name, initialValues))))
+								])));
+				} else {
+					return $elm$core$Maybe$Nothing;
+				}
+			},
+			fieldDefinitions);
+		var fullFormState = A2($elm$core$Dict$union, part2, initialValues);
+		var rawFields = A2(
+			$elm$core$List$map,
+			$elm$core$Tuple$mapSecond(
+				function ($) {
+					return $.value;
+				}),
+			$elm$core$Dict$toList(fullFormState));
+		var thisFormState = function (state) {
+			return _Utils_update(
+				state,
+				{fields: fullFormState});
+		}(
+			A2(
+				$elm$core$Maybe$withDefault,
+				A2(
+					$elm$core$Maybe$withDefault,
+					$dillonkearns$elm_form$Form$initSingle,
+					A2(
+						$elm$core$Maybe$map,
+						function (fields) {
+							return {
+								fields: $elm$core$Dict$fromList(
+									A2(
+										$elm$core$List$map,
+										$elm$core$Tuple$mapSecond(
+											function (value) {
+												return {status: $dillonkearns$elm_form$Form$Validation$NotVisited, value: value};
+											}),
+										fields)),
+								submitAttempted: true
+							};
+						},
+						A2(
+							$elm$core$Maybe$andThen,
+							A2(
+								$elm$core$Basics$composeR,
+								function ($) {
+									return $.persisted;
+								},
+								function ($) {
+									return $.fields;
+								}),
+							options_.serverResponse))),
+				A2($elm$core$Dict$get, options_.id, formState.state)));
+		var parsed1 = A2(
+			parser,
+			$elm$core$Maybe$Just(options_.input),
+			$dillonkearns$elm_form$Form$convert(thisFormState));
+		var parsed = {
+			isMatchCandidate: parsed1.isMatchCandidate,
+			result: _Utils_Tuple2(parsed1.combineAndView.combine, parsed1.result),
+			view: parsed1.combineAndView.view
+		};
+		var withServerErrors = $dillonkearns$elm_form$Form$mergeResults(
+			_Utils_update(
+				parsed,
+				{
+					result: A2(
+						$elm$core$Tuple$mapSecond,
+						function (errors1) {
+							return A2(
+								$dillonkearns$elm_form$Form$mergeErrors,
+								errors1,
+								A2(
+									$elm$core$Maybe$withDefault,
+									$elm$core$Dict$empty,
+									A2(
+										$elm$core$Maybe$andThen,
+										A2(
+											$elm$core$Basics$composeR,
+											function ($) {
+												return $.persisted;
+											},
+											function ($) {
+												return $.clientSideErrors;
+											}),
+										options_.serverResponse)));
+						},
+						parsed.result)
+				}));
+		var withoutServerErrors = $dillonkearns$elm_form$Form$mergeResults(parsed);
+		var isValid = function () {
+			if (withoutServerErrors.c.a.$ === 'Just') {
+				var _v5 = withoutServerErrors.c;
+				var errors = _v5.b;
+				return $elm$core$Dict$isEmpty(errors);
+			} else {
+				return false;
+			}
+		}();
+		var context = {
+			errors: $dillonkearns$elm_form$Form$Errors(
+				$dillonkearns$elm_form$Form$unwrapValidation(withServerErrors).b),
+			input: options_.input,
+			submitAttempted: thisFormState.submitAttempted,
+			submitting: formState.submitting
+		};
+		var children = parsed.view(context);
+		var _v1 = function () {
+			var _v3 = withoutServerErrors.c;
+			var parsedValue = _v3.a;
+			var errors = _v3.b;
+			return _Utils_Tuple2(parsedValue, errors);
+		}();
+		var maybeParsed = _v1.a;
+		var errorsDict = _v1.b;
+		return {children: children, errors: errorsDict, fields: rawFields, hiddenInputs: hiddenInputs, isValid: isValid, parsed: maybeParsed};
+	});
+var $elm$html$Html$input = _VirtualDom_node('input');
+var $dillonkearns$elm_form$Internal$FieldEvent$FieldEvent = F4(
+	function (value, formId, name, event) {
+		return {event: event, formId: formId, name: name, value: value};
+	});
+var $dillonkearns$elm_form$Internal$FieldEvent$BlurEvent = {$: 'BlurEvent'};
+var $dillonkearns$elm_form$Internal$FieldEvent$FocusEvent = {$: 'FocusEvent'};
+var $dillonkearns$elm_form$Internal$FieldEvent$InputEvent = function (a) {
+	return {$: 'InputEvent', a: a};
+};
+var $elm$json$Json$Decode$bool = _Json_decodeBool;
+var $dillonkearns$elm_form$Pages$FormState$inputValueDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (targetType) {
+		switch (targetType) {
+			case 'button':
+				return $elm$json$Json$Decode$fail('Input and focus events don\'t run on buttons.');
+			case 'checkbox':
+				return A3(
+					$elm$json$Json$Decode$map2,
+					F2(
+						function (valueWhenChecked, isChecked) {
+							return isChecked ? valueWhenChecked : '';
+						}),
+					A2(
+						$elm$json$Json$Decode$at,
+						_List_fromArray(
+							['target', 'value']),
+						$elm$json$Json$Decode$string),
+					A2(
+						$elm$json$Json$Decode$at,
+						_List_fromArray(
+							['target', 'checked']),
+						$elm$json$Json$Decode$bool));
+			default:
+				return A2(
+					$elm$json$Json$Decode$at,
+					_List_fromArray(
+						['target', 'value']),
+					$elm$json$Json$Decode$string);
+		}
+	},
+	A2(
+		$elm$json$Json$Decode$at,
+		_List_fromArray(
+			['target', 'type']),
+		$elm$json$Json$Decode$string));
+var $dillonkearns$elm_form$Pages$FormState$fieldDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (type_) {
+		switch (type_) {
+			case 'input':
+				return A2($elm$json$Json$Decode$map, $dillonkearns$elm_form$Internal$FieldEvent$InputEvent, $dillonkearns$elm_form$Pages$FormState$inputValueDecoder);
+			case 'focusin':
+				return $elm$json$Json$Decode$succeed($dillonkearns$elm_form$Internal$FieldEvent$FocusEvent);
+			case 'focusout':
+				return $elm$json$Json$Decode$succeed($dillonkearns$elm_form$Internal$FieldEvent$BlurEvent);
+			default:
+				return $elm$json$Json$Decode$fail('Unexpected event.type');
+		}
+	},
+	A2($elm$json$Json$Decode$field, 'type', $elm$json$Json$Decode$string));
+var $dillonkearns$elm_form$Pages$FormState$fieldEventDecoder = A5(
+	$elm$json$Json$Decode$map4,
+	$dillonkearns$elm_form$Internal$FieldEvent$FieldEvent,
+	$dillonkearns$elm_form$Pages$FormState$inputValueDecoder,
+	A2(
+		$elm$json$Json$Decode$at,
+		_List_fromArray(
+			['currentTarget', 'id']),
+		$elm$json$Json$Decode$string),
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (name) {
+			return (name === '') ? $elm$json$Json$Decode$fail('Events only run on fields with names.') : $elm$json$Json$Decode$succeed(name);
+		},
+		A2(
+			$elm$json$Json$Decode$at,
+			_List_fromArray(
+				['target', 'name']),
+			$elm$json$Json$Decode$string)),
+	$dillonkearns$elm_form$Pages$FormState$fieldDecoder);
+var $dillonkearns$elm_form$Pages$FormState$listeners = function (formId) {
+	return _List_fromArray(
+		[
+			A2($elm$html$Html$Events$on, 'focusin', $dillonkearns$elm_form$Pages$FormState$fieldEventDecoder),
+			A2($elm$html$Html$Events$on, 'focusout', $dillonkearns$elm_form$Pages$FormState$fieldEventDecoder),
+			A2($elm$html$Html$Events$on, 'input', $dillonkearns$elm_form$Pages$FormState$fieldEventDecoder),
+			$elm$html$Html$Attributes$id(formId)
+		]);
+};
+var $elm$html$Html$Attributes$map = $elm$virtual_dom$VirtualDom$mapAttribute;
+var $elm$html$Html$Attributes$method = $elm$html$Html$Attributes$stringProperty('method');
+var $dillonkearns$elm_form$Form$methodToString = function (method) {
+	if (method.$ === 'Get') {
+		return 'GET';
+	} else {
+		return 'POST';
+	}
+};
+var $elm$html$Html$Attributes$novalidate = $elm$html$Html$Attributes$boolProperty('noValidate');
+var $dillonkearns$elm_form$Form$renderHelper = F4(
+	function (formState, options_, attrs, form_) {
+		var toHiddenInput = function (hiddenAttrs) {
+			return A2($elm$html$Html$input, hiddenAttrs, _List_Nil);
+		};
+		var _v0 = A4($dillonkearns$elm_form$Form$helperValues, options_, toHiddenInput, formState, form_);
+		var hiddenInputs = _v0.hiddenInputs;
+		var children = _v0.children;
+		var parsed = _v0.parsed;
+		var fields = _v0.fields;
+		var errors = _v0.errors;
+		return A2(
+			$elm$html$Html$form,
+			_Utils_ap(
+				A2(
+					$elm$core$List$map,
+					$elm$html$Html$Attributes$map(
+						A2($elm$core$Basics$composeR, $dillonkearns$elm_form$Internal$FieldEvent$FormFieldEvent, formState.toMsg)),
+					$dillonkearns$elm_form$Pages$FormState$listeners(options_.id)),
+				_Utils_ap(
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$method(
+							$dillonkearns$elm_form$Form$methodToString(options_.method)),
+							$elm$html$Html$Attributes$novalidate(true)
+						]),
+					_Utils_ap(
+						A2(
+							$elm$core$List$filterMap,
+							$elm$core$Basics$identity,
+							_List_fromArray(
+								[
+									A2($elm$core$Maybe$map, $elm$html$Html$Attributes$action, options_.action)
+								])),
+						_Utils_ap(
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$Attributes$map,
+									function (formDataThing) {
+										var maybeFormMsg = A2(
+											$elm$core$Maybe$map,
+											function (onSubmit) {
+												return onSubmit(
+													{
+														action: formDataThing.action,
+														fields: A2($elm$core$Maybe$withDefault, fields, formDataThing.fields),
+														method: function () {
+															var _v1 = formDataThing.method;
+															if (_v1.$ === 'Get') {
+																return $dillonkearns$elm_form$Form$Get;
+															} else {
+																return $dillonkearns$elm_form$Form$Post;
+															}
+														}(),
+														parsed: function () {
+															if (parsed.$ === 'Just') {
+																var justParsed = parsed.a;
+																return $elm$core$Dict$isEmpty(errors) ? $dillonkearns$elm_form$Form$Valid(justParsed) : A2(
+																	$dillonkearns$elm_form$Form$Invalid,
+																	$elm$core$Maybe$Just(justParsed),
+																	errors);
+															} else {
+																return A2($dillonkearns$elm_form$Form$Invalid, $elm$core$Maybe$Nothing, errors);
+															}
+														}()
+													});
+											},
+											options_.onSubmit);
+										return formState.toMsg(
+											A2($dillonkearns$elm_form$Internal$FieldEvent$Submit, formDataThing, maybeFormMsg));
+									},
+									$dillonkearns$elm_form$Internal$FieldEvent$formDataOnSubmit)
+								]),
+							attrs)))),
+			_Utils_ap(hiddenInputs, children));
+	});
+var $dillonkearns$elm_form$Form$renderHtml = F4(
+	function (state, options_, attrs, form_) {
+		return A5($elm$html$Html$Lazy$lazy4, $dillonkearns$elm_form$Form$renderHelper, state, options_, attrs, form_);
+	});
+var $elm$core$Maybe$map2 = F3(
+	function (func, ma, mb) {
+		if (ma.$ === 'Nothing') {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var a = ma.a;
+			if (mb.$ === 'Nothing') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var b = mb.a;
+				return $elm$core$Maybe$Just(
+					A2(func, a, b));
+			}
+		}
+	});
+var $dillonkearns$elm_form$Form$Validation$insertIfNonempty = F3(
+	function (key, values, dict) {
+		return $elm$core$List$isEmpty(values) ? dict : A3($elm$core$Dict$insert, key, values, dict);
+	});
+var $dillonkearns$elm_form$Form$Validation$mergeErrors = F2(
+	function (errors1, errors2) {
+		return A6(
+			$elm$core$Dict$merge,
+			F3(
+				function (key, entries, soFar) {
+					return A3($dillonkearns$elm_form$Form$Validation$insertIfNonempty, key, entries, soFar);
+				}),
+			F4(
+				function (key, entries1, entries2, soFar) {
+					return A3(
+						$dillonkearns$elm_form$Form$Validation$insertIfNonempty,
+						key,
+						_Utils_ap(entries1, entries2),
+						soFar);
+				}),
+			F3(
+				function (key, entries, soFar) {
+					return A3($dillonkearns$elm_form$Form$Validation$insertIfNonempty, key, entries, soFar);
+				}),
+			errors1,
+			errors2,
+			$elm$core$Dict$empty);
+	});
+var $dillonkearns$elm_form$Form$Validation$map2 = F3(
+	function (f, _v0, _v2) {
+		var _v1 = _v0.c;
+		var maybeParsedA = _v1.a;
+		var errorsA = _v1.b;
+		var _v3 = _v2.c;
+		var maybeParsedB = _v3.a;
+		var errorsB = _v3.b;
+		return A3(
+			$dillonkearns$elm_form$Pages$Internal$Form$Validation,
+			$elm$core$Maybe$Nothing,
+			$elm$core$Maybe$Nothing,
+			_Utils_Tuple2(
+				A3($elm$core$Maybe$map2, f, maybeParsedA, maybeParsedB),
+				A2($dillonkearns$elm_form$Form$Validation$mergeErrors, errorsA, errorsB)));
+	});
+var $dillonkearns$elm_form$Form$Validation$andMap = $dillonkearns$elm_form$Form$Validation$map2($elm$core$Basics$apR);
+var $elm$html$Html$button = _VirtualDom_node('button');
+var $dillonkearns$elm_form$Internal$Form$Form = F3(
+	function (a, b, c) {
+		return {$: 'Form', a: a, b: b, c: c};
+	});
+var $dillonkearns$elm_form$Internal$Form$RegularField = {$: 'RegularField'};
+var $dillonkearns$elm_form$Form$addErrorsInternal = F3(
+	function (name, newErrors, allErrors) {
+		return A3(
+			$elm$core$Dict$update,
+			name,
+			function (errors) {
+				return $elm$core$Maybe$Just(
+					_Utils_ap(
+						newErrors,
+						A2($elm$core$Maybe$withDefault, _List_Nil, errors)));
+			},
+			allErrors);
+	});
+var $dillonkearns$elm_form$Form$FieldStatus$notVisited = 0;
+var $dillonkearns$elm_form$Form$field = F3(
+	function (name, _v0, _v1) {
+		var fieldParser = _v0.a;
+		var kind = _v0.b;
+		var definitions = _v1.a;
+		var parseFn = _v1.b;
+		var toInitialValues = _v1.c;
+		return A3(
+			$dillonkearns$elm_form$Internal$Form$Form,
+			A2(
+				$elm$core$List$cons,
+				_Utils_Tuple2(name, $dillonkearns$elm_form$Internal$Form$RegularField),
+				definitions),
+			F2(
+				function (maybeData, formState) {
+					var _v2 = function () {
+						var _v3 = A2($elm$core$Dict$get, name, formState.fields);
+						if (_v3.$ === 'Just') {
+							var info = _v3.a;
+							return _Utils_Tuple2(
+								$elm$core$Maybe$Just(info.value),
+								info.status);
+						} else {
+							return _Utils_Tuple2(
+								A2(
+									$elm$core$Maybe$andThen,
+									function (data) {
+										return fieldParser.initialValue(data);
+									},
+									maybeData),
+								$dillonkearns$elm_form$Form$FieldStatus$notVisited);
+						}
+					}();
+					var rawFieldValue = _v2.a;
+					var fieldStatus = _v2.b;
+					var thing = {
+						kind: _Utils_Tuple2(kind, fieldParser.properties),
+						status: fieldStatus,
+						value: rawFieldValue
+					};
+					var _v4 = fieldParser.decode(rawFieldValue);
+					var maybeParsed = _v4.a;
+					var errors = _v4.b;
+					var parsedField = A3(
+						$dillonkearns$elm_form$Pages$Internal$Form$Validation,
+						$elm$core$Maybe$Just(thing),
+						$elm$core$Maybe$Just(name),
+						_Utils_Tuple2(maybeParsed, $elm$core$Dict$empty));
+					var myFn = function (soFar) {
+						var validationField = parsedField;
+						return {
+							combineAndView: soFar.combineAndView(validationField),
+							isMatchCandidate: soFar.isMatchCandidate,
+							result: A3($dillonkearns$elm_form$Form$addErrorsInternal, name, errors, soFar.result)
+						};
+					};
+					return myFn(
+						A2(parseFn, maybeData, formState));
+				}),
+			function (input) {
+				var _v5 = fieldParser.initialValue(input);
+				if (_v5.$ === 'Just') {
+					var initialValue = _v5.a;
+					return A2(
+						$elm$core$List$cons,
+						_Utils_Tuple2(
+							name,
+							$elm$core$Maybe$Just(initialValue)),
+						toInitialValues(input));
+				} else {
+					return toInitialValues(input);
+				}
+			});
+	});
+var $dillonkearns$elm_form$Form$Validation$fieldName = function (_v0) {
+	var name = _v0.b;
+	return A2($elm$core$Maybe$withDefault, '', name);
+};
+var $dillonkearns$elm_form$Form$errorsForField = F2(
+	function (field_, _v0) {
+		var errorsDict = _v0.a;
+		return A2(
+			$elm$core$Maybe$withDefault,
+			_List_Nil,
+			A2(
+				$elm$core$Dict$get,
+				$dillonkearns$elm_form$Form$Validation$fieldName(field_),
+				errorsDict));
+	});
+var $elm$html$Html$Attributes$checked = $elm$html$Html$Attributes$boolProperty('checked');
+var $elm$html$Html$Attributes$cols = function (n) {
+	return A2(
+		_VirtualDom_attribute,
+		'cols',
+		$elm$core$String$fromInt(n));
+};
+var $dillonkearns$elm_form$Form$FieldView$expectViewField = function (viewField) {
+	expectViewField:
+	while (true) {
+		if (viewField.$ === 'Just') {
+			var justViewField = viewField.a;
+			return justViewField;
+		} else {
+			var $temp$viewField = viewField;
+			viewField = $temp$viewField;
+			continue expectViewField;
+		}
+	}
+};
+var $dillonkearns$elm_form$Internal$Input$inputTypeToString = function (inputType) {
+	switch (inputType.$) {
+		case 'Text':
+			return 'text';
+		case 'Textarea':
+			return 'text';
+		case 'Number':
+			return 'number';
+		case 'Range':
+			return 'range';
+		case 'Date':
+			return 'date';
+		case 'Time':
+			return 'time';
+		case 'Checkbox':
+			return 'checkbox';
+		case 'Tel':
+			return 'tel';
+		case 'Search':
+			return 'search';
+		case 'Password':
+			return 'password';
+		case 'Email':
+			return 'email';
+		default:
+			return 'url';
+	}
+};
+var $elm$html$Html$Attributes$rows = function (n) {
+	return A2(
+		_VirtualDom_attribute,
+		'rows',
+		$elm$core$String$fromInt(n));
+};
+var $elm$html$Html$textarea = _VirtualDom_node('textarea');
+var $elm$html$Html$Attributes$property = $elm$virtual_dom$VirtualDom$property;
+var $dillonkearns$elm_form$Form$FieldView$toHtmlProperties = function (properties) {
+	return A2(
+		$elm$core$List$map,
+		function (_v0) {
+			var key = _v0.a;
+			var value = _v0.b;
+			return A2($elm$html$Html$Attributes$property, key, value);
+		},
+		properties);
+};
+var $dillonkearns$elm_form$Form$FieldView$input = F2(
+	function (attrs, _v0) {
+		var viewField = _v0.a;
+		var fieldName = _v0.b;
+		var justViewField = $dillonkearns$elm_form$Form$FieldView$expectViewField(viewField);
+		var rawField = {
+			kind: justViewField.kind,
+			name: A2($elm$core$Maybe$withDefault, '', fieldName),
+			value: justViewField.value
+		};
+		var _v1 = rawField.kind;
+		if (_v1.a.a.$ === 'Textarea') {
+			var rows = _v1.a.a.a.rows;
+			var cols = _v1.a.a.a.cols;
+			var properties = _v1.b;
+			return A2(
+				$elm$html$Html$textarea,
+				_Utils_ap(
+					attrs,
+					_Utils_ap(
+						$dillonkearns$elm_form$Form$FieldView$toHtmlProperties(properties),
+						_Utils_ap(
+							A2(
+								$elm$core$List$filterMap,
+								$elm$core$Basics$identity,
+								_List_fromArray(
+									[
+										A2($elm$core$Maybe$map, $elm$html$Html$Attributes$rows, rows),
+										A2($elm$core$Maybe$map, $elm$html$Html$Attributes$cols, cols)
+									])),
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$name(rawField.name)
+								])))),
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						A2($elm$core$Maybe$withDefault, '', rawField.value))
+					]));
+		} else {
+			var inputType = _v1.a.a;
+			var properties = _v1.b;
+			return A2(
+				$elm$html$Html$input,
+				_Utils_ap(
+					attrs,
+					_Utils_ap(
+						$dillonkearns$elm_form$Form$FieldView$toHtmlProperties(properties),
+						_List_fromArray(
+							[
+								function () {
+								if (inputType.$ === 'Checkbox') {
+									return $elm$html$Html$Attributes$checked(
+										A2($elm$core$Maybe$withDefault, '', rawField.value) === 'on');
+								} else {
+									return $elm$html$Html$Attributes$value(
+										A2($elm$core$Maybe$withDefault, '', rawField.value));
+								}
+							}(),
+								$elm$html$Html$Attributes$name(rawField.name),
+								$elm$html$Html$Attributes$type_(
+								$dillonkearns$elm_form$Internal$Input$inputTypeToString(inputType))
+							]))),
+				_List_Nil);
+		}
+	});
+var $elm$html$Html$label = _VirtualDom_node('label');
+var $elm$html$Html$li = _VirtualDom_node('li');
+var $elm$html$Html$ul = _VirtualDom_node('ul');
+var $author$project$Main$fieldView = F3(
+	function (formState, label, field) {
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$label,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(label + ' '),
+							A2($dillonkearns$elm_form$Form$FieldView$input, _List_Nil, field)
+						])),
+					A2(
+					$elm$html$Html$ul,
+					_List_fromArray(
+						[
+							A2($elm$html$Html$Attributes$style, 'color', 'red')
+						]),
+					formState.submitAttempted ? A2(
+						$elm$core$List$map,
+						function (error) {
+							return A2(
+								$elm$html$Html$li,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text(error)
+									]));
+						},
+						A2($dillonkearns$elm_form$Form$errorsForField, field, formState.errors)) : _List_Nil)
+				]));
+	});
+var $dillonkearns$elm_form$Form$form = function (combineAndView) {
+	return A3(
+		$dillonkearns$elm_form$Internal$Form$Form,
+		_List_Nil,
+		F2(
+			function (_v0, _v1) {
+				return {combineAndView: combineAndView, isMatchCandidate: true, result: $elm$core$Dict$empty};
+			}),
+		function (_v2) {
+			return _List_Nil;
+		});
+};
+var $dillonkearns$elm_form$Internal$Field$Field = F2(
+	function (a, b) {
+		return {$: 'Field', a: a, b: b};
+	});
+var $dillonkearns$elm_form$Internal$Input$Input = function (a) {
+	return {$: 'Input', a: a};
+};
+var $dillonkearns$elm_form$Internal$Input$Search = {$: 'Search'};
+var $dillonkearns$elm_form$Form$Field$search = function (_v0) {
+	var field = _v0.a;
+	return A2(
+		$dillonkearns$elm_form$Internal$Field$Field,
+		field,
+		$dillonkearns$elm_form$Internal$Input$Input($dillonkearns$elm_form$Internal$Input$Search));
+};
+var $author$project$Main$SearchForm = F3(
+	function (title, author, keyword) {
+		return {author: author, keyword: keyword, title: title};
+	});
+var $author$project$Main$searchForm = F3(
+	function (title, author, keyword) {
+		var nothingIsJustEmpty = $elm$core$Maybe$withDefault('');
+		return A3(
+			$author$project$Main$SearchForm,
+			nothingIsJustEmpty(title),
+			nothingIsJustEmpty(author),
+			nothingIsJustEmpty(keyword));
+	});
+var $dillonkearns$elm_form$Form$Validation$succeed = function (parsed) {
+	return A3(
+		$dillonkearns$elm_form$Pages$Internal$Form$Validation,
+		$elm$core$Maybe$Nothing,
+		$elm$core$Maybe$Nothing,
+		_Utils_Tuple2(
+			$elm$core$Maybe$Just(parsed),
+			$elm$core$Dict$empty));
+};
+var $dillonkearns$elm_form$Internal$Input$Text = {$: 'Text'};
+var $dillonkearns$elm_form$Form$Field$text = A2(
+	$dillonkearns$elm_form$Internal$Field$Field,
+	{
+		compare: $elm$core$Basics$compare,
+		decode: function (rawValue) {
+			return _Utils_Tuple2(
+				_Utils_eq(
+					rawValue,
+					$elm$core$Maybe$Just('')) ? $elm$core$Maybe$Just($elm$core$Maybe$Nothing) : $elm$core$Maybe$Just(rawValue),
+				_List_Nil);
+		},
+		initialToString: $elm$core$Basics$identity,
+		initialValue: function (_v0) {
+			return $elm$core$Maybe$Nothing;
+		},
+		properties: _List_Nil
+	},
+	$dillonkearns$elm_form$Internal$Input$Input($dillonkearns$elm_form$Internal$Input$Text));
+var $author$project$Main$searchGUI = A3(
+	$dillonkearns$elm_form$Form$field,
+	'keyword',
+	$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
+	A3(
+		$dillonkearns$elm_form$Form$field,
+		'author',
+		$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
+		A3(
+			$dillonkearns$elm_form$Form$field,
+			'title',
+			$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
+			$dillonkearns$elm_form$Form$form(
+				F3(
+					function (title, author, keyword) {
+						return {
+							combine: A2(
+								$dillonkearns$elm_form$Form$Validation$andMap,
+								keyword,
+								A2(
+									$dillonkearns$elm_form$Form$Validation$andMap,
+									author,
+									A2(
+										$dillonkearns$elm_form$Form$Validation$andMap,
+										title,
+										$dillonkearns$elm_form$Form$Validation$succeed($author$project$Main$searchForm)))),
+							view: function (info) {
+								return _List_fromArray(
+									[
+										A2(
+										$elm$html$Html$div,
+										_List_Nil,
+										_List_fromArray(
+											[
+												A2(
+												$elm$html$Html$label,
+												_List_Nil,
+												_List_fromArray(
+													[
+														A3($author$project$Main$fieldView, info, 'title', title),
+														A3($author$project$Main$fieldView, info, 'author', author),
+														A3($author$project$Main$fieldView, info, 'keyword', keyword)
+													])),
+												A2(
+												$elm$html$Html$button,
+												_List_Nil,
+												_List_fromArray(
+													[
+														info.submitting ? $elm$html$Html$text('searching...') : $elm$html$Html$text('search')
+													]))
+											]))
+									]);
+							}
+						};
+					})))));
+var $dillonkearns$elm_form$Form$withOnSubmit = F2(
+	function (onSubmit, options_) {
+		return {
+			action: options_.action,
+			extras: options_.extras,
+			id: options_.id,
+			input: options_.input,
+			method: options_.method,
+			onSubmit: $elm$core$Maybe$Just(onSubmit),
+			serverResponse: options_.serverResponse
+		};
+	});
+var $author$project$Main$viewSearch = F2(
+	function (submitting, searchFormState) {
+		return $mdgriffith$elm_ui$Element$html(
+			A4(
+				$dillonkearns$elm_form$Form$renderHtml,
+				{state: searchFormState, submitting: submitting, toMsg: $author$project$Main$FormMsg},
+				A2(
+					$dillonkearns$elm_form$Form$withOnSubmit,
+					function (record) {
+						return $author$project$Main$SubmitSearch(record.parsed);
+					},
+					$dillonkearns$elm_form$Form$options('signUpForm')),
+				_List_Nil,
+				$author$project$Main$searchGUI));
+	});
+var $author$project$Main$viewResearchResults = F9(
+	function (submitting, searchFormState, dimensions, layout, v, lst, keywords, sorting, _v0) {
 		var p = _v0.a;
 		var urlFromLayout = F2(
 			function (s, l) {
@@ -16014,6 +17221,7 @@ var $author$project$Main$viewResearchResults = F7(
 					$mdgriffith$elm_ui$Element$el,
 					$author$project$RCStyles$defaultPadding,
 					$mdgriffith$elm_ui$Element$text('search results')),
+					A2($author$project$Main$viewSearch, submitting, searchFormState),
 					A2(
 					$author$project$Main$viewLayoutSwitch,
 					layout,
@@ -16055,7 +17263,7 @@ var $author$project$Main$view = function (model) {
 			var _v1 = model.search;
 			if (_v1.$ === 'FoundResearch') {
 				var lst = _v1.a;
-				return A7($author$project$Main$viewResearchResults, model.screenDimensions, layout, model.view, lst, keywords, sorting, page);
+				return A9($author$project$Main$viewResearchResults, model.submitting, model.searchGUI, model.screenDimensions, layout, model.view, lst, keywords, sorting, page);
 			} else {
 				return $mdgriffith$elm_ui$Element$text('search interface');
 			}

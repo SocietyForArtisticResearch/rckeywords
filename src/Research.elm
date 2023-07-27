@@ -13,19 +13,32 @@ module Research exposing
     , Research
     , ReverseKeywordDict
     , TitleSorting(..)
+    , author
     , authorAsString
     , authorUrl
+    , calcStatus
     , decodeExposition
     , decodeKeyword
+    , decodePublicationStatus
     , decoder
+    , dmyToYmd
     , emptyKeywordSet
+    , encodeAuthor
     , encodeExposition
     , encodeKeyword
+    , findResearchAfter
+    , findResearchWithAuthor
     , findResearchWithKeywords
+    , findResearchWithTitle
+    , getAuthorId
     , getCount
     , getName
+    , insert
+    , keyword
     , keywordSet
     , kwName
+    , newKey
+    , publicationstatus
     , reverseKeywordDict
     , shuffleWithSeed
     , sortingFromString
@@ -33,6 +46,7 @@ module Research exposing
     , titleSortingFromString
     , titleSortingToString
     , toList
+    , use
     )
 
 import Dict exposing (Dict)
@@ -596,10 +610,17 @@ findResearchWithKeywords kw dict research =
     in
     case kw |> Set.toList of
         [] ->
+            let
+                _ =
+                    Debug.log "hey it is empty" ""
+            in
             research
 
         kws ->
             let
+                _ =
+                    Debug.log "no it is not empty" kws
+
                 ids =
                     kws
                         |> List.map (findKw >> List.map getId >> Set.fromList)
@@ -617,11 +638,13 @@ findResearchWithTitle q lst =
         f r =
             r.title |> String.toLower |> String.contains (String.toLower q)
     in
-        case q of 
-        "" -> lst 
+    case q of
+        "" ->
+            lst
 
-        _ -> 
+        _ ->
             List.filter f lst
+
 
 findResearchWithAuthor : String -> List Research -> List Research
 findResearchWithAuthor qauthor lst =
@@ -630,11 +653,13 @@ findResearchWithAuthor qauthor lst =
         f r =
             r.author |> getName |> String.toLower |> String.contains (String.toLower qauthor)
     in
-        case qauthor of 
-        "" -> lst 
+    case qauthor of
+        "" ->
+            lst
 
-        _ -> 
+        _ ->
             List.filter f lst
+
 
 findResearchAfter : Time.Posix -> List Research -> List Research
 findResearchAfter posix lst =

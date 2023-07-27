@@ -340,20 +340,35 @@ update msg model =
             ( { model | searchGUI = updatedFormModel }, cmd )
 
         SubmitSearch validated ->
-            ( model, Cmd.none )
+            -- TODO: update url with this search state 
+            case validated of
+                Form.Valid srch ->
+                    let
+                        fullSearch =
+                            Queries.emptySearch
+                                |> Queries.withTitle srch.title
+                                |> Queries.withAuthor srch.author
+                                |> Queries.withKeywords
+                                    (case srch.keyword of
+                                        "" ->
+                                            []
 
+                                        nonEmptyStr ->
+                                            [ nonEmptyStr ]
+                                    )
 
-viewSearch model =
-    searchGUI
-        |> Form.renderHtml
-            { submitting = model.submitting
-            , state = model.searchGUI
-            , toMsg = FormMsg
-            }
-            (Form.options "signUpForm"
-                |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
-            )
-            []
+                        queryCmd =
+                            sendQuery
+                                (Queries.encodeSearchQuery (FindResearch fullSearch))
+                    in
+                    ( model, queryCmd )
+
+                Form.Invalid m x ->
+                    let
+                        _ =
+                            Debug.log "no" ( m, x )
+                    in
+                    ( model, Cmd.none )
 
 
 urlWhereFragmentIsPath : Url -> AppUrl.AppUrl
@@ -785,7 +800,7 @@ view model =
                 SearchView layout keywords sorting page ->
                     case model.search of
                         FoundResearch lst ->
-                            viewResearchResults model.screenDimensions layout model.view lst keywords sorting page
+                            viewResearchResults model.submitting model.searchGUI model.screenDimensions layout model.view lst keywords sorting page
 
                         _ ->
                             Element.text "search interface"
@@ -870,8 +885,8 @@ anchor anchorId =
     Element.htmlAttribute (Attr.id anchorId)
 
 
-viewResearchResults : ScreenDimensions -> Layout -> View -> List Research -> List String -> RC.TitleSorting -> Page -> Element Msg
-viewResearchResults dimensions layout v lst keywords sorting (Page p) =
+viewResearchResults : Bool -> Form.Model -> ScreenDimensions -> Layout -> View -> List Research -> List String -> RC.TitleSorting -> Page -> Element Msg
+viewResearchResults submitting searchFormState dimensions layout v lst keywords sorting (Page p) =
     let
         sorted : List Research
         sorted =
@@ -920,6 +935,7 @@ viewResearchResults dimensions layout v lst keywords sorting (Page p) =
     in
     Element.column [ anchor "top" ] <|
         [ Element.el RCStyles.defaultPadding (Element.text "search results")
+        , viewSearch submitting searchFormState
         , viewLayoutSwitch layout (urlFromLayout sorting)
         , toggleTitleSorting sorting urlFromSorting
         , case keywords of
@@ -1405,17 +1421,37 @@ makeNumColumns num input =
 
 
 type alias SearchForm =
-    { title : Maybe String
-    , author : Maybe String
-    , keyword : Maybe String
+    { title : String
+    , author : String
+    , keyword : String
     }
 
 
+searchForm : Maybe String -> Maybe String -> Maybe String -> SearchForm
+searchForm title author keyword =
+    let
+        nothingIsJustEmpty =
+            Maybe.withDefault ""
+    in
+    SearchForm
+        (nothingIsJustEmpty title)
+        (nothingIsJustEmpty author)
+        (nothingIsJustEmpty keyword)
+
+
+searchGUI :
+    Form.Form
+        String
+        { combine : Validation.Validation String SearchForm Never constraints3
+        , view : { a | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg)
+        }
+        parsedCombined
+        input
 searchGUI =
     Form.form
         (\title author keyword ->
             { combine =
-                Validation.succeed SearchForm
+                Validation.succeed searchForm
                     |> Validation.andMap title
                     |> Validation.andMap author
                     |> Validation.andMap keyword
@@ -1462,3 +1498,19 @@ fieldView formState label field =
           )
             |> Html.ul [ Attr.style "color" "red" ]
         ]
+
+
+viewSearch : Bool -> Form.Model -> Element Msg
+viewSearch submitting searchFormState =
+    Element.html
+        (searchGUI
+            |> Form.renderHtml
+                { submitting = submitting
+                , state = searchFormState
+                , toMsg = FormMsg
+                }
+                (Form.options "signUpForm"
+                    |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
+                )
+                []
+        )

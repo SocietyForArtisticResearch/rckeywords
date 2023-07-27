@@ -4706,6 +4706,7 @@ var $elm$core$Set$intersect = F2(
 		return $elm$core$Set$Set_elm_builtin(
 			A2($elm$core$Dict$intersect, dict1, dict2));
 	});
+var $elm$core$Debug$log = _Debug_log;
 var $elm$core$List$any = F2(
 	function (isOkay, list) {
 		any:
@@ -4774,6 +4775,7 @@ var $author$project$Research$findResearchWithKeywords = F3(
 		};
 		var _v0 = $elm$core$Set$toList(kw);
 		if (!_v0.b) {
+			var _v1 = A2($elm$core$Debug$log, 'hey it is empty', '');
 			return research;
 		} else {
 			var kws = _v0;
@@ -4788,6 +4790,7 @@ var $author$project$Research$findResearchWithKeywords = F3(
 							$elm$core$List$map(getId),
 							$elm$core$Set$fromList)),
 					kws));
+			var _v2 = A2($elm$core$Debug$log, 'no it is not empty', kws);
 			return A2(
 				$elm$core$List$filter,
 				function (exp) {
@@ -4912,6 +4915,64 @@ var $author$project$Research$reverseKeywordDict = function (research) {
 		});
 	return A3($elm$core$List$foldl, addResearchToDict, $elm$core$Dict$empty, research);
 };
+var $author$project$Research$findResearchWithAuthor = F2(
+	function (qauthor, lst) {
+		var f = function (r) {
+			return A2(
+				$elm$core$String$contains,
+				$elm$core$String$toLower(qauthor),
+				$elm$core$String$toLower(
+					$author$project$Research$getName(r.author)));
+		};
+		if (qauthor === '') {
+			return lst;
+		} else {
+			return A2($elm$core$List$filter, f, lst);
+		}
+	});
+var $author$project$Research$findResearchWithTitle = F2(
+	function (q, lst) {
+		var f = function (r) {
+			return A2(
+				$elm$core$String$contains,
+				$elm$core$String$toLower(q),
+				$elm$core$String$toLower(r.title));
+		};
+		if (q === '') {
+			return lst;
+		} else {
+			return A2($elm$core$List$filter, f, lst);
+		}
+	});
+var $author$project$Worker$printLength = F2(
+	function (label, lst) {
+		var _v0 = A2(
+			$elm$core$Debug$log,
+			'* length is * ' + label,
+			$elm$core$List$length(lst));
+		return lst;
+	});
+var $author$project$Worker$searchResearch = F3(
+	function (_v0, revDict, lst) {
+		var search = _v0.a;
+		return A2(
+			$author$project$Worker$printLength,
+			'keywords',
+			A3(
+				$author$project$Research$findResearchWithKeywords,
+				search.keywords,
+				revDict,
+				A2(
+					$author$project$Worker$printLength,
+					'author',
+					A2(
+						$author$project$Research$findResearchWithAuthor,
+						search.author,
+						A2(
+							$author$project$Worker$printLength,
+							'title',
+							A2($author$project$Research$findResearchWithTitle, search.title, lst))))));
+	});
 var $author$project$Worker$update = F2(
 	function (msg, model) {
 		switch (model.$) {
@@ -4971,13 +5032,12 @@ var $author$project$Worker$update = F2(
 											A3($author$project$Worker$findKeywords, str, kwSorting, lmodel.keywords)))));
 						} else {
 							var search = q.a;
-							var kws = $author$project$Queries$getKeywords(search);
 							return _Utils_Tuple2(
 								$author$project$Worker$Loaded(lmodel),
 								$author$project$Worker$returnResults(
 									$author$project$Queries$encodeSearchResult(
 										$author$project$Queries$Expositions(
-											A3($author$project$Research$findResearchWithKeywords, kws, lmodel.reverseKeywordDict, lmodel.research)))));
+											A3($author$project$Worker$searchResearch, search, lmodel.reverseKeywordDict, lmodel.research)))));
 						}
 					} else {
 						return _Utils_Tuple2(

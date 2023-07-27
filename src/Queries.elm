@@ -2,15 +2,23 @@ module Queries exposing
     ( Search(..)
     , SearchQuery(..)
     , SearchResult(..)
+    , decodeKeywordSorting
+    , decodeSearch
     , decodeSearchQuery
     , decodeSearchResult
+    , emptySearch
+    , encodeKeywordSorting
+    , encodeSearch
     , encodeSearchQuery
     , encodeSearchResult
-    , searchWithKeywords
     , getKeywords
-    , emptySearch
+    , search
+    , searchWithKeywords
+    , withAuthor
+    , withKeywords
+    , withTitle
     )
-
+ 
 import Json.Decode exposing (field, int, list, map, string)
 import Json.Encode as E
 import Research as RC
@@ -25,6 +33,24 @@ type Search
         , keywords : Set String
         , after : Time.Posix
         , before : Time.Posix
+        }
+
+
+withAuthor : String -> Search -> Search
+withAuthor author (Search s) =
+    Search { s | author = author }
+
+
+withKeywords : List String -> Search -> Search
+withKeywords keywords (Search s) =
+    Search { s | keywords = Set.fromList keywords }
+
+
+withTitle : String -> Search -> Search
+withTitle title (Search s) =
+    Search
+        { s
+            | title = title
         }
 
 

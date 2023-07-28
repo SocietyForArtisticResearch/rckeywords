@@ -364,10 +364,6 @@ update msg model =
                     ( model, queryCmd )
 
                 Form.Invalid m x ->
-                    let
-                        _ =
-                            Debug.log "no" ( m, x )
-                    in
                     ( model, Cmd.none )
 
 

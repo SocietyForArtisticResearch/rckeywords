@@ -610,17 +610,10 @@ findResearchWithKeywords kw dict research =
     in
     case kw |> Set.toList of
         [] ->
-            let
-                _ =
-                    Debug.log "hey it is empty" ""
-            in
             research
 
         kws ->
             let
-                _ =
-                    Debug.log "no it is not empty" kws
-
                 ids =
                     kws
                         |> List.map (findKw >> List.map getId >> Set.fromList)
@@ -663,4 +656,4 @@ findResearchWithAuthor qauthor lst =
 
 findResearchAfter : Time.Posix -> List Research -> List Research
 findResearchAfter posix lst =
-    Debug.todo "we need to turn created date into posix to support this"
+    lst

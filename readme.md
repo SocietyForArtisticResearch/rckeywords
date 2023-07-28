@@ -80,7 +80,12 @@ viewResearch : Research -> Element Msg
     * keywords, autocomplete interface 
         make it clever so that if you select one keyword, it only shows other keywords that will result in results
     * author, name
+    * list view
     * portal 
     * *geographic location* ?
+- Add a decoder for User objects from the rc:
+[Example json from RC:](https://www.researchcatalogue.net/portal/search-result?fulltext=&name=&keywords=&country=&type_user=user&resulttype=user&modifiedafter=&modifiedbefore=&format=json&limit=25&page=0)
 - fix alignments etc..
+
+
 

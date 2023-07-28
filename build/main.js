@@ -5222,57 +5222,8 @@ var $elm$core$Set$Set_elm_builtin = function (a) {
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $author$project$Research$ByUse = {$: 'ByUse'};
-var $author$project$Queries$FindKeywords = F2(
-	function (a, b) {
-		return {$: 'FindKeywords', a: a, b: b};
-	});
-var $author$project$Queries$FindResearch = function (a) {
-	return {$: 'FindResearch', a: a};
-};
-var $author$project$Main$KeywordMainView = F2(
-	function (a, b) {
-		return {$: 'KeywordMainView', a: a, b: b};
-	});
-var $author$project$Main$KeywordSearch = F3(
-	function (a, b, c) {
-		return {$: 'KeywordSearch', a: a, b: b, c: c};
-	});
-var $author$project$Main$KeywordsView = function (a) {
-	return {$: 'KeywordsView', a: a};
-};
-var $author$project$Main$Medium = {$: 'Medium'};
-var $author$project$Research$NewestFirst = {$: 'NewestFirst'};
-var $author$project$Main$ScreenLayout = function (a) {
-	return {$: 'ScreenLayout', a: a};
-};
-var $author$project$Main$Searching = {$: 'Searching'};
-var $elm$core$Maybe$andThen = F2(
-	function (callback, maybeValue) {
-		if (maybeValue.$ === 'Just') {
-			var value = maybeValue.a;
-			return callback(value);
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $author$project$Queries$Search = function (a) {
-	return {$: 'Search', a: a};
-};
-var $elm$time$Time$Posix = function (a) {
-	return {$: 'Posix', a: a};
-};
-var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
-var $elm$core$Basics$pow = _Basics_pow;
-var $author$project$Queries$emptySearch = $author$project$Queries$Search(
-	{
-		after: $elm$time$Time$millisToPosix(0),
-		author: '',
-		before: $elm$time$Time$millisToPosix(
-			A2($elm$core$Basics$pow, 2, 31) - 1),
-		keywords: $elm$core$Set$empty,
-		title: ''
-	});
+var $author$project$Queries$GetAllKeywords = {$: 'GetAllKeywords'};
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Queries$encodeKeywordSorting = function (sorting) {
 	switch (sorting.$) {
@@ -5340,37 +5291,111 @@ var $author$project$Queries$encodeSearch = function (_v0) {
 };
 var $elm$core$String$toLower = _String_toLower;
 var $author$project$Queries$encodeSearchQuery = function (query) {
-	if (query.$ === 'FindKeywords') {
-		var keywords = query.a;
-		var sorting = query.b;
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'type',
-					$elm$json$Json$Encode$string('FindKeywords')),
-					_Utils_Tuple2(
-					'keywords',
-					$elm$json$Json$Encode$string(
-						$elm$core$String$toLower(keywords))),
-					_Utils_Tuple2(
-					'sorting',
-					$author$project$Queries$encodeKeywordSorting(sorting))
-				]));
-	} else {
-		var src = query.a;
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'type',
-					$elm$json$Json$Encode$string('FindResearch')),
-					_Utils_Tuple2(
-					'search',
-					$author$project$Queries$encodeSearch(src))
-				]));
+	switch (query.$) {
+		case 'FindKeywords':
+			var keywords = query.a;
+			var sorting = query.b;
+			return $elm$json$Json$Encode$object(
+				_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'type',
+						$elm$json$Json$Encode$string('FindKeywords')),
+						_Utils_Tuple2(
+						'keywords',
+						$elm$json$Json$Encode$string(
+							$elm$core$String$toLower(keywords))),
+						_Utils_Tuple2(
+						'sorting',
+						$author$project$Queries$encodeKeywordSorting(sorting))
+					]));
+		case 'FindResearch':
+			var src = query.a;
+			return $elm$json$Json$Encode$object(
+				_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'type',
+						$elm$json$Json$Encode$string('FindResearch')),
+						_Utils_Tuple2(
+						'search',
+						$author$project$Queries$encodeSearch(src))
+					]));
+		default:
+			return $elm$json$Json$Encode$object(
+				_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'type',
+						$elm$json$Json$Encode$string('GetAllKeywords'))
+					]));
 	}
 };
+var $author$project$Main$sendQuery = _Platform_outgoingPort('sendQuery', $elm$core$Basics$identity);
+var $author$project$Main$fetchAllKeywords = function (_v0) {
+	var model = _v0.a;
+	var cmd = _v0.b;
+	return _Utils_Tuple2(
+		model,
+		$elm$core$Platform$Cmd$batch(
+			_List_fromArray(
+				[
+					$author$project$Main$sendQuery(
+					$author$project$Queries$encodeSearchQuery($author$project$Queries$GetAllKeywords)),
+					cmd
+				])));
+};
+var $author$project$Research$ByUse = {$: 'ByUse'};
+var $author$project$Queries$FindKeywords = F2(
+	function (a, b) {
+		return {$: 'FindKeywords', a: a, b: b};
+	});
+var $author$project$Queries$FindResearch = function (a) {
+	return {$: 'FindResearch', a: a};
+};
+var $author$project$Main$KeywordMainView = F2(
+	function (a, b) {
+		return {$: 'KeywordMainView', a: a, b: b};
+	});
+var $author$project$Main$KeywordSearch = F3(
+	function (a, b, c) {
+		return {$: 'KeywordSearch', a: a, b: b, c: c};
+	});
+var $author$project$Main$KeywordsView = function (a) {
+	return {$: 'KeywordsView', a: a};
+};
+var $author$project$Main$Medium = {$: 'Medium'};
+var $author$project$Research$NewestFirst = {$: 'NewestFirst'};
+var $author$project$Main$ScreenLayout = function (a) {
+	return {$: 'ScreenLayout', a: a};
+};
+var $author$project$Main$Searching = {$: 'Searching'};
+var $elm$core$Maybe$andThen = F2(
+	function (callback, maybeValue) {
+		if (maybeValue.$ === 'Just') {
+			var value = maybeValue.a;
+			return callback(value);
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $author$project$Queries$Search = function (a) {
+	return {$: 'Search', a: a};
+};
+var $elm$time$Time$Posix = function (a) {
+	return {$: 'Posix', a: a};
+};
+var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
+var $elm$core$Basics$pow = _Basics_pow;
+var $author$project$Queries$emptySearch = $author$project$Queries$Search(
+	{
+		after: $elm$time$Time$millisToPosix(0),
+		author: '',
+		before: $elm$time$Time$millisToPosix(
+			A2($elm$core$Basics$pow, 2, 31) - 1),
+		keywords: $elm$core$Set$empty,
+		title: ''
+	});
 var $elm$core$Dict$Black = {$: 'Black'};
 var $elm$core$Dict$RBNode_elm_builtin = F5(
 	function (a, b, c, d, e) {
@@ -5561,7 +5586,6 @@ var $author$project$Main$getSortingOfUrl = function (url) {
 			$elm$core$List$head,
 			A2($elm$core$Dict$get, 'sorting', url.queryParameters)));
 };
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Main$noCmd = function (model) {
 	return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -5594,7 +5618,6 @@ var $author$project$Queries$searchWithKeywords = F2(
 				s,
 				{keywords: kws}));
 	});
-var $author$project$Main$sendQuery = _Platform_outgoingPort('sendQuery', $elm$core$Basics$identity);
 var $author$project$Research$Alphabetical = {$: 'Alphabetical'};
 var $author$project$Research$RandomKeyword = {$: 'RandomKeyword'};
 var $author$project$Research$sortingFromString = function (str) {
@@ -6359,27 +6382,29 @@ var $author$project$Main$init = F3(
 		var width = _v0.width;
 		var height = _v0.height;
 		var initUrl = $author$project$Main$urlWhereFragmentIsPath(url);
-		return A2(
-			$author$project$Main$handleUrl,
-			initUrl,
-			{
-				key: key,
-				keywords: $elm$core$Set$empty,
-				numberOfResults: 8,
-				query: '',
-				screenDimensions: {h: height, w: width},
-				search: $author$project$Main$Idle,
-				searchGUI: $dillonkearns$elm_form$Form$init,
-				searchPageSize: 20,
-				submitting: false,
-				url: initUrl,
-				view: A4(
-					$author$project$Main$SearchView,
-					$author$project$Main$ListLayout,
-					_List_Nil,
-					$author$project$Research$Random,
-					$author$project$Main$Page(1))
-			});
+		return $author$project$Main$fetchAllKeywords(
+			A2(
+				$author$project$Main$handleUrl,
+				initUrl,
+				{
+					allKeywords: _List_Nil,
+					key: key,
+					keywords: $elm$core$Set$empty,
+					numberOfResults: 8,
+					query: '',
+					screenDimensions: {h: height, w: width},
+					search: $author$project$Main$Idle,
+					searchGUI: $dillonkearns$elm_form$Form$init,
+					searchPageSize: 20,
+					submitting: false,
+					url: initUrl,
+					view: A4(
+						$author$project$Main$SearchView,
+						$author$project$Main$ListLayout,
+						_List_Nil,
+						$author$project$Research$Random,
+						$author$project$Main$Page(1))
+				}));
 	});
 var $elm$json$Json$Decode$int = _Json_decodeInt;
 var $author$project$Main$ReceiveResults = function (a) {
@@ -6397,6 +6422,9 @@ var $author$project$Main$FoundResearch = function (a) {
 	return {$: 'FoundResearch', a: a};
 };
 var $author$project$Main$additionalKeywordsToLoad = 64;
+var $author$project$Queries$AllKeywords = function (a) {
+	return {$: 'AllKeywords', a: a};
+};
 var $author$project$Queries$Expositions = function (a) {
 	return {$: 'Expositions', a: a};
 };
@@ -6589,6 +6617,14 @@ var $author$project$Queries$decodeSearchResult = function () {
 						$elm$json$Json$Decode$map,
 						$author$project$Queries$Keywords,
 						$elm$json$Json$Decode$list($author$project$Research$decodeKeyword)));
+			case 'allkeywords':
+				return A2(
+					$elm$json$Json$Decode$field,
+					'keywords',
+					A2(
+						$elm$json$Json$Decode$map,
+						$author$project$Queries$AllKeywords,
+						$elm$json$Json$Decode$list($author$project$Research$decodeKeyword)));
 			default:
 				return $elm$json$Json$Decode$fail('expected expositions or keywords');
 		}
@@ -6598,7 +6634,12 @@ var $author$project$Queries$decodeSearchResult = function () {
 		parseResult,
 		A2($elm$json$Json$Decode$field, 'type', $elm$json$Json$Decode$string));
 }();
+var $author$project$Research$kwName = function (_v0) {
+	var kw = _v0.a;
+	return $elm$core$String$toLower(kw.name);
+};
 var $elm$browser$Browser$Navigation$load = _Browser_load;
+var $elm$core$Debug$log = _Debug_log;
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $elm$core$Set$remove = F2(
 	function (key, _v0) {
@@ -6840,34 +6881,48 @@ var $author$project$Main$update = F2(
 				var json = msg.a;
 				var result = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchResult, json);
 				if (result.$ === 'Ok') {
-					if (result.a.$ === 'Keywords') {
-						var kws = result.a.a;
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									search: $author$project$Main$FoundKeywords(kws)
-								}),
-							$elm$core$Platform$Cmd$none);
-					} else {
-						var exps = result.a.a;
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									search: $author$project$Main$FoundResearch(exps)
-								}),
-							$elm$core$Platform$Cmd$none);
+					switch (result.a.$) {
+						case 'Keywords':
+							var kws = result.a.a;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										search: $author$project$Main$FoundKeywords(kws)
+									}),
+								$elm$core$Platform$Cmd$none);
+						case 'Expositions':
+							var exps = result.a.a;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										search: $author$project$Main$FoundResearch(exps)
+									}),
+								$elm$core$Platform$Cmd$none);
+						default:
+							var kws = result.a.a;
+							var _v4 = A2($elm$core$Debug$log, 'all keywords are here', kws);
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										allKeywords: A2(
+											$elm$core$List$map,
+											A2($elm$core$Basics$composeR, $author$project$Research$kwName, $author$project$KeywordString$fromString),
+											kws)
+									}),
+								$elm$core$Platform$Cmd$none);
 					}
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 			case 'HitEnter':
-				var _v4 = model.view;
-				if (_v4.$ === 'KeywordsView') {
-					if (_v4.a.$ === 'KeywordMainView') {
-						var _v5 = _v4.a;
-						var sorting = _v5.a;
+				var _v5 = model.view;
+				if (_v5.$ === 'KeywordsView') {
+					if (_v5.a.$ === 'KeywordMainView') {
+						var _v6 = _v5.a;
+						var sorting = _v6.a;
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
@@ -6891,8 +6946,8 @@ var $author$project$Main$update = F2(
 										'/#/keywords/search?q=' + (model.query + ('&sorting=' + $author$project$Research$sortingToString(sorting))))
 									])));
 					} else {
-						var _v6 = _v4.a;
-						var sorting = _v6.b;
+						var _v7 = _v5.a;
+						var sorting = _v7.b;
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
@@ -6944,9 +6999,9 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'FormMsg':
 				var formMsg = msg.a;
-				var _v7 = A2($dillonkearns$elm_form$Form$update, formMsg, model.searchGUI);
-				var updatedFormModel = _v7.a;
-				var cmd = _v7.b;
+				var _v8 = A2($dillonkearns$elm_form$Form$update, formMsg, model.searchGUI);
+				var updatedFormModel = _v8.a;
+				var cmd = _v8.b;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -6959,11 +7014,11 @@ var $author$project$Main$update = F2(
 					var fullSearch = A2(
 						$author$project$Queries$withKeywords,
 						function () {
-							var _v9 = srch.keyword;
-							if (_v9 === '') {
+							var _v10 = srch.keyword;
+							if (_v10 === '') {
 								return _List_Nil;
 							} else {
-								var nonEmptyStr = _v9;
+								var nonEmptyStr = _v10;
 								return _List_fromArray(
 									[nonEmptyStr]);
 							}
@@ -13922,10 +13977,6 @@ var $author$project$Main$nextPage = function (current) {
 	}
 };
 var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
-var $author$project$Research$kwName = function (_v0) {
-	var kw = _v0.a;
-	return $elm$core$String$toLower(kw.name);
-};
 var $elm$core$List$member = F2(
 	function (x, xs) {
 		return A2(
@@ -17340,6 +17391,73 @@ var $dillonkearns$elm_form$Form$form = function (combineAndView) {
 			return _List_Nil;
 		});
 };
+var $elm$html$Html$datalist = _VirtualDom_node('datalist');
+var $elm$html$Html$Attributes$list = _VirtualDom_attribute('list');
+var $elm$html$Html$option = _VirtualDom_node('option');
+var $author$project$KeywordString$toString = function (_v0) {
+	var k = _v0.a;
+	return k;
+};
+var $author$project$Main$keywordField = F4(
+	function (keywords, formState, label, field) {
+		return A2(
+			$elm$html$Html$div,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$label,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(label + ' '),
+							A2(
+							$dillonkearns$elm_form$Form$FieldView$input,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$list('keyword-field')
+								]),
+							field),
+							A2(
+							$elm$html$Html$datalist,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$id('keyword-field')
+								]),
+							A2(
+								$elm$core$List$map,
+								function (kw) {
+									return A2(
+										$elm$html$Html$option,
+										_List_fromArray(
+											[
+												$elm$html$Html$Attributes$value(
+												$author$project$KeywordString$toString(kw))
+											]),
+										_List_Nil);
+								},
+								keywords))
+						])),
+					A2(
+					$elm$html$Html$ul,
+					_List_fromArray(
+						[
+							A2($elm$html$Html$Attributes$style, 'color', 'red')
+						]),
+					formState.submitAttempted ? A2(
+						$elm$core$List$map,
+						function (error) {
+							return A2(
+								$elm$html$Html$li,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text(error)
+									]));
+						},
+						A2($dillonkearns$elm_form$Form$errorsForField, field, formState.errors)) : _List_Nil)
+				]));
+	});
 var $dillonkearns$elm_form$Internal$Field$Field = F2(
 	function (a, b) {
 		return {$: 'Field', a: a, b: b};
@@ -17396,61 +17514,63 @@ var $dillonkearns$elm_form$Form$Field$text = A2(
 		properties: _List_Nil
 	},
 	$dillonkearns$elm_form$Internal$Input$Input($dillonkearns$elm_form$Internal$Input$Text));
-var $author$project$Main$searchGUI = A3(
-	$dillonkearns$elm_form$Form$field,
-	'keyword',
-	$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
-	A3(
+var $author$project$Main$searchGUI = function (keywords) {
+	return A3(
 		$dillonkearns$elm_form$Form$field,
-		'author',
+		'keyword',
 		$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
 		A3(
 			$dillonkearns$elm_form$Form$field,
-			'title',
+			'author',
 			$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
-			$dillonkearns$elm_form$Form$form(
-				F3(
-					function (title, author, keyword) {
-						return {
-							combine: A2(
-								$dillonkearns$elm_form$Form$Validation$andMap,
-								keyword,
-								A2(
+			A3(
+				$dillonkearns$elm_form$Form$field,
+				'title',
+				$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
+				$dillonkearns$elm_form$Form$form(
+					F3(
+						function (title, author, keyword) {
+							return {
+								combine: A2(
 									$dillonkearns$elm_form$Form$Validation$andMap,
-									author,
+									keyword,
 									A2(
 										$dillonkearns$elm_form$Form$Validation$andMap,
-										title,
-										$dillonkearns$elm_form$Form$Validation$succeed($author$project$Main$searchForm)))),
-							view: function (info) {
-								return _List_fromArray(
-									[
+										author,
 										A2(
-										$elm$html$Html$div,
-										_List_Nil,
-										_List_fromArray(
-											[
-												A2(
-												$elm$html$Html$label,
-												_List_Nil,
-												_List_fromArray(
-													[
-														A3($author$project$Main$fieldView, info, 'title', title),
-														A3($author$project$Main$fieldView, info, 'author', author),
-														A3($author$project$Main$fieldView, info, 'keyword', keyword)
-													])),
-												A2(
-												$elm$html$Html$button,
-												_List_Nil,
-												_List_fromArray(
-													[
-														info.submitting ? $elm$html$Html$text('searching...') : $elm$html$Html$text('search')
-													]))
-											]))
-									]);
-							}
-						};
-					})))));
+											$dillonkearns$elm_form$Form$Validation$andMap,
+											title,
+											$dillonkearns$elm_form$Form$Validation$succeed($author$project$Main$searchForm)))),
+								view: function (info) {
+									return _List_fromArray(
+										[
+											A2(
+											$elm$html$Html$div,
+											_List_Nil,
+											_List_fromArray(
+												[
+													A2(
+													$elm$html$Html$label,
+													_List_Nil,
+													_List_fromArray(
+														[
+															A3($author$project$Main$fieldView, info, 'title', title),
+															A3($author$project$Main$fieldView, info, 'author', author),
+															A4($author$project$Main$keywordField, keywords, info, 'keyword', keyword)
+														])),
+													A2(
+													$elm$html$Html$button,
+													_List_Nil,
+													_List_fromArray(
+														[
+															info.submitting ? $elm$html$Html$text('searching...') : $elm$html$Html$text('search')
+														]))
+												]))
+										]);
+								}
+							};
+						})))));
+};
 var $dillonkearns$elm_form$Form$withOnSubmit = F2(
 	function (onSubmit, options_) {
 		return {
@@ -17463,8 +17583,8 @@ var $dillonkearns$elm_form$Form$withOnSubmit = F2(
 			serverResponse: options_.serverResponse
 		};
 	});
-var $author$project$Main$viewSearch = F2(
-	function (submitting, searchFormState) {
+var $author$project$Main$viewSearch = F3(
+	function (keywords, submitting, searchFormState) {
 		return $mdgriffith$elm_ui$Element$html(
 			A4(
 				$dillonkearns$elm_form$Form$renderHtml,
@@ -17476,137 +17596,154 @@ var $author$project$Main$viewSearch = F2(
 					},
 					$dillonkearns$elm_form$Form$options('signUpForm')),
 				_List_Nil,
-				$author$project$Main$searchGUI));
+				$author$project$Main$searchGUI(keywords)));
 	});
-var $author$project$Main$viewResearchResults = F9(
-	function (submitting, searchFormState, dimensions, layout, v, lst, keywords, sorting, _v0) {
-		var p = _v0.a;
-		var urlFromLayout = F2(
-			function (s, l) {
-				if (l.$ === 'ListLayout') {
-					return $author$project$Main$prefixHash(
-						$lydell$elm_app_url$AppUrl$toString(
-							A2(
-								$author$project$Main$withParametersList,
-								_List_fromArray(
-									[
-										_Utils_Tuple2('keywords', keywords),
-										_Utils_Tuple2(
-										'sorting',
-										_List_fromArray(
-											[
-												$author$project$Research$titleSortingToString(s)
-											])),
-										_Utils_Tuple2(
-										'page',
-										_List_fromArray(
-											[
-												$author$project$Main$pageAsString(
-												$author$project$Main$Page(p))
-											]))
-									]),
-								$lydell$elm_app_url$AppUrl$fromPath(
-									_List_fromArray(
-										['research', 'search', 'list'])))));
-				} else {
-					var scale = l.a;
-					return $author$project$Main$prefixHash(
-						$lydell$elm_app_url$AppUrl$toString(
-							A2(
-								$author$project$Main$withParametersList,
-								_List_fromArray(
-									[
-										_Utils_Tuple2('keywords', keywords),
-										_Utils_Tuple2(
-										'sorting',
-										_List_fromArray(
-											[
-												$author$project$Research$titleSortingToString(s)
-											])),
-										_Utils_Tuple2(
-										'scale',
-										_List_fromArray(
-											[
-												$author$project$Main$scaleToString(scale)
-											])),
-										_Utils_Tuple2(
-										'page',
-										_List_fromArray(
-											[
-												$author$project$Main$pageAsString(
-												$author$project$Main$Page(p))
-											]))
-									]),
-								$lydell$elm_app_url$AppUrl$fromPath(
-									_List_fromArray(
-										['research', 'search', 'screen'])))));
-				}
-			});
-		var urlFromSorting = function (s) {
-			return A2(urlFromLayout, s, layout);
+var $author$project$Main$viewResearchResults = function (allKeywords) {
+	return function (submitting) {
+		return function (searchFormState) {
+			return function (dimensions) {
+				return function (layout) {
+					return function (v) {
+						return function (lst) {
+							return function (keywords) {
+								return function (sorting) {
+									return function (_v0) {
+										var p = _v0.a;
+										var urlFromLayout = F2(
+											function (s, l) {
+												if (l.$ === 'ListLayout') {
+													return $author$project$Main$prefixHash(
+														$lydell$elm_app_url$AppUrl$toString(
+															A2(
+																$author$project$Main$withParametersList,
+																_List_fromArray(
+																	[
+																		_Utils_Tuple2('keywords', keywords),
+																		_Utils_Tuple2(
+																		'sorting',
+																		_List_fromArray(
+																			[
+																				$author$project$Research$titleSortingToString(s)
+																			])),
+																		_Utils_Tuple2(
+																		'page',
+																		_List_fromArray(
+																			[
+																				$author$project$Main$pageAsString(
+																				$author$project$Main$Page(p))
+																			]))
+																	]),
+																$lydell$elm_app_url$AppUrl$fromPath(
+																	_List_fromArray(
+																		['research', 'search', 'list'])))));
+												} else {
+													var scale = l.a;
+													return $author$project$Main$prefixHash(
+														$lydell$elm_app_url$AppUrl$toString(
+															A2(
+																$author$project$Main$withParametersList,
+																_List_fromArray(
+																	[
+																		_Utils_Tuple2('keywords', keywords),
+																		_Utils_Tuple2(
+																		'sorting',
+																		_List_fromArray(
+																			[
+																				$author$project$Research$titleSortingToString(s)
+																			])),
+																		_Utils_Tuple2(
+																		'scale',
+																		_List_fromArray(
+																			[
+																				$author$project$Main$scaleToString(scale)
+																			])),
+																		_Utils_Tuple2(
+																		'page',
+																		_List_fromArray(
+																			[
+																				$author$project$Main$pageAsString(
+																				$author$project$Main$Page(p))
+																			]))
+																	]),
+																$lydell$elm_app_url$AppUrl$fromPath(
+																	_List_fromArray(
+																		['research', 'search', 'screen'])))));
+												}
+											});
+										var urlFromSorting = function (s) {
+											return A2(urlFromLayout, s, layout);
+										};
+										var sorted = A2(
+											$elm$core$List$take,
+											$author$project$Main$pageSize,
+											A2(
+												$elm$core$List$drop,
+												(p - 1) * $author$project$Main$pageSize,
+												A2($author$project$Main$sortResearch, sorting, lst)));
+										var render = function () {
+											if (layout.$ === 'ListLayout') {
+												return A2(
+													$mdgriffith$elm_ui$Element$column,
+													_List_Nil,
+													A2($elm$core$List$map, $author$project$Main$viewResearchMicro, sorted));
+											} else {
+												var scale = layout.a;
+												return A4($author$project$Main$viewScreenshots, keywords, dimensions, scale, sorted);
+											}
+										}();
+										var numberOfPages = function (n) {
+											return (n / $author$project$Main$pageSize) | 0;
+										}(
+											$elm$core$List$length(lst));
+										return A2(
+											$mdgriffith$elm_ui$Element$column,
+											_List_fromArray(
+												[
+													$author$project$Main$anchor('top')
+												]),
+											_List_fromArray(
+												[
+													A2(
+													$mdgriffith$elm_ui$Element$el,
+													$author$project$RCStyles$defaultPadding,
+													$mdgriffith$elm_ui$Element$text('search results')),
+													A3($author$project$Main$viewSearch, allKeywords, submitting, searchFormState),
+													A2(
+													$author$project$Main$viewLayoutSwitch,
+													layout,
+													urlFromLayout(sorting)),
+													A2($author$project$Main$toggleTitleSorting, sorting, urlFromSorting),
+													function () {
+													if (!keywords.b) {
+														return $mdgriffith$elm_ui$Element$none;
+													} else {
+														var kws = keywords;
+														return A2(
+															$mdgriffith$elm_ui$Element$el,
+															_List_Nil,
+															$mdgriffith$elm_ui$Element$text(
+																'showing research for keywords: ' + A2($elm$core$String$join, ',', kws)));
+													}
+												}(),
+													render,
+													A5(
+													$author$project$Main$pageNav,
+													numberOfPages,
+													v,
+													dimensions,
+													sorted,
+													$author$project$Main$Page(p))
+												]));
+									};
+								};
+							};
+						};
+					};
+				};
+			};
 		};
-		var sorted = A2(
-			$elm$core$List$take,
-			$author$project$Main$pageSize,
-			A2(
-				$elm$core$List$drop,
-				(p - 1) * $author$project$Main$pageSize,
-				A2($author$project$Main$sortResearch, sorting, lst)));
-		var render = function () {
-			if (layout.$ === 'ListLayout') {
-				return A2(
-					$mdgriffith$elm_ui$Element$column,
-					_List_Nil,
-					A2($elm$core$List$map, $author$project$Main$viewResearchMicro, sorted));
-			} else {
-				var scale = layout.a;
-				return A4($author$project$Main$viewScreenshots, keywords, dimensions, scale, sorted);
-			}
-		}();
-		var numberOfPages = function (n) {
-			return (n / $author$project$Main$pageSize) | 0;
-		}(
-			$elm$core$List$length(lst));
-		return A2(
-			$mdgriffith$elm_ui$Element$column,
-			_List_fromArray(
-				[
-					$author$project$Main$anchor('top')
-				]),
-			_List_fromArray(
-				[
-					A2(
-					$mdgriffith$elm_ui$Element$el,
-					$author$project$RCStyles$defaultPadding,
-					$mdgriffith$elm_ui$Element$text('search results')),
-					A2($author$project$Main$viewSearch, submitting, searchFormState),
-					A2(
-					$author$project$Main$viewLayoutSwitch,
-					layout,
-					urlFromLayout(sorting)),
-					A2($author$project$Main$toggleTitleSorting, sorting, urlFromSorting),
-					function () {
-					if (!keywords.b) {
-						return $mdgriffith$elm_ui$Element$none;
-					} else {
-						var kws = keywords;
-						return A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_Nil,
-							$mdgriffith$elm_ui$Element$text(
-								'showing research for keywords: ' + A2($elm$core$String$join, ',', kws)));
-					}
-				}(),
-					render,
-					A5(
-					$author$project$Main$pageNav,
-					numberOfPages,
-					v,
-					dimensions,
-					sorted,
-					$author$project$Main$Page(p))
-				]));
-	});
+	};
+};
 var $author$project$Main$view = function (model) {
 	var body = function () {
 		var _v0 = model.view;
@@ -17621,7 +17758,7 @@ var $author$project$Main$view = function (model) {
 			var _v1 = model.search;
 			if (_v1.$ === 'FoundResearch') {
 				var lst = _v1.a;
-				return A9($author$project$Main$viewResearchResults, model.submitting, model.searchGUI, model.screenDimensions, layout, model.view, lst, keywords, sorting, page);
+				return $author$project$Main$viewResearchResults(model.allKeywords)(model.submitting)(model.searchGUI)(model.screenDimensions)(layout)(model.view)(lst)(keywords)(sorting)(page);
 			} else {
 				return $mdgriffith$elm_ui$Element$text('search interface');
 			}

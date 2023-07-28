@@ -21,6 +21,7 @@ import Html.Attributes as Attr
 import Html.Events
 import Json.Decode
 import Json.Encode
+import KeywordString exposing (KeywordString)
 import List
 import Queries exposing (SearchQuery(..))
 import RCStyles
@@ -28,10 +29,8 @@ import Research as RC exposing (Research)
 import Set exposing (Set)
 import String
 import Task
-
 import Time
 import Url exposing (Url)
-
 
 
 
@@ -167,13 +166,16 @@ pageSize : Int
 pageSize =
     128
 
+
 additionalKeywordsToLoad : Int
 additionalKeywordsToLoad =
     64
 
+
 pageFromInt : Int -> Page
 pageFromInt p =
     Page p
+
 
 type KeywordsViewState
     = KeywordMainView RC.KeywordSorting Page -- query, sorting, page
@@ -223,6 +225,7 @@ type alias Model =
     , keywords : Set String
     , searchGUI : Form.Model
     , submitting : Bool
+    , allKeywords : List KeywordString
     }
 
 
@@ -268,8 +271,22 @@ init { width, height } url key =
     , keywords = Set.empty
     , searchGUI = Form.init
     , submitting = False
+    , allKeywords = []
     }
         |> handleUrl initUrl
+        |> fetchAllKeywords
+
+
+-- before doing anything else, ask worker for all keywords
+fetchAllKeywords : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+fetchAllKeywords ( model, cmd ) =
+    ( model
+    , Cmd.batch
+        [ sendQuery
+            (Queries.encodeSearchQuery Queries.GetAllKeywords)
+        , cmd
+        ]
+    )
 
 
 resetViewport : Cmd Msg
@@ -319,6 +336,10 @@ update msg model =
                 Ok (Queries.Expositions exps) ->
                     ( { model | search = FoundResearch exps }, Cmd.none )
 
+                Ok (Queries.AllKeywords kws) ->
+                    let _  = Debug.log "all keywords are here" kws in
+                    ( { model | allKeywords = kws |> List.map (RC.kwName >> KeywordString.fromString) }, Cmd.none )
+
                 Err _ ->
                     ( model, Cmd.none )
 
@@ -348,15 +369,16 @@ update msg model =
             , Cmd.none
             )
 
-        AddKeyword kw->
-            ( { model | keywords = Set.insert kw model.keywords}
+        AddKeyword kw ->
+            ( { model | keywords = Set.insert kw model.keywords }
             , Cmd.none
             )
 
-        RemoveKeyword kw->
-            ( { model | keywords = Set.remove kw model.keywords}
+        RemoveKeyword kw ->
+            ( { model | keywords = Set.remove kw model.keywords }
             , Cmd.none
             )
+
         FormMsg formMsg ->
             let
                 ( updatedFormModel, cmd ) =
@@ -365,7 +387,7 @@ update msg model =
             ( { model | searchGUI = updatedFormModel }, cmd )
 
         SubmitSearch validated ->
-            -- TODO: update url with this search state 
+            -- TODO: update url with this search state
             case validated of
                 Form.Valid srch ->
                     let
@@ -821,7 +843,7 @@ view model =
                 SearchView layout keywords sorting page ->
                     case model.search of
                         FoundResearch lst ->
-                            viewResearchResults model.submitting model.searchGUI model.screenDimensions layout model.view lst keywords sorting page
+                            viewResearchResults model.allKeywords model.submitting model.searchGUI model.screenDimensions layout model.view lst keywords sorting page
 
                         _ ->
                             Element.text "search interface"
@@ -906,8 +928,8 @@ anchor anchorId =
     Element.htmlAttribute (Attr.id anchorId)
 
 
-viewResearchResults : Bool -> Form.Model -> ScreenDimensions -> Layout -> View -> List Research -> List String -> RC.TitleSorting -> Page -> Element Msg
-viewResearchResults submitting searchFormState dimensions layout v lst keywords sorting (Page p) =
+viewResearchResults : List KeywordString -> Bool -> Form.Model -> ScreenDimensions -> Layout -> View -> List Research -> List String -> RC.TitleSorting -> Page -> Element Msg
+viewResearchResults allKeywords submitting searchFormState dimensions layout v lst keywords sorting (Page p) =
     let
         sorted : List Research
         sorted =
@@ -956,7 +978,7 @@ viewResearchResults submitting searchFormState dimensions layout v lst keywords 
     in
     Element.column [ anchor "top" ] <|
         [ Element.el RCStyles.defaultPadding (Element.text "search results")
-        , viewSearch submitting searchFormState
+        , viewSearch allKeywords submitting searchFormState
         , viewLayoutSwitch layout (urlFromLayout sorting)
         , toggleTitleSorting sorting urlFromSorting
         , case keywords of
@@ -1086,9 +1108,8 @@ viewKeywordAsClickable fontsize kw =
         , width fill
         ]
         --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
-
-         [ Element.Input.button [ width fill ]
-             { onPress = Just (AddKeyword name)
+        [ Element.Input.button [ width fill ]
+            { onPress = Just (AddKeyword name)
             , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
             }
         , Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
@@ -1099,10 +1120,12 @@ viewSelectedKeyword : Int -> String -> Element Msg
 viewSelectedKeyword fontsize kw =
     let
         name : String
-        name = kw
+        name =
+            kw
 
         count : Int
-        count = 0
+        count =
+            0
     in
     Element.row
         [ Element.spacing 5
@@ -1117,19 +1140,18 @@ viewSelectedKeyword fontsize kw =
         , width (fill |> maximum 200)
         ]
         --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
-
-         [ 
-            Element.Input.button [ Element.alignRight, Font.size fontsize ]
-             { onPress = Just (RemoveKeyword name)
+        [ Element.Input.button [ Element.alignRight, Font.size fontsize ]
+            { onPress = Just (RemoveKeyword name)
             , label = text "x"
-            },
-            
-            Element.Input.button [ width fill ]
-             { onPress = Just (RemoveKeyword name)
+            }
+        , Element.Input.button [ width fill ]
+            { onPress = Just (RemoveKeyword name)
             , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
             }
+
         --Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text "x")
         ]
+
 
 {-| on Enter
 -}
@@ -1281,19 +1303,17 @@ viewKeywords model keywordview =
                 count =
                     lst |> List.length
 
-                shown = model.searchPageSize
+                shown =
+                    model.searchPageSize
             in
-            
-            if shown < count 
-                then 
-                    Element.Input.button[Element.paddingXY 0 25, Font.size 12]
-                        { onPress = Just LoadMore
-                        , label = text "Load More"
-                        }
-                else
-                    Element.none
-            
+            if shown < count then
+                Element.Input.button [ Element.paddingXY 0 25, Font.size 12 ]
+                    { onPress = Just LoadMore
+                    , label = text "Load More"
+                    }
 
+            else
+                Element.none
 
         -- lastDate : Element msg
         -- lastDate =
@@ -1382,36 +1402,31 @@ viewKeywords model keywordview =
                             currentPage =
                                 pageOfList model page results
                         in
-                        
-                        Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ][
-
-                        viewCountScroll results,
-                        
-                        Element.row [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
-                            [text ("selected keywords count: " ++ (String.fromInt (Set.size model.keywords)))],
-
-                        Element.row [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
-                            [ 
-                                (Set.toList model.keywords) |> List.map (viewSelectedKeyword 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
-                            ],
-
-                        --scrollable
-                        Element.el
-                            [ Element.width Element.fill
-                            , Element.height Element.fill
-                            ]
-                        <|
-                            Element.column [ Element.width Element.shrink
-                            , Element.height <| Element.maximum 330 Element.shrink
-                            , Element.scrollbarY
-                            , Element.clipX
-                            ]
-                                [ 
-                                currentPage |> List.filter (notInSet model)|> List.map (viewKeywordAsClickable 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
-                                , loadMore results
-                                --, pageNavigation results page
+                        Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
+                            [ viewCountScroll results
+                            , Element.row [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
+                                [ text ("selected keywords count: " ++ String.fromInt (Set.size model.keywords)) ]
+                            , Element.row [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
+                                [ Set.toList model.keywords |> List.map (viewSelectedKeyword 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
                                 ]
-                        ]
+                            , --scrollable
+                              Element.el
+                                [ Element.width Element.fill
+                                , Element.height Element.fill
+                                ]
+                              <|
+                                Element.column
+                                    [ Element.width Element.shrink
+                                    , Element.height <| Element.maximum 330 Element.shrink
+                                    , Element.scrollbarY
+                                    , Element.clipX
+                                    ]
+                                    [ currentPage |> List.filter (notInSet model) |> List.map (viewKeywordAsClickable 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                                    , loadMore results
+
+                                    --, pageNavigation results page
+                                    ]
+                            ]
 
                     Idle ->
                         Element.text "idle"
@@ -1453,16 +1468,18 @@ pageOfList model (Page i) lst =
 
 
 notInSet : Model -> RC.Keyword -> Bool
-notInSet model kw=
+notInSet model kw =
     let
         name : String
         name =
             RC.kwName kw
-        set = Set.toList model.keywords
+
+        set =
+            Set.toList model.keywords
     in
-    
     if List.member name set then
         False
+
     else
         True
 
@@ -1623,14 +1640,16 @@ searchForm title author keyword =
 
 
 searchGUI :
-    Form.Form
-        String
-        { combine : Validation.Validation String SearchForm Never constraints3
-        , view : { a | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg)
-        }
-        parsedCombined
-        input
-searchGUI =
+    List KeywordString
+    ->
+        Form.Form
+            String
+            { combine : Validation.Validation String SearchForm Never constraints3
+            , view : { a | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg)
+            }
+            parsedCombined
+            input
+searchGUI keywords =
     Form.form
         (\title author keyword ->
             { combine =
@@ -1644,7 +1663,7 @@ searchGUI =
                         [ Html.label []
                             [ fieldView info "title" title
                             , fieldView info "author" author
-                            , fieldView info "keyword" keyword
+                            , keywordField keywords info "keyword" keyword
                             ]
                         , Html.button []
                             [ if info.submitting then
@@ -1683,10 +1702,39 @@ fieldView formState label field =
         ]
 
 
-viewSearch : Bool -> Form.Model -> Element Msg
-viewSearch submitting searchFormState =
+keywordField : List KeywordString -> { a | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Field String parsed Form.FieldView.Input -> Html msg
+keywordField keywords formState label field =
+    Html.div []
+        [ Html.label []
+            [ Html.text (label ++ " ")
+            , field |> Form.FieldView.input [ Attr.list "keyword-field" ]
+            , Html.datalist [ Attr.id "keyword-field"]
+                (List.map
+                    (\kw ->
+                        Html.option [ Attr.value (KeywordString.toString kw) ] []
+                    )
+                    keywords
+                )
+            ]
+        , (if formState.submitAttempted then
+            formState.errors
+                |> Form.errorsForField field
+                |> List.map
+                    (\error ->
+                        Html.li [] [ Html.text error ]
+                    )
+
+           else
+            []
+          )
+            |> Html.ul [ Attr.style "color" "red" ]
+        ]
+
+
+viewSearch : List KeywordString -> Bool -> Form.Model -> Element Msg
+viewSearch keywords submitting searchFormState =
     Element.html
-        (searchGUI
+        (searchGUI keywords
             |> Form.renderHtml
                 { submitting = submitting
                 , state = searchFormState
@@ -1697,4 +1745,3 @@ viewSearch submitting searchFormState =
                 )
                 []
         )
-

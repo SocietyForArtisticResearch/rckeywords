@@ -1,12 +1,15 @@
 module KeywordString exposing (..)
 
-type KeywordString =
-    KeywordString String
+
+type KeywordString
+    = KeywordString String
+
 
 toString : KeywordString -> String
-toString (KeywordString k) = 
+toString (KeywordString k) =
     k
 
+
 fromString : String -> KeywordString
-fromString str = 
+fromString str =
     KeywordString (str |> String.toLower |> String.trim)

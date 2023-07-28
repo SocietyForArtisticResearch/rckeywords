@@ -18,13 +18,13 @@ module Queries exposing
     , withKeywords
     , withTitle
     )
- 
+
 import Json.Decode exposing (field, int, list, map, string)
 import Json.Encode as E
+import KeywordString
 import Research as RC
 import Set exposing (Set)
 import Time
-import KeywordString
 
 
 type Search
@@ -114,11 +114,13 @@ encodeSearch (Search data) =
 type SearchQuery
     = FindKeywords String RC.KeywordSorting
     | FindResearch Search
+    | GetAllKeywords
 
 
 type SearchResult
     = Expositions (List RC.Research)
     | Keywords (List RC.Keyword)
+    | AllKeywords (List RC.Keyword)
 
 
 decodeSearchResult : Json.Decode.Decoder SearchResult
@@ -131,6 +133,9 @@ decodeSearchResult =
 
                 "keywords" ->
                     field "keywords" (Json.Decode.list RC.decodeKeyword |> Json.Decode.map Keywords)
+
+                "allkeywords" ->
+                    field "keywords" (Json.Decode.list RC.decodeKeyword |> Json.Decode.map AllKeywords)
 
                 _ ->
                     Json.Decode.fail "expected expositions or keywords"
@@ -150,6 +155,12 @@ encodeSearchResult result =
         Keywords kws ->
             E.object
                 [ ( "type", E.string "keywords" )
+                , ( "keywords", E.list RC.encodeKeyword kws )
+                ]
+
+        AllKeywords kws ->
+            E.object
+                [ ( "type", E.string "allkeywords" )
                 , ( "keywords", E.list RC.encodeKeyword kws )
                 ]
 
@@ -202,6 +213,9 @@ decodeSearchQuery =
                         Json.Decode.map FindResearch
                             (field "search" decodeSearch)
 
+                    "GetAllKeywords" ->
+                        Json.Decode.succeed GetAllKeywords
+
                     _ ->
                         Json.Decode.fail "Unknown query type"
             )
@@ -222,3 +236,7 @@ encodeSearchQuery query =
                 [ ( "type", E.string "FindResearch" )
                 , ( "search", encodeSearch src )
                 ]
+
+        GetAllKeywords ->
+            E.object
+                [ ( "type", E.string "GetAllKeywords" ) ]

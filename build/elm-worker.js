@@ -4115,6 +4115,10 @@ var $author$project$Worker$searchQuery = _Platform_incomingPort('searchQuery', $
 var $author$project$Worker$subscriptions = function (_v0) {
 	return $author$project$Worker$searchQuery($author$project$Worker$SearchQuery);
 };
+var $author$project$Queries$AllKeywords = function (a) {
+	return {$: 'AllKeywords', a: a};
+};
+var $author$project$Research$Alphabetical = {$: 'Alphabetical'};
 var $author$project$Worker$DecodeError = {$: 'DecodeError'};
 var $author$project$Queries$Expositions = function (a) {
 	return {$: 'Expositions', a: a};
@@ -4138,8 +4142,8 @@ var $author$project$Queries$FindKeywords = F2(
 var $author$project$Queries$FindResearch = function (a) {
 	return {$: 'FindResearch', a: a};
 };
+var $author$project$Queries$GetAllKeywords = {$: 'GetAllKeywords'};
 var $elm$json$Json$Decode$andThen = _Json_andThen;
-var $author$project$Research$Alphabetical = {$: 'Alphabetical'};
 var $author$project$Research$ByUse = {$: 'ByUse'};
 var $author$project$Research$RandomKeyword = {$: 'RandomKeyword'};
 var $elm$json$Json$Decode$fail = _Json_fail;
@@ -4222,6 +4226,8 @@ var $author$project$Queries$decodeSearchQuery = A2(
 					$elm$json$Json$Decode$map,
 					$author$project$Queries$FindResearch,
 					A2($elm$json$Json$Decode$field, 'search', $author$project$Queries$decodeSearch));
+			case 'GetAllKeywords':
+				return $elm$json$Json$Decode$succeed($author$project$Queries$GetAllKeywords);
 			default:
 				return $elm$json$Json$Decode$fail('Unknown query type');
 		}
@@ -4412,30 +4418,43 @@ var $author$project$Research$encodeKeyword = function (_v0) {
 			]));
 };
 var $author$project$Queries$encodeSearchResult = function (result) {
-	if (result.$ === 'Expositions') {
-		var exps = result.a;
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'type',
-					$elm$json$Json$Encode$string('expositions')),
-					_Utils_Tuple2(
-					'expositions',
-					A2($elm$json$Json$Encode$list, $author$project$Research$encodeExposition, exps))
-				]));
-	} else {
-		var kws = result.a;
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'type',
-					$elm$json$Json$Encode$string('keywords')),
-					_Utils_Tuple2(
-					'keywords',
-					A2($elm$json$Json$Encode$list, $author$project$Research$encodeKeyword, kws))
-				]));
+	switch (result.$) {
+		case 'Expositions':
+			var exps = result.a;
+			return $elm$json$Json$Encode$object(
+				_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'type',
+						$elm$json$Json$Encode$string('expositions')),
+						_Utils_Tuple2(
+						'expositions',
+						A2($elm$json$Json$Encode$list, $author$project$Research$encodeExposition, exps))
+					]));
+		case 'Keywords':
+			var kws = result.a;
+			return $elm$json$Json$Encode$object(
+				_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'type',
+						$elm$json$Json$Encode$string('keywords')),
+						_Utils_Tuple2(
+						'keywords',
+						A2($elm$json$Json$Encode$list, $author$project$Research$encodeKeyword, kws))
+					]));
+		default:
+			var kws = result.a;
+			return $elm$json$Json$Encode$object(
+				_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'type',
+						$elm$json$Json$Encode$string('allkeywords')),
+						_Utils_Tuple2(
+						'keywords',
+						A2($elm$json$Json$Encode$list, $author$project$Research$encodeKeyword, kws))
+					]));
 	}
 };
 var $elm$core$String$contains = _String_contains;
@@ -5032,23 +5051,31 @@ var $author$project$Worker$update = F2(
 					var _v5 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
 					if (_v5.$ === 'Ok') {
 						var q = _v5.a;
-						if (q.$ === 'FindKeywords') {
-							var str = q.a;
-							var kwSorting = q.b;
-							return _Utils_Tuple2(
-								$author$project$Worker$Loaded(lmodel),
-								$author$project$Worker$returnResults(
-									$author$project$Queries$encodeSearchResult(
-										$author$project$Queries$Keywords(
-											A3($author$project$Worker$findKeywords, str, kwSorting, lmodel.keywords)))));
-						} else {
-							var search = q.a;
-							return _Utils_Tuple2(
-								$author$project$Worker$Loaded(lmodel),
-								$author$project$Worker$returnResults(
-									$author$project$Queries$encodeSearchResult(
-										$author$project$Queries$Expositions(
-											A3($author$project$Worker$searchResearch, search, lmodel.reverseKeywordDict, lmodel.research)))));
+						switch (q.$) {
+							case 'FindKeywords':
+								var str = q.a;
+								var kwSorting = q.b;
+								return _Utils_Tuple2(
+									$author$project$Worker$Loaded(lmodel),
+									$author$project$Worker$returnResults(
+										$author$project$Queries$encodeSearchResult(
+											$author$project$Queries$Keywords(
+												A3($author$project$Worker$findKeywords, str, kwSorting, lmodel.keywords)))));
+							case 'FindResearch':
+								var search = q.a;
+								return _Utils_Tuple2(
+									$author$project$Worker$Loaded(lmodel),
+									$author$project$Worker$returnResults(
+										$author$project$Queries$encodeSearchResult(
+											$author$project$Queries$Expositions(
+												A3($author$project$Worker$searchResearch, search, lmodel.reverseKeywordDict, lmodel.research)))));
+							default:
+								return _Utils_Tuple2(
+									$author$project$Worker$Loaded(lmodel),
+									$author$project$Worker$returnResults(
+										$author$project$Queries$encodeSearchResult(
+											$author$project$Queries$AllKeywords(
+												A3($author$project$Worker$findKeywords, '', $author$project$Research$Alphabetical, lmodel.keywords)))));
 						}
 					} else {
 						return _Utils_Tuple2(
@@ -5090,20 +5117,26 @@ var $author$project$Worker$update = F2(
 						var reverseKeywordDict = $author$project$Research$reverseKeywordDict(data);
 						var kws = $author$project$Research$keywordSet(data);
 						var cmd = function () {
-							if (q.$ === 'FindKeywords') {
-								var str = q.a;
-								var kwsorting = q.b;
-								return $author$project$Worker$returnResults(
-									$author$project$Queries$encodeSearchResult(
-										$author$project$Queries$Keywords(
-											A3($author$project$Worker$findKeywords, str, kwsorting, kws))));
-							} else {
-								var search = q.a;
-								var keywords = $author$project$Queries$getKeywords(search);
-								return $author$project$Worker$returnResults(
-									$author$project$Queries$encodeSearchResult(
-										$author$project$Queries$Expositions(
-											A3($author$project$Research$findResearchWithKeywords, keywords, reverseKeywordDict, data))));
+							switch (q.$) {
+								case 'FindKeywords':
+									var str = q.a;
+									var kwsorting = q.b;
+									return $author$project$Worker$returnResults(
+										$author$project$Queries$encodeSearchResult(
+											$author$project$Queries$Keywords(
+												A3($author$project$Worker$findKeywords, str, kwsorting, kws))));
+								case 'FindResearch':
+									var search = q.a;
+									var keywords = $author$project$Queries$getKeywords(search);
+									return $author$project$Worker$returnResults(
+										$author$project$Queries$encodeSearchResult(
+											$author$project$Queries$Expositions(
+												A3($author$project$Research$findResearchWithKeywords, keywords, reverseKeywordDict, data))));
+								default:
+									return $author$project$Worker$returnResults(
+										$author$project$Queries$encodeSearchResult(
+											$author$project$Queries$AllKeywords(
+												A3($author$project$Worker$findKeywords, '', $author$project$Research$Alphabetical, kws))));
 							}
 						}();
 						return _Utils_Tuple2(

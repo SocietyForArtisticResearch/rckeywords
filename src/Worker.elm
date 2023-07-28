@@ -7,7 +7,7 @@ import Platform
 import Queries exposing (Search(..), SearchQuery(..))
 import Random
 import Random.List exposing (shuffle)
-import Research as RC exposing (Keyword, KeywordSet, Research, ReverseKeywordDict)
+import Research as RC exposing (Keyword, KeywordSet, KeywordSorting(..), Research, ReverseKeywordDict)
 import Set
 
 
@@ -92,6 +92,9 @@ update msg model =
                                 Queries.FindResearch search ->
                                     ( Loaded lmodel, searchResearch search lmodel.reverseKeywordDict lmodel.research |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults )
 
+                                Queries.GetAllKeywords ->
+                                    ( Loaded lmodel, findKeywords "" Alphabetical lmodel.keywords |> Queries.AllKeywords |> Queries.encodeSearchResult |> returnResults )
+
                         Err _ ->
                             ( problemize DecodeError (Loaded lmodel), Cmd.none )
 
@@ -136,6 +139,12 @@ update msg model =
                                             in
                                             RC.findResearchWithKeywords keywords reverseKeywordDict data
                                                 |> Queries.Expositions
+                                                |> Queries.encodeSearchResult
+                                                |> returnResults
+
+                                        GetAllKeywords ->
+                                            findKeywords "" Alphabetical kws
+                                                |> Queries.AllKeywords
                                                 |> Queries.encodeSearchResult
                                                 |> returnResults
                             in
@@ -227,6 +236,7 @@ main =
     Platform.worker { init = init, update = update, subscriptions = subscriptions }
 
 
+
 -- printLength : String -> List a -> List a
 -- printLength label lst =
 --     let
@@ -245,4 +255,7 @@ searchResearch (Search search) revDict lst =
         |> RC.findResearchWithAuthor search.author
         -- |> printLength "author"
         |> RC.findResearchWithKeywords search.keywords revDict
-        -- |> printLength "keywords"
+
+
+
+-- |> printLength "keywords"

@@ -4,10 +4,11 @@ import Http
 import Json.Decode as D
 import Json.Encode as E
 import Platform
-import Queries exposing (SearchQuery(..))
+import Queries exposing (Search(..), SearchQuery(..))
 import Random
 import Random.List exposing (shuffle)
 import Research as RC exposing (Keyword, KeywordSet, Research, ReverseKeywordDict)
+import Set
 
 
 
@@ -88,8 +89,8 @@ update msg model =
                                 Queries.FindKeywords str kwSorting ->
                                     ( Loaded lmodel, findKeywords str kwSorting lmodel.keywords |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults )
 
-                                Queries.FindResearch kws ->
-                                    ( Loaded lmodel, RC.findResearchWithKeywords kws lmodel.reverseKeywordDict lmodel.research |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults )
+                                Queries.FindResearch search ->
+                                    ( Loaded lmodel, searchResearch search lmodel.reverseKeywordDict lmodel.research |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults )
 
                         Err _ ->
                             ( problemize DecodeError (Loaded lmodel), Cmd.none )
@@ -128,8 +129,15 @@ update msg model =
                                         FindKeywords str kwsorting ->
                                             findKeywords str kwsorting kws |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults
 
-                                        FindResearch keywords ->
-                                            RC.findResearchWithKeywords keywords reverseKeywordDict data |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults
+                                        FindResearch search ->
+                                            let
+                                                keywords =
+                                                    search |> Queries.getKeywords
+                                            in
+                                            RC.findResearchWithKeywords keywords reverseKeywordDict data
+                                                |> Queries.Expositions
+                                                |> Queries.encodeSearchResult
+                                                |> returnResults
                             in
                             ( Loaded
                                 { problems = []
@@ -217,3 +225,24 @@ subscriptions _ =
 main : Program () Model Msg
 main =
     Platform.worker { init = init, update = update, subscriptions = subscriptions }
+
+
+-- printLength : String -> List a -> List a
+-- printLength label lst =
+--     let
+--         _ =
+--             Debug.log ("* length is * " ++ label) (List.length lst)
+--     in
+--     lst
+
+
+searchResearch : Search -> ReverseKeywordDict -> List Research -> List Research
+searchResearch (Search search) revDict lst =
+    -- TODO implement dates
+    lst
+        |> RC.findResearchWithTitle search.title
+        -- |> printLength "title"
+        |> RC.findResearchWithAuthor search.author
+        -- |> printLength "author"
+        |> RC.findResearchWithKeywords search.keywords revDict
+        -- |> printLength "keywords"

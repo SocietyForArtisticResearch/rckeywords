@@ -1,20 +1,119 @@
 module Queries exposing
-    ( SearchQuery(..)
+    ( Search(..)
+    , SearchQuery(..)
     , SearchResult(..)
+    , decodeKeywordSorting
+    , decodeSearch
     , decodeSearchQuery
     , decodeSearchResult
+    , emptySearch
+    , encodeKeywordSorting
+    , encodeSearch
     , encodeSearchQuery
     , encodeSearchResult
+    , getKeywords
+    , search
+    , searchWithKeywords
+    , withAuthor
+    , withKeywords
+    , withTitle
     )
-
-import Json.Decode
-import Json.Encode
+ 
+import Json.Decode exposing (field, int, list, map, string)
+import Json.Encode as E
 import Research as RC
+import Set exposing (Set)
+import Time
+import KeywordString
+
+
+type Search
+    = Search
+        { title : String
+        , author : String
+        , keywords : Set String
+        , after : Time.Posix
+        , before : Time.Posix
+        }
+
+
+withAuthor : String -> Search -> Search
+withAuthor author (Search s) =
+    Search { s | author = author }
+
+
+withKeywords : List String -> Search -> Search
+withKeywords keywords (Search s) =
+    Search { s | keywords = Set.fromList keywords }
+
+
+withTitle : String -> Search -> Search
+withTitle title (Search s) =
+    Search
+        { s
+            | title = title
+        }
+
+
+emptySearch : Search
+emptySearch =
+    Search
+        { title = ""
+        , author = ""
+        , keywords = Set.empty
+        , after = Time.millisToPosix 0
+        , before = Time.millisToPosix ((2 ^ 31) - 1)
+        }
+
+
+getKeywords : Search -> Set String
+getKeywords (Search s) =
+    s.keywords
+
+
+searchWithKeywords : Set String -> Search -> Search
+searchWithKeywords kws (Search s) =
+    Search
+        { s
+            | keywords = kws
+        }
+
+
+search : String -> String -> Set String -> Time.Posix -> Time.Posix -> Search
+search title author keywords after before =
+    Search
+        { title = title
+        , author = author
+        , keywords = keywords
+        , after = after
+        , before = before
+        }
+
+
+decodeSearch : Json.Decode.Decoder Search
+decodeSearch =
+    Json.Decode.map5 search
+        (field "title" string)
+        (field "author" string)
+        (field "keywords" (list string) |> map Set.fromList)
+        (field "after" (int |> map Time.millisToPosix))
+        (field "before" (int |> map Time.millisToPosix))
+
+
+encodeSearch : Search -> E.Value
+encodeSearch (Search data) =
+    E.object
+        [ ( "title", E.string data.title )
+        , ( "author", E.string data.author )
+        , ( "keywords", E.list E.string (data.keywords |> Set.toList) )
+        , ( "after", E.int (Time.posixToMillis data.after) )
+        , ( "before", E.int (Time.posixToMillis data.before) )
+        ]
 
 
 type SearchQuery
     = FindKeywords String RC.KeywordSorting
-    | FindResearch (List String)
+    | FindResearch Search
 
 
 type SearchResult
@@ -28,49 +127,49 @@ decodeSearchResult =
         parseResult typ =
             case typ of
                 "expositions" ->
-                    Json.Decode.field "expositions" (Json.Decode.list RC.decodeExposition |> Json.Decode.map Expositions)
+                    field "expositions" (Json.Decode.list RC.decodeExposition |> Json.Decode.map Expositions)
 
                 "keywords" ->
-                    Json.Decode.field "keywords" (Json.Decode.list RC.decodeKeyword |> Json.Decode.map Keywords)
+                    field "keywords" (Json.Decode.list RC.decodeKeyword |> Json.Decode.map Keywords)
 
                 _ ->
                     Json.Decode.fail "expected expositions or keywords"
     in
-    Json.Decode.field "type" Json.Decode.string |> Json.Decode.andThen parseResult
+    field "type" string |> Json.Decode.andThen parseResult
 
 
-encodeSearchResult : SearchResult -> Json.Encode.Value
+encodeSearchResult : SearchResult -> E.Value
 encodeSearchResult result =
     case result of
         Expositions exps ->
-            Json.Encode.object
-                [ ( "type", Json.Encode.string "expositions" )
-                , ( "expositions", Json.Encode.list RC.encodeExposition exps )
+            E.object
+                [ ( "type", E.string "expositions" )
+                , ( "expositions", E.list RC.encodeExposition exps )
                 ]
 
         Keywords kws ->
-            Json.Encode.object
-                [ ( "type", Json.Encode.string "keywords" )
-                , ( "keywords", Json.Encode.list RC.encodeKeyword kws )
+            E.object
+                [ ( "type", E.string "keywords" )
+                , ( "keywords", E.list RC.encodeKeyword kws )
                 ]
 
 
-encodeKeywordSorting : RC.KeywordSorting -> Json.Encode.Value
+encodeKeywordSorting : RC.KeywordSorting -> E.Value
 encodeKeywordSorting sorting =
     case sorting of
         RC.ByUse ->
-            Json.Encode.string "ByUse"
+            E.string "ByUse"
 
         RC.RandomKeyword ->
-            Json.Encode.string "Random"
+            E.string "Random"
 
         RC.Alphabetical ->
-            Json.Encode.string "Alphabetical"
+            E.string "Alphabetical"
 
 
 decodeKeywordSorting : Json.Decode.Decoder RC.KeywordSorting
 decodeKeywordSorting =
-    Json.Decode.string
+    string
         |> Json.Decode.andThen
             (\s ->
                 case s of
@@ -90,36 +189,36 @@ decodeKeywordSorting =
 
 decodeSearchQuery : Json.Decode.Decoder SearchQuery
 decodeSearchQuery =
-    Json.Decode.field "type" Json.Decode.string
+    field "type" string
         |> Json.Decode.andThen
             (\t ->
                 case t of
                     "FindKeywords" ->
                         Json.Decode.map2 FindKeywords
-                            (Json.Decode.field "keywords" Json.Decode.string)
-                            (Json.Decode.field "sorting" decodeKeywordSorting)
+                            (field "keywords" string |> Json.Decode.map String.toLower)
+                            (field "sorting" decodeKeywordSorting)
 
                     "FindResearch" ->
                         Json.Decode.map FindResearch
-                            (Json.Decode.field "keywords" (Json.Decode.list Json.Decode.string))
+                            (field "search" decodeSearch)
 
                     _ ->
                         Json.Decode.fail "Unknown query type"
             )
 
 
-encodeSearchQuery : SearchQuery -> Json.Encode.Value
+encodeSearchQuery : SearchQuery -> E.Value
 encodeSearchQuery query =
     case query of
         FindKeywords keywords sorting ->
-            Json.Encode.object
-                [ ( "type", Json.Encode.string "FindKeywords" )
-                , ( "keywords", Json.Encode.string keywords )
+            E.object
+                [ ( "type", E.string "FindKeywords" )
+                , ( "keywords", E.string (String.toLower keywords) ) -- Badly named: this is only a query for searching keywords
                 , ( "sorting", encodeKeywordSorting sorting )
                 ]
 
-        FindResearch keywords ->
-            Json.Encode.object
-                [ ( "type", Json.Encode.string "FindResearch" )
-                , ( "keywords", Json.Encode.list Json.Encode.string keywords )
+        FindResearch src ->
+            E.object
+                [ ( "type", E.string "FindResearch" )
+                , ( "search", encodeSearch src )
                 ]

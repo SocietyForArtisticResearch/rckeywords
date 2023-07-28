@@ -169,7 +169,6 @@ pageFromInt : Int -> Page
 pageFromInt p =
     Page p
 
-
 type KeywordsViewState
     = KeywordMainView RC.KeywordSorting Page -- query, sorting, page
     | KeywordSearch String RC.KeywordSorting Page -- could be opaque type?
@@ -1339,7 +1338,7 @@ viewKeywords model keywordview =
                             , Element.clipX
                             ]
                                 [ 
-                                currentPage |> List.map (viewKeywordAsClickable 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                                currentPage |> List.filter (notInSet model)|> List.map (viewKeywordAsClickable 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
                                 , loadMore results
                                 --, pageNavigation results page
                                 ]
@@ -1382,6 +1381,21 @@ pageOfList model (Page i) lst =
     lst
         |> List.drop start
         |> List.take model.searchPageSize
+
+
+notInSet : Model -> RC.Keyword -> Bool
+notInSet model kw=
+    let
+        name : String
+        name =
+            RC.kwName kw
+        set = Set.toList model.keywords
+    in
+    
+    if List.member name set then
+        False
+    else
+        True
 
 
 lazyImageWithErrorHandling : Int -> ScreenDimensions -> Research -> Html Msg

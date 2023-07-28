@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1690447289949"
+    "1690530439564"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -16747,6 +16747,25 @@ var $author$project$Main$nextPage = function (current) {
 	}
 };
 var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
+var $author$project$Research$kwName = function (_v0) {
+	var kw = _v0.a;
+	return kw.name;
+};
+var $elm$core$List$member = F2(
+	function (x, xs) {
+		return A2(
+			$elm$core$List$any,
+			function (a) {
+				return _Utils_eq(a, x);
+			},
+			xs);
+	});
+var $author$project$Main$notInSet = F2(
+	function (model, kw) {
+		var set = $elm$core$Set$toList(model.keywords);
+		var name = $author$project$Research$kwName(kw);
+		return A2($elm$core$List$member, name, set) ? false : true;
+	});
 var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
 var $author$project$Main$onAnyKey = function (msg) {
 	return $mdgriffith$elm_ui$Element$htmlAttribute(
@@ -17752,10 +17771,6 @@ var $author$project$Research$getCount = function (_v0) {
 	var kw = _v0.a;
 	return kw.count;
 };
-var $author$project$Research$kwName = function (_v0) {
-	var kw = _v0.a;
-	return kw.name;
-};
 var $mdgriffith$elm_ui$Element$rgb255 = F3(
 	function (red, green, blue) {
 		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, red / 255, green / 255, blue / 255, 1);
@@ -18147,7 +18162,10 @@ var $author$project$Main$viewKeywords = F2(
 															A2(
 																$elm$core$List$map,
 																$author$project$Main$viewKeywordAsClickable(16),
-																currentPage)),
+																A2(
+																	$elm$core$List$filter,
+																	$author$project$Main$notInSet(model),
+																	currentPage))),
 															loadMore(results)
 														])))
 											]));

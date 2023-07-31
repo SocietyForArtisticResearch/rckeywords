@@ -39,6 +39,7 @@ module Research exposing
     , kwName
     , newKey
     , publicationstatus
+    , rcDateToPosix
     , reverseKeywordDict
     , shuffleWithSeed
     , sortingFromString
@@ -50,6 +51,7 @@ module Research exposing
     )
 
 import Dict exposing (Dict)
+import Iso8601
 import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
 import Json.Encode
@@ -57,7 +59,7 @@ import KeywordString exposing (KeywordString)
 import Random
 import Random.List
 import Set exposing (Set)
-import Time
+import Time exposing (Posix)
 
 
 type alias ExpositionID =
@@ -602,7 +604,7 @@ findResearchWithKeywords kw dict research =
         {- use the ids to fetch the expositions -}
         intersectionOfNonempty : Set comparable -> List (Set comparable) -> List comparable
         intersectionOfNonempty first rest =
-            List.foldl Set.intersect first rest |> Set.toList
+            List.foldl Set.union first rest |> Set.toList
 
         combineResults : List (Set comparable) -> List comparable
         combineResults results =
@@ -659,6 +661,47 @@ findResearchWithAuthor qauthor lst =
             List.filter f lst
 
 
+rcDateToPosix : String -> Result String Time.Posix
+rcDateToPosix rcdate =
+    --
+    case rcdate |> String.split "/" of
+        [ d, m, y ] ->
+            [ d, m, y ] |> String.join "-" |> Iso8601.toTime |> Result.mapError (always "nope")
+
+        _ ->
+            Err "couldn't parse this"
+
+
+type Compare
+    = Equal
+    | Smaller
+    | Bigger
+
+
+comparePosix : Posix -> Posix -> Compare
+comparePosix p1 p2 =
+    let
+        ( m1, m2 ) =
+            ( Time.posixToMillis p1, Time.posixToMillis p2 )
+    in
+    if m1 == m2 then
+        Equal
+
+    else if m1 > m2 then
+        Bigger
+
+    else
+        Smaller
+
+
 findResearchAfter : Time.Posix -> List Research -> List Research
 findResearchAfter posix lst =
-    lst
+    let
+        test research =
+            let
+                researchDate =
+                    research.created |> rcDateToPosix |> Result.toMaybe |> Maybe.withDefault (Time.millisToPosix 0)
+            in
+            List.member (comparePosix researchDate posix) [ Bigger, Equal ]
+    in
+    List.filter test lst

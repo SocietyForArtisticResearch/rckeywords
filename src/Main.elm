@@ -31,6 +31,7 @@ import String
 import Task
 import Time
 import Url exposing (Url)
+import Iso8601
 
 
 
@@ -133,7 +134,7 @@ viewLayoutSwitch layout makeurl =
                 _ ->
                     False
     in
-    Element.row [ padding 25, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+    Element.row [ paddingXY 0 15, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
         [ Element.link (linkStyle (isScreenLayout layout) SmallLink) { url = makeurl (ScreenLayout Medium), label = Element.text "visual" }
         , Element.link (linkStyle (layout == ListLayout) SmallLink) { url = makeurl ListLayout, label = Element.text "list" }
         ]
@@ -277,7 +278,10 @@ init { width, height } url key =
         |> fetchAllKeywords
 
 
+
 -- before doing anything else, ask worker for all keywords
+
+
 fetchAllKeywords : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 fetchAllKeywords ( model, cmd ) =
     ( model
@@ -337,7 +341,10 @@ update msg model =
                     ( { model | search = FoundResearch exps }, Cmd.none )
 
                 Ok (Queries.AllKeywords kws) ->
-                    let _  = Debug.log "all keywords are here" kws in
+                    let
+                        _ =
+                            Debug.log "all keywords are here" kws
+                    in
                     ( { model | allKeywords = kws |> List.map (RC.kwName >> KeywordString.fromString) }, Cmd.none )
 
                 Err _ ->
@@ -396,13 +403,7 @@ update msg model =
                                 |> Queries.withTitle srch.title
                                 |> Queries.withAuthor srch.author
                                 |> Queries.withKeywords
-                                    (case srch.keyword of
-                                        "" ->
-                                            []
-
-                                        nonEmptyStr ->
-                                            [ nonEmptyStr ]
-                                    )
+                                    ([ srch.keyword1, srch.keyword2 ] |> List.filter (\k -> k /= ""))
 
                         queryCmd =
                             sendQuery
@@ -1623,12 +1624,13 @@ makeNumColumns num input =
 type alias SearchForm =
     { title : String
     , author : String
-    , keyword : String
+    , keyword1 : String
+    , keyword2 : String
     }
 
 
-searchForm : Maybe String -> Maybe String -> Maybe String -> SearchForm
-searchForm title author keyword =
+searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> SearchForm
+searchForm title author keyword1 keyword2 =
     let
         nothingIsJustEmpty =
             Maybe.withDefault ""
@@ -1636,7 +1638,8 @@ searchForm title author keyword =
     SearchForm
         (nothingIsJustEmpty title)
         (nothingIsJustEmpty author)
-        (nothingIsJustEmpty keyword)
+        (nothingIsJustEmpty keyword1)
+        (nothingIsJustEmpty keyword2)
 
 
 searchGUI :
@@ -1650,20 +1653,47 @@ searchGUI :
             parsedCombined
             input
 searchGUI keywords =
+    let
+        parseKeyword mk =
+            case mk of
+                Nothing ->
+                    Ok Nothing
+
+                Just k ->
+                    if
+                        keywords
+                            |> List.map KeywordString.toString
+                            |> List.member k
+                    then
+                        Ok (Just k)
+
+                    else
+                        Err "this is not a keyword"
+    in
     Form.form
-        (\title author keyword ->
+        (\title author keyword1 keyword2 ->
             { combine =
                 Validation.succeed searchForm
                     |> Validation.andMap title
                     |> Validation.andMap author
-                    |> Validation.andMap keyword
+                    |> Validation.andMap
+                        (keyword1
+                            |> Validation.map parseKeyword
+                            |> Validation.fromResult
+                        )
+                    |> Validation.andMap
+                        (keyword2
+                            |> Validation.map parseKeyword
+                            |> Validation.fromResult
+                        )
             , view =
                 \info ->
                     [ Html.div []
                         [ Html.label []
                             [ fieldView info "title" title
                             , fieldView info "author" author
-                            , keywordField keywords info "keyword" keyword
+                            , keywordField keywords info "keyword 1" keyword1
+                            , keywordField keywords info "keyword 2" keyword2
                             ]
                         , Html.button []
                             [ if info.submitting then
@@ -1678,7 +1708,8 @@ searchGUI keywords =
         )
         |> Form.field "title" (Field.text |> Field.search)
         |> Form.field "author" (Field.text |> Field.search)
-        |> Form.field "keyword" (Field.text |> Field.search)
+        |> Form.field "keyword 1" (Field.text |> Field.search)
+        |> Form.field "keyword 2" (Field.text |> Field.search)
 
 
 fieldView formState label field =
@@ -1702,18 +1733,42 @@ fieldView formState label field =
         ]
 
 
-keywordField : List KeywordString -> { a | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Field String parsed Form.FieldView.Input -> Html msg
 keywordField keywords formState label field =
+    let
+        lengthIfParsed =
+            field
+                |> Validation.value
+                |> Maybe.map (Maybe.map String.length)
+
+        isLongEnough str =
+            case lengthIfParsed of
+                Nothing ->
+                    True
+
+                Just (Just n) ->
+                    (str |> String.length) - 1 >= n
+
+                _ -> 
+                    False
+
+        kwStrings =
+            keywords |> List.map KeywordString.toString
+
+        optimizedSuggestions =
+            kwStrings
+                |> List.filter isLongEnough
+                |> List.sortBy String.length
+    in
     Html.div []
         [ Html.label []
             [ Html.text (label ++ " ")
             , field |> Form.FieldView.input [ Attr.list "keyword-field" ]
-            , Html.datalist [ Attr.id "keyword-field"]
+            , Html.datalist [ Attr.id "keyword-field", Attr.autocomplete False ]
                 (List.map
                     (\kw ->
-                        Html.option [ Attr.value (KeywordString.toString kw) ] []
+                        Html.option [ Attr.value kw ] []
                     )
-                    keywords
+                    optimizedSuggestions
                 )
             ]
         , (if formState.submitAttempted then
@@ -1745,3 +1800,12 @@ viewSearch keywords submitting searchFormState =
                 )
                 []
         )
+
+rcDateToPosix : String -> Result String Time.Posix
+rcDateToPosix rcdate = 
+    -- 
+    case rcdate |> String.split "/" of
+        [d,m,y] -> [d,m,y] |> String.join "-" |> Iso8601.toTime |> Result.mapError (always "nope")
+
+        _ -> 
+            Err "couldn't parse this"

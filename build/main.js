@@ -6634,12 +6634,24 @@ var $author$project$Queries$decodeSearchResult = function () {
 		parseResult,
 		A2($elm$json$Json$Decode$field, 'type', $elm$json$Json$Decode$string));
 }();
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
 var $author$project$Research$kwName = function (_v0) {
 	var kw = _v0.a;
 	return $elm$core$String$toLower(kw.name);
 };
 var $elm$browser$Browser$Navigation$load = _Browser_load;
 var $elm$core$Debug$log = _Debug_log;
+var $elm$core$Basics$neq = _Utils_notEqual;
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $elm$core$Set$remove = F2(
 	function (key, _v0) {
@@ -7013,16 +7025,13 @@ var $author$project$Main$update = F2(
 					var srch = validated.a;
 					var fullSearch = A2(
 						$author$project$Queries$withKeywords,
-						function () {
-							var _v10 = srch.keyword;
-							if (_v10 === '') {
-								return _List_Nil;
-							} else {
-								var nonEmptyStr = _v10;
-								return _List_fromArray(
-									[nonEmptyStr]);
-							}
-						}(),
+						A2(
+							$elm$core$List$filter,
+							function (k) {
+								return k !== '';
+							},
+							_List_fromArray(
+								[srch.keyword1, srch.keyword2])),
 						A2(
 							$author$project$Queries$withAuthor,
 							srch.author,
@@ -10353,17 +10362,6 @@ var $mdgriffith$elm_ui$Internal$Model$adjust = F3(
 	function (size, height, vertical) {
 		return {height: height / size, size: size, vertical: vertical};
 	});
-var $elm$core$List$filter = F2(
-	function (isGood, list) {
-		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, xs) {
-					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
-				}),
-			_List_Nil,
-			list);
-	});
 var $elm$core$List$maximum = function (list) {
 	if (list.b) {
 		var x = list.a;
@@ -10384,7 +10382,6 @@ var $elm$core$List$minimum = function (list) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
-var $elm$core$Basics$neq = _Utils_notEqual;
 var $mdgriffith$elm_ui$Internal$Model$convertAdjustment = function (adjustment) {
 	var lines = _List_fromArray(
 		[adjustment.capital, adjustment.baseline, adjustment.descender, adjustment.lowercase]);
@@ -15984,7 +15981,7 @@ var $author$project$Main$viewLayoutSwitch = F2(
 			$mdgriffith$elm_ui$Element$row,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$padding(25),
+					A2($mdgriffith$elm_ui$Element$paddingXY, 0, 15),
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(5),
 					$mdgriffith$elm_ui$Element$Font$color(
@@ -17391,6 +17388,82 @@ var $dillonkearns$elm_form$Form$form = function (combineAndView) {
 			return _List_Nil;
 		});
 };
+var $dillonkearns$elm_form$Form$Validation$andThen = F2(
+	function (andThenFn, _v0) {
+		var _v1 = _v0.c;
+		var maybeParsed = _v1.a;
+		var errors = _v1.b;
+		if (maybeParsed.$ === 'Just') {
+			var parsed = maybeParsed.a;
+			return function (_v3) {
+				var _v4 = _v3.c;
+				var andThenParsed = _v4.a;
+				var andThenErrors = _v4.b;
+				return A3(
+					$dillonkearns$elm_form$Pages$Internal$Form$Validation,
+					$elm$core$Maybe$Nothing,
+					$elm$core$Maybe$Nothing,
+					_Utils_Tuple2(
+						andThenParsed,
+						A2($dillonkearns$elm_form$Form$Validation$mergeErrors, errors, andThenErrors)));
+			}(
+				andThenFn(parsed));
+		} else {
+			return A3(
+				$dillonkearns$elm_form$Pages$Internal$Form$Validation,
+				$elm$core$Maybe$Nothing,
+				$elm$core$Maybe$Nothing,
+				_Utils_Tuple2($elm$core$Maybe$Nothing, errors));
+		}
+	});
+var $elm$core$Dict$singleton = F2(
+	function (key, value) {
+		return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
+	});
+var $dillonkearns$elm_form$Form$Validation$fail = F2(
+	function (parsed, _v0) {
+		var key = _v0.b;
+		return A3(
+			$dillonkearns$elm_form$Pages$Internal$Form$Validation,
+			$elm$core$Maybe$Nothing,
+			$elm$core$Maybe$Nothing,
+			_Utils_Tuple2(
+				$elm$core$Maybe$Nothing,
+				A2(
+					$elm$core$Dict$singleton,
+					A2($elm$core$Maybe$withDefault, '', key),
+					_List_fromArray(
+						[parsed]))));
+	});
+var $dillonkearns$elm_form$Form$Validation$succeed = function (parsed) {
+	return A3(
+		$dillonkearns$elm_form$Pages$Internal$Form$Validation,
+		$elm$core$Maybe$Nothing,
+		$elm$core$Maybe$Nothing,
+		_Utils_Tuple2(
+			$elm$core$Maybe$Just(parsed),
+			$elm$core$Dict$empty));
+};
+var $dillonkearns$elm_form$Form$Validation$fromResult = function (fieldResult) {
+	return A2(
+		$dillonkearns$elm_form$Form$Validation$andThen,
+		function (parsedValue) {
+			if (parsedValue.$ === 'Ok') {
+				var okValue = parsedValue.a;
+				return $dillonkearns$elm_form$Form$Validation$succeed(okValue);
+			} else {
+				var error = parsedValue.a;
+				return A2($dillonkearns$elm_form$Form$Validation$fail, error, fieldResult);
+			}
+		},
+		fieldResult);
+};
+var $elm$html$Html$Attributes$autocomplete = function (bool) {
+	return A2(
+		$elm$html$Html$Attributes$stringProperty,
+		'autocomplete',
+		bool ? 'on' : 'off');
+};
 var $elm$html$Html$datalist = _VirtualDom_node('datalist');
 var $elm$html$Html$Attributes$list = _VirtualDom_attribute('list');
 var $elm$html$Html$option = _VirtualDom_node('option');
@@ -17398,8 +17471,36 @@ var $author$project$KeywordString$toString = function (_v0) {
 	var k = _v0.a;
 	return k;
 };
+var $dillonkearns$elm_form$Form$Validation$value = function (_v0) {
+	var _v1 = _v0.c;
+	var maybeParsed = _v1.a;
+	return maybeParsed;
+};
 var $author$project$Main$keywordField = F4(
 	function (keywords, formState, label, field) {
+		var lengthIfParsed = A2(
+			$elm$core$Maybe$map,
+			$elm$core$Maybe$map($elm$core$String$length),
+			$dillonkearns$elm_form$Form$Validation$value(field));
+		var kwStrings = A2($elm$core$List$map, $author$project$KeywordString$toString, keywords);
+		var isLongEnough = function (str) {
+			if (lengthIfParsed.$ === 'Nothing') {
+				return true;
+			} else {
+				if (lengthIfParsed.a.$ === 'Just') {
+					var n = lengthIfParsed.a.a;
+					return _Utils_cmp(
+						$elm$core$String$length(str) - 1,
+						n) > -1;
+				} else {
+					return false;
+				}
+			}
+		};
+		var optimizedSuggestions = A2(
+			$elm$core$List$sortBy,
+			$elm$core$String$length,
+			A2($elm$core$List$filter, isLongEnough, kwStrings));
 		return A2(
 			$elm$html$Html$div,
 			_List_Nil,
@@ -17422,7 +17523,8 @@ var $author$project$Main$keywordField = F4(
 							$elm$html$Html$datalist,
 							_List_fromArray(
 								[
-									$elm$html$Html$Attributes$id('keyword-field')
+									$elm$html$Html$Attributes$id('keyword-field'),
+									$elm$html$Html$Attributes$autocomplete(false)
 								]),
 							A2(
 								$elm$core$List$map,
@@ -17431,12 +17533,11 @@ var $author$project$Main$keywordField = F4(
 										$elm$html$Html$option,
 										_List_fromArray(
 											[
-												$elm$html$Html$Attributes$value(
-												$author$project$KeywordString$toString(kw))
+												$elm$html$Html$Attributes$value(kw)
 											]),
 										_List_Nil);
 								},
-								keywords))
+								optimizedSuggestions))
 						])),
 					A2(
 					$elm$html$Html$ul,
@@ -17458,6 +17559,20 @@ var $author$project$Main$keywordField = F4(
 						A2($dillonkearns$elm_form$Form$errorsForField, field, formState.errors)) : _List_Nil)
 				]));
 	});
+var $dillonkearns$elm_form$Form$Validation$map = F2(
+	function (mapFn, _v0) {
+		var name = _v0.b;
+		var _v1 = _v0.c;
+		var maybeParsedA = _v1.a;
+		var errorsA = _v1.b;
+		return A3(
+			$dillonkearns$elm_form$Pages$Internal$Form$Validation,
+			$elm$core$Maybe$Nothing,
+			name,
+			_Utils_Tuple2(
+				A2($elm$core$Maybe$map, mapFn, maybeParsedA),
+				errorsA));
+	});
 var $dillonkearns$elm_form$Internal$Field$Field = F2(
 	function (a, b) {
 		return {$: 'Field', a: a, b: b};
@@ -17473,28 +17588,20 @@ var $dillonkearns$elm_form$Form$Field$search = function (_v0) {
 		field,
 		$dillonkearns$elm_form$Internal$Input$Input($dillonkearns$elm_form$Internal$Input$Search));
 };
-var $author$project$Main$SearchForm = F3(
-	function (title, author, keyword) {
-		return {author: author, keyword: keyword, title: title};
+var $author$project$Main$SearchForm = F4(
+	function (title, author, keyword1, keyword2) {
+		return {author: author, keyword1: keyword1, keyword2: keyword2, title: title};
 	});
-var $author$project$Main$searchForm = F3(
-	function (title, author, keyword) {
+var $author$project$Main$searchForm = F4(
+	function (title, author, keyword1, keyword2) {
 		var nothingIsJustEmpty = $elm$core$Maybe$withDefault('');
-		return A3(
+		return A4(
 			$author$project$Main$SearchForm,
 			nothingIsJustEmpty(title),
 			nothingIsJustEmpty(author),
-			nothingIsJustEmpty(keyword));
+			nothingIsJustEmpty(keyword1),
+			nothingIsJustEmpty(keyword2));
 	});
-var $dillonkearns$elm_form$Form$Validation$succeed = function (parsed) {
-	return A3(
-		$dillonkearns$elm_form$Pages$Internal$Form$Validation,
-		$elm$core$Maybe$Nothing,
-		$elm$core$Maybe$Nothing,
-		_Utils_Tuple2(
-			$elm$core$Maybe$Just(parsed),
-			$elm$core$Dict$empty));
-};
 var $dillonkearns$elm_form$Internal$Input$Text = {$: 'Text'};
 var $dillonkearns$elm_form$Form$Field$text = A2(
 	$dillonkearns$elm_form$Internal$Field$Field,
@@ -17515,61 +17622,83 @@ var $dillonkearns$elm_form$Form$Field$text = A2(
 	},
 	$dillonkearns$elm_form$Internal$Input$Input($dillonkearns$elm_form$Internal$Input$Text));
 var $author$project$Main$searchGUI = function (keywords) {
+	var parseKeyword = function (mk) {
+		if (mk.$ === 'Nothing') {
+			return $elm$core$Result$Ok($elm$core$Maybe$Nothing);
+		} else {
+			var k = mk.a;
+			return A2(
+				$elm$core$List$member,
+				k,
+				A2($elm$core$List$map, $author$project$KeywordString$toString, keywords)) ? $elm$core$Result$Ok(
+				$elm$core$Maybe$Just(k)) : $elm$core$Result$Err('this is not a keyword');
+		}
+	};
 	return A3(
 		$dillonkearns$elm_form$Form$field,
-		'keyword',
+		'keyword 2',
 		$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
 		A3(
 			$dillonkearns$elm_form$Form$field,
-			'author',
+			'keyword 1',
 			$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
 			A3(
 				$dillonkearns$elm_form$Form$field,
-				'title',
+				'author',
 				$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
-				$dillonkearns$elm_form$Form$form(
-					F3(
-						function (title, author, keyword) {
-							return {
-								combine: A2(
-									$dillonkearns$elm_form$Form$Validation$andMap,
-									keyword,
-									A2(
+				A3(
+					$dillonkearns$elm_form$Form$field,
+					'title',
+					$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
+					$dillonkearns$elm_form$Form$form(
+						F4(
+							function (title, author, keyword1, keyword2) {
+								return {
+									combine: A2(
 										$dillonkearns$elm_form$Form$Validation$andMap,
-										author,
+										$dillonkearns$elm_form$Form$Validation$fromResult(
+											A2($dillonkearns$elm_form$Form$Validation$map, parseKeyword, keyword2)),
 										A2(
 											$dillonkearns$elm_form$Form$Validation$andMap,
-											title,
-											$dillonkearns$elm_form$Form$Validation$succeed($author$project$Main$searchForm)))),
-								view: function (info) {
-									return _List_fromArray(
-										[
+											$dillonkearns$elm_form$Form$Validation$fromResult(
+												A2($dillonkearns$elm_form$Form$Validation$map, parseKeyword, keyword1)),
 											A2(
-											$elm$html$Html$div,
-											_List_Nil,
-											_List_fromArray(
-												[
-													A2(
-													$elm$html$Html$label,
-													_List_Nil,
-													_List_fromArray(
-														[
-															A3($author$project$Main$fieldView, info, 'title', title),
-															A3($author$project$Main$fieldView, info, 'author', author),
-															A4($author$project$Main$keywordField, keywords, info, 'keyword', keyword)
-														])),
-													A2(
-													$elm$html$Html$button,
-													_List_Nil,
-													_List_fromArray(
-														[
-															info.submitting ? $elm$html$Html$text('searching...') : $elm$html$Html$text('search')
-														]))
-												]))
-										]);
-								}
-							};
-						})))));
+												$dillonkearns$elm_form$Form$Validation$andMap,
+												author,
+												A2(
+													$dillonkearns$elm_form$Form$Validation$andMap,
+													title,
+													$dillonkearns$elm_form$Form$Validation$succeed($author$project$Main$searchForm))))),
+									view: function (info) {
+										return _List_fromArray(
+											[
+												A2(
+												$elm$html$Html$div,
+												_List_Nil,
+												_List_fromArray(
+													[
+														A2(
+														$elm$html$Html$label,
+														_List_Nil,
+														_List_fromArray(
+															[
+																A3($author$project$Main$fieldView, info, 'title', title),
+																A3($author$project$Main$fieldView, info, 'author', author),
+																A4($author$project$Main$keywordField, keywords, info, 'keyword 1', keyword1),
+																A4($author$project$Main$keywordField, keywords, info, 'keyword 2', keyword2)
+															])),
+														A2(
+														$elm$html$Html$button,
+														_List_Nil,
+														_List_fromArray(
+															[
+																info.submitting ? $elm$html$Html$text('searching...') : $elm$html$Html$text('search')
+															]))
+													]))
+											]);
+									}
+								};
+							}))))));
 };
 var $dillonkearns$elm_form$Form$withOnSubmit = F2(
 	function (onSubmit, options_) {

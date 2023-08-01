@@ -44,7 +44,7 @@ type alias LoadedModel =
 
 type Model
     = Loading
-    | LoadingWithQuery SearchQuery
+    | LoadingWithQuery SearchQuery (List SearchQuery) -- non empty list
     | Loaded LoadedModel
 
 
@@ -75,7 +75,7 @@ update msg model =
                 SearchQuery json ->
                     case D.decodeValue Queries.decodeSearchQuery json of
                         Ok query ->
-                            ( LoadingWithQuery query, Cmd.none )
+                            ( LoadingWithQuery query [], Cmd.none )
 
                         Err _ ->
                             ( problemize DecodeError model, Cmd.none )
@@ -112,7 +112,7 @@ update msg model =
                         Err e ->
                             ( problemize (LoadError e) (Loaded lmodel), Cmd.none )
 
-        LoadingWithQuery q ->
+        LoadingWithQuery q otherQs ->
             case msg of
                 LoadData res ->
                     case res of
@@ -126,9 +126,9 @@ update msg model =
                                 reverseKeywordDict =
                                     RC.reverseKeywordDict data
 
-                                cmd : Cmd msg
-                                cmd =
-                                    case q of
+                                cmdOfQ : SearchQuery -> Cmd msg
+                                cmdOfQ query =
+                                    case query of
                                         FindKeywords str kwsorting ->
                                             findKeywords str kwsorting kws |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults
 
@@ -154,7 +154,7 @@ update msg model =
                                 , keywords = kws
                                 , reverseKeywordDict = reverseKeywordDict
                                 }
-                            , cmd
+                            , Cmd.batch (List.map cmdOfQ (q :: otherQs))
                             )
 
                         Err e ->
@@ -163,7 +163,7 @@ update msg model =
                 SearchQuery json ->
                     case D.decodeValue Queries.decodeSearchQuery json of
                         Ok query ->
-                            ( LoadingWithQuery query, Cmd.none )
+                            ( LoadingWithQuery q (query::otherQs) , Cmd.none )
 
                         Err _ ->
                             ( problemize DecodeError model, Cmd.none )
@@ -209,8 +209,8 @@ problemize p m =
         Loading ->
             Loading
 
-        LoadingWithQuery q ->
-            LoadingWithQuery q
+        LoadingWithQuery q qs ->
+            LoadingWithQuery q qs
 
         Loaded lm ->
             Loaded { lm | problems = p :: lm.problems }

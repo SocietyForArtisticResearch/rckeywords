@@ -4132,9 +4132,11 @@ var $author$project$Worker$LoadError = function (a) {
 var $author$project$Worker$Loaded = function (a) {
 	return {$: 'Loaded', a: a};
 };
-var $author$project$Worker$LoadingWithQuery = function (a) {
-	return {$: 'LoadingWithQuery', a: a};
-};
+var $author$project$Worker$LoadingWithQuery = F2(
+	function (a, b) {
+		return {$: 'LoadingWithQuery', a: a, b: b};
+	});
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $author$project$Queries$FindKeywords = F2(
 	function (a, b) {
 		return {$: 'FindKeywords', a: a, b: b};
@@ -4685,68 +4687,6 @@ var $author$project$Worker$findKeywords = F3(
 				return A2($author$project$Worker$shuffleWithSeed, 42, filtered);
 		}
 	});
-var $elm$core$Dict$foldl = F3(
-	function (func, acc, dict) {
-		foldl:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return acc;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var $temp$func = func,
-					$temp$acc = A3(
-					func,
-					key,
-					value,
-					A3($elm$core$Dict$foldl, func, acc, left)),
-					$temp$dict = right;
-				func = $temp$func;
-				acc = $temp$acc;
-				dict = $temp$dict;
-				continue foldl;
-			}
-		}
-	});
-var $elm$core$Dict$filter = F2(
-	function (isGood, dict) {
-		return A3(
-			$elm$core$Dict$foldl,
-			F3(
-				function (k, v, d) {
-					return A2(isGood, k, v) ? A3($elm$core$Dict$insert, k, v, d) : d;
-				}),
-			$elm$core$Dict$empty,
-			dict);
-	});
-var $elm$core$Dict$member = F2(
-	function (key, dict) {
-		var _v0 = A2($elm$core$Dict$get, key, dict);
-		if (_v0.$ === 'Just') {
-			return true;
-		} else {
-			return false;
-		}
-	});
-var $elm$core$Dict$intersect = F2(
-	function (t1, t2) {
-		return A2(
-			$elm$core$Dict$filter,
-			F2(
-				function (k, _v0) {
-					return A2($elm$core$Dict$member, k, t2);
-				}),
-			t1);
-	});
-var $elm$core$Set$intersect = F2(
-	function (_v0, _v1) {
-		var dict1 = _v0.a;
-		var dict2 = _v1.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A2($elm$core$Dict$intersect, dict1, dict2));
-	});
 var $elm$core$List$any = F2(
 	function (isOkay, list) {
 		any:
@@ -4777,6 +4717,42 @@ var $elm$core$List$member = F2(
 			},
 			xs);
 	});
+var $elm$core$Dict$foldl = F3(
+	function (func, acc, dict) {
+		foldl:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return acc;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$func = func,
+					$temp$acc = A3(
+					func,
+					key,
+					value,
+					A3($elm$core$Dict$foldl, func, acc, left)),
+					$temp$dict = right;
+				func = $temp$func;
+				acc = $temp$acc;
+				dict = $temp$dict;
+				continue foldl;
+			}
+		}
+	});
+var $elm$core$Dict$union = F2(
+	function (t1, t2) {
+		return A3($elm$core$Dict$foldl, $elm$core$Dict$insert, t2, t1);
+	});
+var $elm$core$Set$union = F2(
+	function (_v0, _v1) {
+		var dict1 = _v0.a;
+		var dict2 = _v1.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A2($elm$core$Dict$union, dict1, dict2));
+	});
 var $elm$core$Maybe$withDefault = F2(
 	function (_default, maybe) {
 		if (maybe.$ === 'Just') {
@@ -4791,7 +4767,7 @@ var $author$project$Research$findResearchWithKeywords = F3(
 		var intersectionOfNonempty = F2(
 			function (first, rest) {
 				return $elm$core$Set$toList(
-					A3($elm$core$List$foldl, $elm$core$Set$intersect, first, rest));
+					A3($elm$core$List$foldl, $elm$core$Set$union, first, rest));
 			});
 		var getId = function (exp) {
 			return exp.id;
@@ -4912,7 +4888,6 @@ var $author$project$Research$keywordSet = function (researchlist) {
 		$author$project$Research$emptyKeywordSet,
 		researchlist);
 };
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Worker$problemize = F2(
 	function (p, m) {
@@ -4921,7 +4896,8 @@ var $author$project$Worker$problemize = F2(
 				return $author$project$Worker$Loading;
 			case 'LoadingWithQuery':
 				var q = m.a;
-				return $author$project$Worker$LoadingWithQuery(q);
+				var qs = m.b;
+				return A2($author$project$Worker$LoadingWithQuery, q, qs);
 			default:
 				var lm = m.a;
 				return $author$project$Worker$Loaded(
@@ -5036,7 +5012,7 @@ var $author$project$Worker$update = F2(
 					if (_v3.$ === 'Ok') {
 						var query = _v3.a;
 						return _Utils_Tuple2(
-							$author$project$Worker$LoadingWithQuery(query),
+							A2($author$project$Worker$LoadingWithQuery, query, _List_Nil),
 							$elm$core$Platform$Cmd$none);
 					} else {
 						return _Utils_Tuple2(
@@ -5110,23 +5086,24 @@ var $author$project$Worker$update = F2(
 				}
 			default:
 				var q = model.a;
+				var otherQs = model.b;
 				if (msg.$ === 'LoadData') {
 					var res = msg.a;
 					if (res.$ === 'Ok') {
 						var data = res.a;
 						var reverseKeywordDict = $author$project$Research$reverseKeywordDict(data);
 						var kws = $author$project$Research$keywordSet(data);
-						var cmd = function () {
-							switch (q.$) {
+						var cmdOfQ = function (query) {
+							switch (query.$) {
 								case 'FindKeywords':
-									var str = q.a;
-									var kwsorting = q.b;
+									var str = query.a;
+									var kwsorting = query.b;
 									return $author$project$Worker$returnResults(
 										$author$project$Queries$encodeSearchResult(
 											$author$project$Queries$Keywords(
 												A3($author$project$Worker$findKeywords, str, kwsorting, kws))));
 								case 'FindResearch':
-									var search = q.a;
+									var search = query.a;
 									var keywords = $author$project$Queries$getKeywords(search);
 									return $author$project$Worker$returnResults(
 										$author$project$Queries$encodeSearchResult(
@@ -5138,11 +5115,15 @@ var $author$project$Worker$update = F2(
 											$author$project$Queries$AllKeywords(
 												A3($author$project$Worker$findKeywords, '', $author$project$Research$Alphabetical, kws))));
 							}
-						}();
+						};
 						return _Utils_Tuple2(
 							$author$project$Worker$Loaded(
 								{keywords: kws, problems: _List_Nil, research: data, reverseKeywordDict: reverseKeywordDict}),
-							cmd);
+							$elm$core$Platform$Cmd$batch(
+								A2(
+									$elm$core$List$map,
+									cmdOfQ,
+									A2($elm$core$List$cons, q, otherQs))));
 					} else {
 						var e = res.a;
 						return _Utils_Tuple2(
@@ -5164,7 +5145,10 @@ var $author$project$Worker$update = F2(
 					if (_v11.$ === 'Ok') {
 						var query = _v11.a;
 						return _Utils_Tuple2(
-							$author$project$Worker$LoadingWithQuery(query),
+							A2(
+								$author$project$Worker$LoadingWithQuery,
+								q,
+								A2($elm$core$List$cons, query, otherQs)),
 							$elm$core$Platform$Cmd$none);
 					} else {
 						return _Utils_Tuple2(

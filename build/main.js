@@ -5222,6 +5222,7 @@ var $elm$core$Set$Set_elm_builtin = function (a) {
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
+var $author$project$Main$emptyForm = {author: '', keywords: _List_Nil, title: ''};
 var $author$project$Queries$GetAllKeywords = {$: 'GetAllKeywords'};
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$json$Json$Encode$string = _Json_wrap;
@@ -5395,6 +5396,10 @@ var $author$project$Queries$emptySearch = $author$project$Queries$Search(
 			A2($elm$core$Basics$pow, 2, 31) - 1),
 		keywords: $elm$core$Set$empty,
 		title: ''
+	});
+var $author$project$Main$formWith = F3(
+	function (title, author, keywords) {
+		return {author: author, keywords: keywords, title: title};
 	});
 var $elm$core$Dict$Black = {$: 'Black'};
 var $elm$core$Dict$RBNode_elm_builtin = F5(
@@ -5586,13 +5591,10 @@ var $author$project$Main$getSortingOfUrl = function (url) {
 			$elm$core$List$head,
 			A2($elm$core$Dict$get, 'sorting', url.queryParameters)));
 };
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $author$project$Main$noCmd = function (model) {
-	return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-};
 var $author$project$Main$pageFromInt = function (p) {
 	return $author$project$Main$Page(p);
 };
+var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $author$project$Main$Large = {$: 'Large'};
 var $author$project$Main$Micro = {$: 'Micro'};
 var $author$project$Main$Small = {$: 'Small'};
@@ -5632,6 +5634,14 @@ var $author$project$Research$sortingFromString = function (str) {
 			return $author$project$Research$ByUse;
 	}
 };
+var $author$project$Queries$withAuthor = F2(
+	function (author, _v0) {
+		var s = _v0.a;
+		return $author$project$Queries$Search(
+			_Utils_update(
+				s,
+				{author: author}));
+	});
 var $elm$core$Maybe$withDefault = F2(
 	function (_default, maybe) {
 		if (maybe.$ === 'Just') {
@@ -5640,6 +5650,14 @@ var $elm$core$Maybe$withDefault = F2(
 		} else {
 			return _default;
 		}
+	});
+var $author$project$Queries$withTitle = F2(
+	function (title, _v0) {
+		var s = _v0.a;
+		return $author$project$Queries$Search(
+			_Utils_update(
+				s,
+				{title: title}));
 	});
 var $author$project$Main$handleUrl = F2(
 	function (url, model) {
@@ -5746,6 +5764,13 @@ var $author$project$Main$handleUrl = F2(
 									case 'list':
 										var _v3 = _v0.b;
 										var _v4 = _v3.b;
+										var title = A2(
+											$elm$core$Maybe$withDefault,
+											'',
+											A2(
+												$elm$core$Maybe$andThen,
+												$elm$core$List$head,
+												A2($elm$core$Dict$get, 'title', url.queryParameters)));
 										var sorting = A2(
 											$elm$core$Maybe$withDefault,
 											$author$project$Research$NewestFirst,
@@ -5764,13 +5789,26 @@ var $author$project$Main$handleUrl = F2(
 											$elm$core$Maybe$withDefault,
 											_List_Nil,
 											A2($elm$core$Dict$get, 'keyword', url.queryParameters));
+										var author = A2(
+											$elm$core$Maybe$withDefault,
+											'',
+											A2(
+												$elm$core$Maybe$andThen,
+												$elm$core$List$head,
+												A2($elm$core$Dict$get, 'author', url.queryParameters)));
 										var cmd = $author$project$Main$sendQuery(
 											$author$project$Queries$encodeSearchQuery(
 												$author$project$Queries$FindResearch(
 													A2(
-														$author$project$Queries$searchWithKeywords,
-														$elm$core$Set$fromList(keywords),
-														$author$project$Queries$emptySearch))));
+														$author$project$Queries$withAuthor,
+														author,
+														A2(
+															$author$project$Queries$withTitle,
+															title,
+															A2(
+																$author$project$Queries$searchWithKeywords,
+																$elm$core$Set$fromList(keywords),
+																$author$project$Queries$emptySearch))))));
 										return _Utils_Tuple2(
 											_Utils_update(
 												model,
@@ -5778,7 +5816,7 @@ var $author$project$Main$handleUrl = F2(
 													view: A4(
 														$author$project$Main$SearchView,
 														$author$project$Main$ListLayout,
-														keywords,
+														A3($author$project$Main$formWith, title, author, keywords),
 														sorting,
 														$author$project$Main$Page(page))
 												}),
@@ -5786,6 +5824,13 @@ var $author$project$Main$handleUrl = F2(
 									case 'screen':
 										var _v5 = _v0.b;
 										var _v6 = _v5.b;
+										var title = A2(
+											$elm$core$Maybe$withDefault,
+											'',
+											A2(
+												$elm$core$Maybe$andThen,
+												$elm$core$List$head,
+												A2($elm$core$Dict$get, 'title', url.queryParameters)));
 										var sorting = A2(
 											$elm$core$Maybe$withDefault,
 											$author$project$Research$NewestFirst,
@@ -5821,6 +5866,13 @@ var $author$project$Main$handleUrl = F2(
 														$author$project$Queries$searchWithKeywords,
 														$elm$core$Set$fromList(keywords),
 														$author$project$Queries$emptySearch))));
+										var author = A2(
+											$elm$core$Maybe$withDefault,
+											'',
+											A2(
+												$elm$core$Maybe$andThen,
+												$elm$core$List$head,
+												A2($elm$core$Dict$get, 'author', url.queryParameters)));
 										return _Utils_Tuple2(
 											_Utils_update(
 												model,
@@ -5828,7 +5880,7 @@ var $author$project$Main$handleUrl = F2(
 													view: A4(
 														$author$project$Main$SearchView,
 														$author$project$Main$ScreenLayout(scale),
-														keywords,
+														A3($author$project$Main$formWith, title, author, keywords),
 														sorting,
 														$author$project$Main$Page(page))
 												}),
@@ -5848,7 +5900,18 @@ var $author$project$Main$handleUrl = F2(
 				break _v0$4;
 			}
 		}
-		return $author$project$Main$noCmd(model);
+		return _Utils_Tuple2(
+			_Utils_update(
+				model,
+				{
+					view: A4(
+						$author$project$Main$SearchView,
+						$author$project$Main$ListLayout,
+						A3($author$project$Main$formWith, '', '', _List_Nil),
+						$author$project$Research$NewestFirst,
+						$author$project$Main$Page(1))
+				}),
+			A2($elm$browser$Browser$Navigation$pushUrl, model.key, '/#/research/search/list'));
 	});
 var $dillonkearns$elm_form$Form$init = $elm$core$Dict$empty;
 var $elm$url$Url$percentDecode = _Url_percentDecode;
@@ -6401,7 +6464,7 @@ var $author$project$Main$init = F3(
 					view: A4(
 						$author$project$Main$SearchView,
 						$author$project$Main$ListLayout,
-						_List_Nil,
+						$author$project$Main$emptyForm,
 						$author$project$Research$Random,
 						$author$project$Main$Page(1))
 				}));
@@ -6650,9 +6713,8 @@ var $author$project$Research$kwName = function (_v0) {
 	return $elm$core$String$toLower(kw.name);
 };
 var $elm$browser$Browser$Navigation$load = _Browser_load;
-var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Basics$neq = _Utils_notEqual;
-var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$core$Set$remove = F2(
 	function (key, _v0) {
 		var dict = _v0.a;
@@ -6814,14 +6876,6 @@ var $dillonkearns$elm_form$Form$update = F2(
 							maybeMsg)));
 		}
 	});
-var $author$project$Queries$withAuthor = F2(
-	function (author, _v0) {
-		var s = _v0.a;
-		return $author$project$Queries$Search(
-			_Utils_update(
-				s,
-				{author: author}));
-	});
 var $author$project$Queries$withKeywords = F2(
 	function (keywords, _v0) {
 		var s = _v0.a;
@@ -6831,14 +6885,6 @@ var $author$project$Queries$withKeywords = F2(
 				{
 					keywords: $elm$core$Set$fromList(keywords)
 				}));
-	});
-var $author$project$Queries$withTitle = F2(
-	function (title, _v0) {
-		var s = _v0.a;
-		return $author$project$Queries$Search(
-			_Utils_update(
-				s,
-				{title: title}));
 	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
@@ -6914,7 +6960,6 @@ var $author$project$Main$update = F2(
 								$elm$core$Platform$Cmd$none);
 						default:
 							var kws = result.a.a;
-							var _v4 = A2($elm$core$Debug$log, 'all keywords are here', kws);
 							return _Utils_Tuple2(
 								_Utils_update(
 									model,
@@ -6930,11 +6975,11 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 			case 'HitEnter':
-				var _v5 = model.view;
-				if (_v5.$ === 'KeywordsView') {
-					if (_v5.a.$ === 'KeywordMainView') {
-						var _v6 = _v5.a;
-						var sorting = _v6.a;
+				var _v4 = model.view;
+				if (_v4.$ === 'KeywordsView') {
+					if (_v4.a.$ === 'KeywordMainView') {
+						var _v5 = _v4.a;
+						var sorting = _v5.a;
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
@@ -6958,8 +7003,8 @@ var $author$project$Main$update = F2(
 										'/#/keywords/search?q=' + (model.query + ('&sorting=' + $author$project$Research$sortingToString(sorting))))
 									])));
 					} else {
-						var _v7 = _v5.a;
-						var sorting = _v7.b;
+						var _v6 = _v4.a;
+						var sorting = _v6.b;
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
@@ -7011,9 +7056,9 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'FormMsg':
 				var formMsg = msg.a;
-				var _v8 = A2($dillonkearns$elm_form$Form$update, formMsg, model.searchGUI);
-				var updatedFormModel = _v8.a;
-				var cmd = _v8.b;
+				var _v7 = A2($dillonkearns$elm_form$Form$update, formMsg, model.searchGUI);
+				var updatedFormModel = _v7.a;
+				var cmd = _v7.b;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -7030,8 +7075,7 @@ var $author$project$Main$update = F2(
 							function (k) {
 								return k !== '';
 							},
-							_List_fromArray(
-								[srch.keyword1, srch.keyword2])),
+							srch.keywords),
 						A2(
 							$author$project$Queries$withAuthor,
 							srch.author,
@@ -15587,7 +15631,7 @@ var $author$project$Main$appUrlFromView = function (v) {
 		return $author$project$Main$appUrlFromKeywordViewState(kwstate);
 	} else {
 		var layout = v.a;
-		var keywords = v.b;
+		var searchFormState = v.b;
 		var sorting = v.c;
 		var page = v.d;
 		var appurl = function () {
@@ -15596,7 +15640,15 @@ var $author$project$Main$appUrlFromView = function (v) {
 					$author$project$Main$withParametersList,
 					_List_fromArray(
 						[
-							_Utils_Tuple2('keyword', keywords),
+							_Utils_Tuple2('keyword', searchFormState.keywords),
+							_Utils_Tuple2(
+							'title',
+							_List_fromArray(
+								[searchFormState.title])),
+							_Utils_Tuple2(
+							'author',
+							_List_fromArray(
+								[searchFormState.author])),
 							_Utils_Tuple2(
 							'sorting',
 							_List_fromArray(
@@ -15619,7 +15671,15 @@ var $author$project$Main$appUrlFromView = function (v) {
 					$author$project$Main$withParametersList,
 					_List_fromArray(
 						[
-							_Utils_Tuple2('keyword', keywords),
+							_Utils_Tuple2('keyword', searchFormState.keywords),
+							_Utils_Tuple2(
+							'title',
+							_List_fromArray(
+								[searchFormState.title])),
+							_Utils_Tuple2(
+							'author',
+							_List_fromArray(
+								[searchFormState.author])),
 							_Utils_Tuple2(
 							'sorting',
 							_List_fromArray(
@@ -16265,7 +16325,7 @@ var $author$project$Main$viewScaleSwitch = F2(
 			$mdgriffith$elm_ui$Element$row,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$padding(25),
+					A2($mdgriffith$elm_ui$Element$paddingXY, 0, 15),
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
 					$mdgriffith$elm_ui$Element$spacing(5),
 					$mdgriffith$elm_ui$Element$Font$color(
@@ -17458,6 +17518,30 @@ var $dillonkearns$elm_form$Form$Validation$fromResult = function (fieldResult) {
 		},
 		fieldResult);
 };
+var $author$project$Main$getFirstKeyword = function (form) {
+	return A2(
+		$elm$core$Maybe$withDefault,
+		'',
+		$elm$core$List$head(form.keywords));
+};
+var $elm$core$List$tail = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(xs);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$Main$getSecondKeyword = function (form) {
+	return A2(
+		$elm$core$Maybe$withDefault,
+		'',
+		A2(
+			$elm$core$Maybe$andThen,
+			$elm$core$List$head,
+			$elm$core$List$tail(form.keywords)));
+};
 var $elm$html$Html$Attributes$autocomplete = function (bool) {
 	return A2(
 		$elm$html$Html$Attributes$stringProperty,
@@ -17588,19 +17672,22 @@ var $dillonkearns$elm_form$Form$Field$search = function (_v0) {
 		field,
 		$dillonkearns$elm_form$Internal$Input$Input($dillonkearns$elm_form$Internal$Input$Search));
 };
-var $author$project$Main$SearchForm = F4(
-	function (title, author, keyword1, keyword2) {
-		return {author: author, keyword1: keyword1, keyword2: keyword2, title: title};
+var $author$project$Main$SearchForm = F3(
+	function (title, author, keywords) {
+		return {author: author, keywords: keywords, title: title};
 	});
 var $author$project$Main$searchForm = F4(
 	function (title, author, keyword1, keyword2) {
 		var nothingIsJustEmpty = $elm$core$Maybe$withDefault('');
-		return A4(
+		return A3(
 			$author$project$Main$SearchForm,
 			nothingIsJustEmpty(title),
 			nothingIsJustEmpty(author),
-			nothingIsJustEmpty(keyword1),
-			nothingIsJustEmpty(keyword2));
+			A2(
+				$elm$core$List$filterMap,
+				$elm$core$Basics$identity,
+				_List_fromArray(
+					[keyword1, keyword2])));
 	});
 var $dillonkearns$elm_form$Internal$Input$Text = {$: 'Text'};
 var $dillonkearns$elm_form$Form$Field$text = A2(
@@ -17621,6 +17708,22 @@ var $dillonkearns$elm_form$Form$Field$text = A2(
 		properties: _List_Nil
 	},
 	$dillonkearns$elm_form$Internal$Input$Input($dillonkearns$elm_form$Internal$Input$Text));
+var $dillonkearns$elm_form$Form$Field$withInitialValue = F2(
+	function (toInitialValue, _v0) {
+		var field = _v0.a;
+		var kind = _v0.b;
+		return A2(
+			$dillonkearns$elm_form$Internal$Field$Field,
+			_Utils_update(
+				field,
+				{
+					initialValue: A2(
+						$elm$core$Basics$composeR,
+						toInitialValue,
+						A2($elm$core$Basics$composeR, field.initialToString, $elm$core$Maybe$Just))
+				}),
+			kind);
+	});
 var $author$project$Main$searchGUI = function (keywords) {
 	var parseKeyword = function (mk) {
 		if (mk.$ === 'Nothing') {
@@ -17637,19 +17740,35 @@ var $author$project$Main$searchGUI = function (keywords) {
 	return A3(
 		$dillonkearns$elm_form$Form$field,
 		'keyword 2',
-		$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
+		A2(
+			$dillonkearns$elm_form$Form$Field$withInitialValue,
+			$author$project$Main$getSecondKeyword,
+			$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text)),
 		A3(
 			$dillonkearns$elm_form$Form$field,
 			'keyword 1',
-			$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
+			A2(
+				$dillonkearns$elm_form$Form$Field$withInitialValue,
+				$author$project$Main$getFirstKeyword,
+				$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text)),
 			A3(
 				$dillonkearns$elm_form$Form$field,
 				'author',
-				$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
+				A2(
+					$dillonkearns$elm_form$Form$Field$withInitialValue,
+					function ($) {
+						return $.author;
+					},
+					$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text)),
 				A3(
 					$dillonkearns$elm_form$Form$field,
 					'title',
-					$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text),
+					A2(
+						$dillonkearns$elm_form$Form$Field$withInitialValue,
+						function ($) {
+							return $.title;
+						},
+						$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text)),
 					$dillonkearns$elm_form$Form$form(
 						F4(
 							function (title, author, keyword1, keyword2) {
@@ -17700,6 +17819,10 @@ var $author$project$Main$searchGUI = function (keywords) {
 								};
 							}))))));
 };
+var $dillonkearns$elm_form$Form$withInput = F2(
+	function (input, options_) {
+		return {action: options_.action, extras: options_.extras, id: options_.id, input: input, method: options_.method, onSubmit: options_.onSubmit, serverResponse: options_.serverResponse};
+	});
 var $dillonkearns$elm_form$Form$withOnSubmit = F2(
 	function (onSubmit, options_) {
 		return {
@@ -17712,20 +17835,28 @@ var $dillonkearns$elm_form$Form$withOnSubmit = F2(
 			serverResponse: options_.serverResponse
 		};
 	});
-var $author$project$Main$viewSearch = F3(
-	function (keywords, submitting, searchFormState) {
-		return $mdgriffith$elm_ui$Element$html(
-			A4(
-				$dillonkearns$elm_form$Form$renderHtml,
-				{state: searchFormState, submitting: submitting, toMsg: $author$project$Main$FormMsg},
-				A2(
-					$dillonkearns$elm_form$Form$withOnSubmit,
-					function (record) {
-						return $author$project$Main$SubmitSearch(record.parsed);
-					},
-					$dillonkearns$elm_form$Form$options('signUpForm')),
-				_List_Nil,
-				$author$project$Main$searchGUI(keywords)));
+var $author$project$Main$viewSearch = F4(
+	function (initialForm, keywords, submitting, searchFormState) {
+		if (initialForm.$ === 'Just') {
+			var formInput = initialForm.a;
+			return $mdgriffith$elm_ui$Element$html(
+				A4(
+					$dillonkearns$elm_form$Form$renderHtml,
+					{state: searchFormState, submitting: submitting, toMsg: $author$project$Main$FormMsg},
+					A2(
+						$dillonkearns$elm_form$Form$withInput,
+						formInput,
+						A2(
+							$dillonkearns$elm_form$Form$withOnSubmit,
+							function (record) {
+								return $author$project$Main$SubmitSearch(record.parsed);
+							},
+							$dillonkearns$elm_form$Form$options('signUpForm'))),
+					_List_Nil,
+					$author$project$Main$searchGUI(keywords)));
+		} else {
+			return $mdgriffith$elm_ui$Element$text('loading form data..');
+		}
 	});
 var $author$project$Main$viewResearchResults = function (allKeywords) {
 	return function (submitting) {
@@ -17734,7 +17865,7 @@ var $author$project$Main$viewResearchResults = function (allKeywords) {
 				return function (layout) {
 					return function (v) {
 						return function (lst) {
-							return function (keywords) {
+							return function (initialForm) {
 								return function (sorting) {
 									return function (_v0) {
 										var p = _v0.a;
@@ -17747,7 +17878,7 @@ var $author$project$Main$viewResearchResults = function (allKeywords) {
 																$author$project$Main$withParametersList,
 																_List_fromArray(
 																	[
-																		_Utils_Tuple2('keywords', keywords),
+																		_Utils_Tuple2('keywords', initialForm.keywords),
 																		_Utils_Tuple2(
 																		'sorting',
 																		_List_fromArray(
@@ -17773,7 +17904,7 @@ var $author$project$Main$viewResearchResults = function (allKeywords) {
 																$author$project$Main$withParametersList,
 																_List_fromArray(
 																	[
-																		_Utils_Tuple2('keywords', keywords),
+																		_Utils_Tuple2('keywords', initialForm.keywords),
 																		_Utils_Tuple2(
 																		'sorting',
 																		_List_fromArray(
@@ -17817,7 +17948,7 @@ var $author$project$Main$viewResearchResults = function (allKeywords) {
 													A2($elm$core$List$map, $author$project$Main$viewResearchMicro, sorted));
 											} else {
 												var scale = layout.a;
-												return A4($author$project$Main$viewScreenshots, keywords, dimensions, scale, sorted);
+												return A4($author$project$Main$viewScreenshots, initialForm.keywords, dimensions, scale, sorted);
 											}
 										}();
 										var numberOfPages = function (n) {
@@ -17836,17 +17967,23 @@ var $author$project$Main$viewResearchResults = function (allKeywords) {
 													$mdgriffith$elm_ui$Element$el,
 													$author$project$RCStyles$defaultPadding,
 													$mdgriffith$elm_ui$Element$text('search results')),
-													A3($author$project$Main$viewSearch, allKeywords, submitting, searchFormState),
+													A4(
+													$author$project$Main$viewSearch,
+													$elm$core$Maybe$Just(initialForm),
+													allKeywords,
+													submitting,
+													searchFormState),
 													A2(
 													$author$project$Main$viewLayoutSwitch,
 													layout,
 													urlFromLayout(sorting)),
 													A2($author$project$Main$toggleTitleSorting, sorting, urlFromSorting),
 													function () {
-													if (!keywords.b) {
+													var _v1 = initialForm.keywords;
+													if (!_v1.b) {
 														return $mdgriffith$elm_ui$Element$none;
 													} else {
-														var kws = keywords;
+														var kws = _v1;
 														return A2(
 															$mdgriffith$elm_ui$Element$el,
 															_List_Nil,

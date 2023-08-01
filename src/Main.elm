@@ -19,6 +19,7 @@ import Form.Validation as Validation
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events
+import Iso8601
 import Json.Decode
 import Json.Encode
 import KeywordString exposing (KeywordString)
@@ -31,7 +32,6 @@ import String
 import Task
 import Time
 import Url exposing (Url)
-import Iso8601
 
 
 
@@ -115,7 +115,7 @@ scaleFromString scale =
 
 viewScaleSwitch : Scale -> (Scale -> String) -> Element Msg
 viewScaleSwitch scale urlWithScale =
-    Element.row [ padding 25, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+    Element.row [ paddingXY 0 15, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
         [ Element.link (linkStyle (scale == Micro) SmallLink) { url = urlWithScale Micro, label = Element.text "micro" }
         , Element.link (linkStyle (scale == Small) SmallLink) { url = urlWithScale Small, label = Element.text "small" }
         , Element.link (linkStyle (scale == Medium) SmallLink) { url = urlWithScale Medium, label = Element.text "medium" }
@@ -146,7 +146,7 @@ type Page
 
 type View
     = KeywordsView KeywordsViewState
-    | SearchView Layout (List String) RC.TitleSorting Page
+    | SearchView Layout SearchForm RC.TitleSorting Page
 
 
 
@@ -264,7 +264,7 @@ init { width, height } url key =
     { query = ""
     , search = Idle
     , screenDimensions = { w = width, h = height }
-    , view = SearchView ListLayout [] RC.Random (Page 1)
+    , view = SearchView ListLayout emptyForm RC.Random (Page 1)
     , numberOfResults = 8
     , url = initUrl
     , key = key
@@ -341,10 +341,6 @@ update msg model =
                     ( { model | search = FoundResearch exps }, Cmd.none )
 
                 Ok (Queries.AllKeywords kws) ->
-                    let
-                        _ =
-                            Debug.log "all keywords are here" kws
-                    in
                     ( { model | allKeywords = kws |> List.map (RC.kwName >> KeywordString.fromString) }, Cmd.none )
 
                 Err _ ->
@@ -403,7 +399,7 @@ update msg model =
                                 |> Queries.withTitle srch.title
                                 |> Queries.withAuthor srch.author
                                 |> Queries.withKeywords
-                                    ([ srch.keyword1, srch.keyword2 ] |> List.filter (\k -> k /= ""))
+                                    (srch.keywords |> List.filter (\k -> k /= ""))
 
                         queryCmd =
                             sendQuery
@@ -511,28 +507,63 @@ handleUrl url model =
                         |> Maybe.andThen String.toInt
                         |> Maybe.withDefault 1
 
+                title : String
+                title =
+                    url.queryParameters
+                        |> Dict.get "title"
+                        |> Maybe.andThen List.head
+                        |> Maybe.withDefault ""
+
+                author : String
+                author =
+                    url.queryParameters
+                        |> Dict.get "author"
+                        |> Maybe.andThen List.head
+                        |> Maybe.withDefault ""
+
                 cmd : Cmd msg
                 cmd =
                     sendQuery
                         (Queries.encodeSearchQuery
                             (FindResearch
-                                (Queries.emptySearch |> Queries.searchWithKeywords (Set.fromList keywords))
+                                (Queries.emptySearch
+                                    |> Queries.searchWithKeywords (Set.fromList keywords)
+                                    |> Queries.withTitle title
+                                    |> Queries.withAuthor author
+                                )
                             )
                         )
             in
-            ( { model | view = SearchView ListLayout keywords sorting (Page page) }, cmd )
+            ( { model | view = SearchView ListLayout (formWith title author keywords) sorting (Page page) }, cmd )
 
         [ "research", "search", "screen" ] ->
             let
+                sorting : RC.TitleSorting
                 sorting =
                     getSortingOfUrl url
                         |> Maybe.withDefault RC.NewestFirst
 
+                keywords : List String
                 keywords =
                     url.queryParameters
                         |> Dict.get "keyword"
                         |> Maybe.withDefault []
 
+                title : String
+                title =
+                    url.queryParameters
+                        |> Dict.get "title"
+                        |> Maybe.andThen List.head
+                        |> Maybe.withDefault ""
+
+                author : String
+                author =
+                    url.queryParameters
+                        |> Dict.get "author"
+                        |> Maybe.andThen List.head
+                        |> Maybe.withDefault ""
+
+                scale : Scale
                 scale =
                     url.queryParameters
                         |> Dict.get "scale"
@@ -540,6 +571,7 @@ handleUrl url model =
                         |> Maybe.andThen scaleFromString
                         |> Maybe.withDefault Medium
 
+                page : Int
                 page =
                     url.queryParameters
                         |> Dict.get "page"
@@ -547,6 +579,7 @@ handleUrl url model =
                         |> Maybe.andThen String.toInt
                         |> Maybe.withDefault 1
 
+                cmd : Cmd msg
                 cmd =
                     sendQuery
                         (Queries.encodeSearchQuery
@@ -557,10 +590,14 @@ handleUrl url model =
                             )
                         )
             in
-            ( { model | view = SearchView (ScreenLayout scale) keywords sorting (Page page) }, cmd )
+            ( { model | view = SearchView (ScreenLayout scale) (formWith title author keywords) sorting (Page page) }, cmd )
 
         _ ->
-            noCmd model
+            ( { model
+                | view = SearchView ListLayout (formWith "" "" []) RC.NewestFirst (Page 1)
+              }
+            , Nav.pushUrl model.key "/#/research/search/list"
+            )
 
 
 image : ( Int, Int ) -> String -> Element msg
@@ -929,8 +966,8 @@ anchor anchorId =
     Element.htmlAttribute (Attr.id anchorId)
 
 
-viewResearchResults : List KeywordString -> Bool -> Form.Model -> ScreenDimensions -> Layout -> View -> List Research -> List String -> RC.TitleSorting -> Page -> Element Msg
-viewResearchResults allKeywords submitting searchFormState dimensions layout v lst keywords sorting (Page p) =
+viewResearchResults : List KeywordString -> Bool -> Form.Model -> ScreenDimensions -> Layout -> View -> List Research -> SearchForm -> RC.TitleSorting -> Page -> Element Msg
+viewResearchResults allKeywords submitting searchFormState dimensions layout v lst initialForm sorting (Page p) =
     let
         sorted : List Research
         sorted =
@@ -943,7 +980,7 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
                     Element.column [] (sorted |> List.map viewResearchMicro)
 
                 ScreenLayout scale ->
-                    viewScreenshots keywords dimensions scale sorted
+                    viewScreenshots initialForm.keywords dimensions scale sorted
 
         urlFromLayout : RC.TitleSorting -> Layout -> String
         urlFromLayout s l =
@@ -951,7 +988,7 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
                 ListLayout ->
                     AppUrl.fromPath [ "research", "search", "list" ]
                         |> withParametersList
-                            [ ( "keywords", keywords )
+                            [ ( "keywords", initialForm.keywords )
                             , ( "sorting", [ RC.titleSortingToString s ] )
                             , ( "page", [ pageAsString (Page p) ] )
                             ]
@@ -961,7 +998,7 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
                 ScreenLayout scale ->
                     AppUrl.fromPath [ "research", "search", "screen" ]
                         |> withParametersList
-                            [ ( "keywords", keywords )
+                            [ ( "keywords", initialForm.keywords )
                             , ( "sorting", [ RC.titleSortingToString s ] )
                             , ( "scale", [ scaleToString scale ] )
                             , ( "page", [ pageAsString (Page p) ] )
@@ -979,10 +1016,10 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
     in
     Element.column [ anchor "top" ] <|
         [ Element.el RCStyles.defaultPadding (Element.text "search results")
-        , viewSearch allKeywords submitting searchFormState
+        , viewSearch (Just initialForm) allKeywords submitting searchFormState
         , viewLayoutSwitch layout (urlFromLayout sorting)
         , toggleTitleSorting sorting urlFromSorting
-        , case keywords of
+        , case initialForm.keywords of
             [] ->
                 Element.none
 
@@ -1201,14 +1238,16 @@ appUrlFromView v =
         KeywordsView kwstate ->
             appUrlFromKeywordViewState kwstate
 
-        SearchView layout keywords sorting page ->
+        SearchView layout searchFormState sorting page ->
             let
                 appurl =
                     case layout of
                         ListLayout ->
                             AppUrl.fromPath [ "research", "search", "list" ]
                                 |> withParametersList
-                                    [ ( "keyword", keywords )
+                                    [ ( "keyword", searchFormState.keywords )
+                                    , ( "title", [ searchFormState.title ] )
+                                    , ( "author", [ searchFormState.author ] )
                                     , ( "sorting", [ RC.titleSortingToString sorting ] )
                                     , ( "page", [ pageAsString page ] )
                                     ]
@@ -1216,7 +1255,9 @@ appUrlFromView v =
                         ScreenLayout scale ->
                             AppUrl.fromPath [ "research", "search", "screen" ]
                                 |> withParametersList
-                                    [ ( "keyword", keywords )
+                                    [ ( "keyword", searchFormState.keywords )
+                                    , ( "title", [ searchFormState.title ] )
+                                    , ( "author", [ searchFormState.author ] )
                                     , ( "sorting", [ RC.titleSortingToString sorting ] )
                                     , ( "page", [ pageAsString page ] )
                                     , ( "scale", [ scaleToString scale ] )
@@ -1624,8 +1665,23 @@ makeNumColumns num input =
 type alias SearchForm =
     { title : String
     , author : String
-    , keyword1 : String
-    , keyword2 : String
+    , keywords : List String
+    }
+
+
+emptyForm : SearchForm
+emptyForm =
+    { title = ""
+    , author = ""
+    , keywords = []
+    }
+
+
+formWith : String -> String -> List String -> SearchForm
+formWith title author keywords =
+    { title = title
+    , author = author
+    , keywords = keywords
     }
 
 
@@ -1638,20 +1694,9 @@ searchForm title author keyword1 keyword2 =
     SearchForm
         (nothingIsJustEmpty title)
         (nothingIsJustEmpty author)
-        (nothingIsJustEmpty keyword1)
-        (nothingIsJustEmpty keyword2)
+        (List.filterMap identity [ keyword1, keyword2 ])
 
 
-searchGUI :
-    List KeywordString
-    ->
-        Form.Form
-            String
-            { combine : Validation.Validation String SearchForm Never constraints3
-            , view : { a | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg)
-            }
-            parsedCombined
-            input
 searchGUI keywords =
     let
         parseKeyword mk =
@@ -1706,10 +1751,23 @@ searchGUI keywords =
                     ]
             }
         )
-        |> Form.field "title" (Field.text |> Field.search)
-        |> Form.field "author" (Field.text |> Field.search)
-        |> Form.field "keyword 1" (Field.text |> Field.search)
-        |> Form.field "keyword 2" (Field.text |> Field.search)
+        |> Form.field "title" (Field.text |> Field.search |> Field.withInitialValue .title)
+        |> Form.field "author" (Field.text |> Field.search |> Field.withInitialValue .author)
+        |> Form.field "keyword 1" (Field.text |> Field.search |> Field.withInitialValue getFirstKeyword)
+        |> Form.field "keyword 2" (Field.text |> Field.search |> Field.withInitialValue getSecondKeyword)
+
+
+getFirstKeyword : SearchForm -> String
+getFirstKeyword form =
+    form.keywords |> List.head |> Maybe.withDefault ""
+
+
+getSecondKeyword : SearchForm -> String
+getSecondKeyword form =
+    form.keywords
+        |> List.tail
+        |> Maybe.andThen List.head
+        |> Maybe.withDefault ""
 
 
 fieldView formState label field =
@@ -1748,7 +1806,7 @@ keywordField keywords formState label field =
                 Just (Just n) ->
                     (str |> String.length) - 1 >= n
 
-                _ -> 
+                _ ->
                     False
 
         kwStrings =
@@ -1786,26 +1844,23 @@ keywordField keywords formState label field =
         ]
 
 
-viewSearch : List KeywordString -> Bool -> Form.Model -> Element Msg
-viewSearch keywords submitting searchFormState =
-    Element.html
-        (searchGUI keywords
-            |> Form.renderHtml
-                { submitting = submitting
-                , state = searchFormState
-                , toMsg = FormMsg
-                }
-                (Form.options "signUpForm"
-                    |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
+viewSearch : Maybe SearchForm -> List KeywordString -> Bool -> Form.Model -> Element Msg
+viewSearch initialForm keywords submitting searchFormState =
+    case initialForm of
+        Just formInput ->
+            Element.html
+                (searchGUI keywords
+                    |> Form.renderHtml
+                        { submitting = submitting
+                        , state = searchFormState
+                        , toMsg = FormMsg
+                        }
+                        (Form.options "signUpForm"
+                            |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
+                            |> Form.withInput formInput
+                        )
+                        []
                 )
-                []
-        )
 
-rcDateToPosix : String -> Result String Time.Posix
-rcDateToPosix rcdate = 
-    -- 
-    case rcdate |> String.split "/" of
-        [d,m,y] -> [d,m,y] |> String.join "-" |> Iso8601.toTime |> Result.mapError (always "nope")
-
-        _ -> 
-            Err "couldn't parse this"
+        Nothing ->
+            Element.text "loading form data.."

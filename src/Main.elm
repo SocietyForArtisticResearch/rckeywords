@@ -393,22 +393,45 @@ update msg model =
             -- TODO: update url with this search state
             case validated of
                 Form.Valid srch ->
+                    -- should update key
                     let
-                        fullSearch =
-                            Queries.emptySearch
-                                |> Queries.withTitle srch.title
-                                |> Queries.withAuthor srch.author
-                                |> Queries.withKeywords
-                                    (srch.keywords |> List.filter (\k -> k /= ""))
+                        newView =
+                            updateViewWithSearch srch model.view
 
-                        queryCmd =
+                        searchCmd =
                             sendQuery
-                                (Queries.encodeSearchQuery (FindResearch fullSearch))
+                                (Queries.encodeSearchQuery
+                                    (FindResearch
+                                        (Queries.emptySearch
+                                            |> Queries.searchWithKeywords (Set.fromList srch.keywords)
+                                            |> Queries.withTitle srch.title
+                                            |> Queries.withAuthor srch.author
+                                        )
+                                    )
+                                )
                     in
-                    ( model, queryCmd )
+                    ( { model
+                        | view = newView
+                        , search = Searching
+                      }
+                    , Cmd.batch
+                        [ searchCmd
+                        , Nav.pushUrl model.key (appUrlFromView newView)
+                        ]
+                    )
 
                 Form.Invalid m x ->
                     ( model, Cmd.none )
+
+
+updateViewWithSearch : SearchForm -> View -> View
+updateViewWithSearch srch v =
+    case v of
+        KeywordsView s ->
+            KeywordsView s
+
+        SearchView layout _ sorting _ ->
+            SearchView layout srch sorting (Page 1)
 
 
 urlWhereFragmentIsPath : Url -> AppUrl.AppUrl
@@ -684,7 +707,35 @@ viewResearchMicro research =
                 ]
 
         Nothing ->
-            Element.none
+            let
+                urlFromId : Int -> String
+                urlFromId i =
+                    String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
+            in
+            Element.row
+                [ width fill
+                , height (px 200)
+                , Element.clip
+                ]
+                [ Maybe.map img (Just <| urlFromId research.id) |> Maybe.withDefault Element.none
+                , Element.column [ width (fillPortion 6), Element.alignTop ] <|
+                    [ Element.link [ width fill, Element.alignLeft ] <|
+                        { label =
+                            Element.paragraph
+                                microLinkStyle
+                                [ Element.text research.title ]
+                        , url = research.defaultPage
+                        }
+                    , Element.link [ width fill ] <|
+                        { label =
+                            Element.paragraph
+                                microLinkStyle
+                                [ Element.text <| RC.authorAsString research.author ]
+                        , url = RC.authorUrl research.author
+                        }
+                    , Element.el lightLink (Element.text research.created)
+                    ]
+                ]
 
 
 
@@ -848,7 +899,7 @@ linkStyle active style =
         List.append [ Font.underline, Element.Border.solid ] common
 
     else
-        Element.Border.dashed :: common
+        Element.Border.solid :: common
 
 
 viewNav : View -> Element Msg
@@ -881,10 +932,20 @@ view model =
                 SearchView layout keywords sorting page ->
                     case model.search of
                         FoundResearch lst ->
+                            let
+                                _ =
+                                    Debug.log "found research" lst
+                            in
                             viewResearchResults model.allKeywords model.submitting model.searchGUI model.screenDimensions layout model.view lst keywords sorting page
 
-                        _ ->
-                            Element.text "search interface"
+                        FoundKeywords _ ->
+                            Element.text "hmm, found keywords"
+
+                        Searching ->
+                            Element.text "waiting"
+
+                        Idle ->
+                            Element.text "idle"
     in
     { title = "Research Catalogue - Screenshot Page"
     , body =
@@ -1015,7 +1076,7 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
             lst |> List.length |> (\n -> n // pageSize)
     in
     Element.column [ anchor "top" ] <|
-        [ Element.el RCStyles.defaultPadding (Element.text "search results")
+        [ Element.el RCStyles.defaultPadding (Element.text "search form")
         , viewSearch (Just initialForm) allKeywords submitting searchFormState
         , viewLayoutSwitch layout (urlFromLayout sorting)
         , toggleTitleSorting sorting urlFromSorting
@@ -1323,40 +1384,6 @@ viewKeywords model keywordview =
             in
             el [ Font.size 12 ] (Element.text showing)
 
-        viewCountScroll : List RC.Keyword -> Element msg
-        viewCountScroll lst =
-            let
-                count : Int
-                count =
-                    lst |> List.length
-
-                p =
-                    page |> pageToInt
-
-                showing =
-                    [ "results ", 0 |> String.fromInt, "-", min count model.searchPageSize |> String.fromInt, " (total: ", count |> String.fromInt, ")" ] |> String.concat
-            in
-            el [ Font.size 12 ] (Element.text showing)
-
-        loadMore : List RC.Keyword -> Element Msg
-        loadMore lst =
-            let
-                count : Int
-                count =
-                    lst |> List.length
-
-                shown =
-                    model.searchPageSize
-            in
-            if shown < count then
-                Element.Input.button [ Element.paddingXY 0 25, Font.size 12 ]
-                    { onPress = Just LoadMore
-                    , label = text "Load More"
-                    }
-
-            else
-                Element.none
-
         -- lastDate : Element msg
         -- lastDate =
         --     let
@@ -1387,10 +1414,10 @@ viewKeywords model keywordview =
                             KeywordSearch nonEmpty RC.ByUse (Page 1) |> appUrlFromKeywordViewState
             in
             Element.row [ Element.spacingXY 15 0 ]
-                [ Element.Input.search [ width (px 620), onAnyKey HitEnter ]
+                [ Element.Input.search [ width (px 200), onEnter HitEnter ]
                     { onChange = ChangedQuery
                     , text = model.query
-                    , placeholder = Just (Element.Input.placeholder [] (Element.text "search for artwork, category, author ..."))
+                    , placeholder = Just (Element.Input.placeholder [] (Element.text "search for keyword"))
                     , label = Element.Input.labelAbove [] (Element.text "keyword")
                     }
                 , Element.link (Element.moveDown 12 :: linkStyle shouldEnable BigLink)
@@ -1440,34 +1467,13 @@ viewKeywords model keywordview =
                 , case result of
                     FoundKeywords results ->
                         let
-                            currentPage : List RC.Keyword
                             currentPage =
-                                pageOfList model page results
+                                pageOfList page results
                         in
                         Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
-                            [ viewCountScroll results
-                            , Element.row [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
-                                [ text ("selected keywords count: " ++ String.fromInt (Set.size model.keywords)) ]
-                            , Element.row [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
-                                [ Set.toList model.keywords |> List.map (viewSelectedKeyword 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
-                                ]
-                            , --scrollable
-                              Element.el
-                                [ Element.width Element.fill
-                                , Element.height Element.fill
-                                ]
-                              <|
-                                Element.column
-                                    [ Element.width Element.shrink
-                                    , Element.height <| Element.maximum 330 Element.shrink
-                                    , Element.scrollbarY
-                                    , Element.clipX
-                                    ]
-                                    [ currentPage |> List.filter (notInSet model) |> List.map (viewKeywordAsClickable 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
-                                    , loadMore results
-
-                                    --, pageNavigation results page
-                                    ]
+                            [ viewCount results
+                            , currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                            , pageNavigation results page
                             ]
 
                     Idle ->
@@ -1497,8 +1503,8 @@ makeColumns n attrs lst =
         )
 
 
-pageOfList : Model -> Page -> List a -> List a
-pageOfList model (Page i) lst =
+pageOfList : Page -> List a -> List a
+pageOfList (Page i) lst =
     let
         start : Int
         start =
@@ -1506,7 +1512,7 @@ pageOfList model (Page i) lst =
     in
     lst
         |> List.drop start
-        |> List.take model.searchPageSize
+        |> List.take pageSize
 
 
 notInSet : Model -> RC.Keyword -> Bool
@@ -1737,8 +1743,10 @@ searchGUI keywords =
                         [ Html.label []
                             [ fieldView info "title" title
                             , fieldView info "author" author
-                            , keywordField keywords info "keyword 1" keyword1
-                            , keywordField keywords info "keyword 2" keyword2
+                            , Html.div [ Attr.style "display" "flex" ]
+                                [ keywordField keywords info "keyword" keyword1
+                                , keywordField keywords info "" keyword2
+                                ]
                             ]
                         , Html.button []
                             [ if info.submitting then

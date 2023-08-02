@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1690960918768"
+    "1690961016434"
   );
   var ORIGINAL_COMPILATION_MODE = "debug";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -25409,14 +25409,16 @@ var $author$project$Main$viewResearchResults = function (allKeywords) {
 												[
 													A2(
 													$mdgriffith$elm_ui$Element$el,
-													_List_Nil,
-													$mdgriffith$elm_ui$Element$text('search form')),
+													_List_fromArray(
+														[
+															A2($mdgriffith$elm_ui$Element$paddingXY, 0, 15)
+														]),
 													A4(
-													$author$project$Main$viewSearch,
-													$elm$core$Maybe$Just(initialForm),
-													allKeywords,
-													submitting,
-													searchFormState),
+														$author$project$Main$viewSearch,
+														$elm$core$Maybe$Just(initialForm),
+														allKeywords,
+														submitting,
+														searchFormState)),
 													A2(
 													$author$project$Main$viewLayoutSwitch,
 													layout,

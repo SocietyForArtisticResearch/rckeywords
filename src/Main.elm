@@ -1076,8 +1076,7 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
             lst |> List.length |> (\n -> n // pageSize)
     in
     Element.column [ anchor "top", spacingXY 0 5 ] <|
-        [ Element.el [] (Element.text "search form")
-        , viewSearch (Just initialForm) allKeywords submitting searchFormState
+        [ Element.el [paddingXY 0 15]  (viewSearch (Just initialForm) allKeywords submitting searchFormState)
         , viewLayoutSwitch layout (urlFromLayout sorting)
         , toggleTitleSorting sorting urlFromSorting
         , case initialForm.keywords of

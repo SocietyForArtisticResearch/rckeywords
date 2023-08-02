@@ -4,7 +4,7 @@ import AppUrl exposing (AppUrl)
 import Browser
 import Browser.Navigation as Nav
 import Dict
-import Element exposing (Element, el, fill, fillPortion, height, maximum, padding, paddingXY, px, rgb255, shrink, spacing, spacingXY, text, width)
+import Element exposing (Element, el, fill, fillPortion, height, layout, maximum, padding, paddingXY, paragraph, px, rgb255, shrink, spacing, spacingXY, text, width)
 import Element.Background
 import Element.Border
 import Element.Font as Font
@@ -56,7 +56,10 @@ subscriptions _ =
     receiveResults ReceiveResults
 
 
-
+sampleText =
+    """
+But I must explain to you how all this mistaken idea of denouncing pleasure and praising pain was born and I will give you a complete account of the system, and expound the actual teachings of the great explorer of the truth, the master-builder of human happiness. No one rejects, dislikes, or avoids pleasure itself, because it is pleasure, but because those who do not know how to pursue pleasure rationally encounter consequences that are extremely painful. 
+"""
 -- | Portal
 
 
@@ -330,9 +333,10 @@ update msg model =
             , Cmd.none
             )
 
-        AddKeyword kw->
-            ( { model | keywords = Set.insert kw model.keywords}
-            , Cmd.none
+        AddKeyword kw ->
+            ( model
+                |> setKeyword kw
+                |> smartSearch kw
             )
 
         RemoveKeyword kw->
@@ -1360,6 +1364,22 @@ viewKeywords model keywordview =
         lazyf
         model.search
         keywordSearch
+        {-(
+        Element.row [ width fill, height fill, padding 50, spacing 20 ]
+            [ Element.column
+                [ width fill
+                , Element.centerY
+                , spacing 10
+                , Element.Border.widthEach { right = 1, left = 0, top = 0, bottom = 0 }
+                , Element.Border.color <| rgb255 0xE0 0xE0 0xE0
+                ]
+                [ el [ Element.centerX, Element.clip, Element.Border.rounded 100 ] <| keywordSearch]
+            , Element.column [ width fill, Element.centerY, spacing 10 ]
+                [ el [ Element.centerX, Font.bold ] <| text "Lorem Ipsum"
+                , paragraph [ width <| maximum 300 fill, Element.centerX, Font.size 16 ]
+                    [ text sampleText ]
+                ]
+            ])-}
 
 
 makeColumns : Int -> List (Element.Attribute Msg) -> List (Element Msg) -> Element Msg
@@ -1384,11 +1404,11 @@ pageOfList model (Page i) lst =
 
 
 notInSet : Model -> RC.Keyword -> Bool
-notInSet model kw=
+notInSet model kw =
     let
         name : String
-        name =
-            RC.kwName kw
+        name = RC.kwName kw
+        set : List String
         set = Set.toList model.keywords
     in
     
@@ -1471,6 +1491,17 @@ sortResearch sorting research =
 
         RC.NewestFirst ->
             research |> List.sortBy (\r -> r.created) |> List.reverse
+
+
+setKeyword : String -> Model -> Model
+setKeyword kw model = 
+    { model | keywords = Set.insert kw model.keywords}
+
+
+smartSearch : String -> Model -> (Model, Cmd msg)
+smartSearch kw model = 
+    --({ model | query = kw}, sendQuery (Queries.encodeSearchQuery (FindResearch (Set.toList model.keywords))))
+    ({ model | query = kw}, sendQuery (Queries.encodeSearchQuery (FindKeywords kw RC.Alphabetical)))
 
 
 viewScreenshots : List String -> ScreenDimensions -> Scale -> List Research -> Element Msg

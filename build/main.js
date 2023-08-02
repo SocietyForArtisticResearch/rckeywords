@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1690530439564"
+    "1690964058580"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -9618,12 +9618,6 @@ var $author$project$Queries$decodeSearchResult = function () {
 		parseResult,
 		A2($elm$json$Json$Decode$field, 'type', $elm$json$Json$Decode$string));
 }();
-var $elm$core$Set$insert = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
-	});
 var $elm$browser$Browser$Navigation$load = _Browser_load;
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $elm$core$Set$remove = F2(
@@ -9640,6 +9634,30 @@ var $author$project$Main$resetViewport = A2(
 		return $author$project$Main$NoOp;
 	},
 	A2($elm$browser$Browser$Dom$setViewport, 0, 0));
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var $author$project$Main$setKeyword = F2(
+	function (kw, model) {
+		return _Utils_update(
+			model,
+			{
+				keywords: A2($elm$core$Set$insert, kw, model.keywords)
+			});
+	});
+var $author$project$Main$smartSearch = F2(
+	function (kw, model) {
+		return _Utils_Tuple2(
+			_Utils_update(
+				model,
+				{query: kw}),
+			$author$project$Main$sendQuery(
+				$author$project$Queries$encodeSearchQuery(
+					A2($author$project$Queries$FindKeywords, kw, $author$project$Research$Alphabetical))));
+	});
 var $author$project$Research$sortingToString = function (s) {
 	switch (s.$) {
 		case 'ByUse':
@@ -9789,13 +9807,10 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'AddKeyword':
 				var kw = msg.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							keywords: A2($elm$core$Set$insert, kw, model.keywords)
-						}),
-					$elm$core$Platform$Cmd$none);
+				return A2(
+					$author$project$Main$smartSearch,
+					kw,
+					A2($author$project$Main$setKeyword, kw, model));
 			default:
 				var kw = msg.a;
 				return _Utils_Tuple2(

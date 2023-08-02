@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1690961016434"
+    "1690963711191"
   );
   var ORIGINAL_COMPILATION_MODE = "debug";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -21501,7 +21501,7 @@ var $author$project$Main$linkStyle = F2(
 			if (style.$ === 'SmallLink') {
 				return 12;
 			} else {
-				return 20;
+				return 15;
 			}
 		}();
 		var common = _List_fromArray(
@@ -21846,6 +21846,17 @@ var $mdgriffith$elm_ui$Element$Input$Placeholder = F2(
 		return {$: 'Placeholder', a: a, b: b};
 	});
 var $mdgriffith$elm_ui$Element$Input$placeholder = $mdgriffith$elm_ui$Element$Input$Placeholder;
+var $mdgriffith$elm_ui$Internal$Flag$borderRound = $mdgriffith$elm_ui$Internal$Flag$flag(17);
+var $mdgriffith$elm_ui$Element$Border$rounded = function (radius) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$borderRound,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Single,
+			'br-' + $elm$core$String$fromInt(radius),
+			'border-radius',
+			$elm$core$String$fromInt(radius) + 'px'));
+};
 var $mdgriffith$elm_ui$Element$Input$TextInputNode = function (a) {
 	return {$: 'TextInputNode', a: a};
 };
@@ -21981,17 +21992,6 @@ var $mdgriffith$elm_ui$Element$clip = A2($mdgriffith$elm_ui$Internal$Model$Class
 var $mdgriffith$elm_ui$Internal$Flag$cursor = $mdgriffith$elm_ui$Internal$Flag$flag(21);
 var $mdgriffith$elm_ui$Element$Input$darkGrey = A3($mdgriffith$elm_ui$Element$rgb, 186 / 255, 189 / 255, 182 / 255);
 var $mdgriffith$elm_ui$Element$Input$defaultTextPadding = A2($mdgriffith$elm_ui$Element$paddingXY, 12, 12);
-var $mdgriffith$elm_ui$Internal$Flag$borderRound = $mdgriffith$elm_ui$Internal$Flag$flag(17);
-var $mdgriffith$elm_ui$Element$Border$rounded = function (radius) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderRound,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Single,
-			'br-' + $elm$core$String$fromInt(radius),
-			'border-radius',
-			$elm$core$String$fromInt(radius) + 'px'));
-};
 var $mdgriffith$elm_ui$Element$Input$white = A3($mdgriffith$elm_ui$Element$rgb, 1, 1, 1);
 var $mdgriffith$elm_ui$Element$Input$defaultTextBoxStyle = _List_fromArray(
 	[
@@ -22930,23 +22930,6 @@ var $author$project$Main$viewKeywords = F2(
 						]),
 					_List_fromArray(
 						[
-							A2(
-							$mdgriffith$elm_ui$Element$row,
-							_List_fromArray(
-								[
-									A2($mdgriffith$elm_ui$Element$spacingXY, 25, 25),
-									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
-								]),
-							_List_fromArray(
-								[
-									A2(
-									$mdgriffith$elm_ui$Element$el,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink)
-										]),
-									$author$project$Main$toggleSorting(sorting))
-								])),
 							searchbox,
 							function () {
 							switch (result.$) {
@@ -22964,6 +22947,14 @@ var $author$project$Main$viewKeywords = F2(
 											]),
 										_List_fromArray(
 											[
+												A2(
+												$mdgriffith$elm_ui$Element$el,
+												_List_fromArray(
+													[
+														$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
+														A2($mdgriffith$elm_ui$Element$paddingXY, 0, 5)
+													]),
+												$author$project$Main$toggleSorting(sorting)),
 												viewCount(results),
 												A3(
 												$author$project$Main$makeColumns,
@@ -23034,20 +23025,29 @@ var $author$project$Main$viewKeywords = F2(
 						$mdgriffith$elm_ui$Element$Input$search,
 						_List_fromArray(
 							[
+								$mdgriffith$elm_ui$Element$Border$rounded(0),
 								$mdgriffith$elm_ui$Element$width(
 								$mdgriffith$elm_ui$Element$px(200)),
+								$mdgriffith$elm_ui$Element$height(
+								$mdgriffith$elm_ui$Element$px(40)),
 								$author$project$Main$onEnter($author$project$Main$HitEnter)
 							]),
 						{
 							label: A2(
 								$mdgriffith$elm_ui$Element$Input$labelAbove,
-								_List_Nil,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$Font$size(16)
+									]),
 								$mdgriffith$elm_ui$Element$text('keyword')),
 							onChange: $author$project$Main$ChangedQuery,
 							placeholder: $elm$core$Maybe$Just(
 								A2(
 									$mdgriffith$elm_ui$Element$Input$placeholder,
-									_List_Nil,
+									_List_fromArray(
+										[
+											$mdgriffith$elm_ui$Element$Font$size(16)
+										]),
 									$mdgriffith$elm_ui$Element$text('search for keyword'))),
 							text: model.query
 						}),
@@ -24947,6 +24947,13 @@ var $author$project$Main$getSecondKeyword = function (form) {
 			$elm$core$List$head,
 			$elm$core$List$tail(form.keywords)));
 };
+var $elm$html$Html$h1 = _VirtualDom_node('h1');
+var $author$project$Main$headerStyle = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'font-size', '16px'),
+		A2($elm$html$Html$Attributes$style, 'margin', '5px 0 15px 5px'),
+		A2($elm$html$Html$Attributes$style, 'font-weight', '600')
+	]);
 var $elm$html$Html$Attributes$autocomplete = function (bool) {
 	return A2(
 		$elm$html$Html$Attributes$stringProperty,
@@ -25105,6 +25112,14 @@ var $author$project$Main$searchForm = F4(
 				_List_fromArray(
 					[keyword1, keyword2])));
 	});
+var $author$project$Main$submitButtonStyle = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'border', '1px solid gray'),
+		A2($elm$html$Html$Attributes$style, 'padding', '10px'),
+		A2($elm$html$Html$Attributes$style, 'background-color', 'white'),
+		A2($elm$html$Html$Attributes$style, 'margin', '0px 5px'),
+		A2($elm$html$Html$Attributes$style, 'float', 'right')
+	]);
 var $dillonkearns$elm_form$Internal$Input$Text = {$: 'Text'};
 var $dillonkearns$elm_form$Form$Field$text = A2(
 	$dillonkearns$elm_form$Internal$Field$Field,
@@ -25213,6 +25228,13 @@ var $author$project$Main$searchGUI = function (keywords) {
 												_List_fromArray(
 													[
 														A2(
+														$elm$html$Html$h1,
+														$author$project$Main$headerStyle,
+														_List_fromArray(
+															[
+																$elm$html$Html$text('search form:')
+															])),
+														A2(
 														$elm$html$Html$label,
 														_List_Nil,
 														_List_fromArray(
@@ -25242,7 +25264,7 @@ var $author$project$Main$searchGUI = function (keywords) {
 															])),
 														A2(
 														$elm$html$Html$button,
-														_List_Nil,
+														$author$project$Main$submitButtonStyle,
 														_List_fromArray(
 															[
 																info.submitting ? $elm$html$Html$text('searching...') : $elm$html$Html$text('search')

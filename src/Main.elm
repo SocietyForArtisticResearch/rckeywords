@@ -14,7 +14,7 @@ import Element.Lazy
 import Element.Region
 import Form
 import Form.Field as Field
-import Form.FieldView
+import Form.FieldView exposing (inputStyled)
 import Form.Validation as Validation
 import Html exposing (Html)
 import Html.Attributes as Attr
@@ -882,7 +882,7 @@ linkStyle active style =
                     12
 
                 BigLink ->
-                    20
+                    15
 
         common : List (Element.Attr () msg)
         common =
@@ -1076,7 +1076,7 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
             lst |> List.length |> (\n -> n // pageSize)
     in
     Element.column [ anchor "top", spacingXY 0 5 ] <|
-        [ Element.el [paddingXY 0 15]  (viewSearch (Just initialForm) allKeywords submitting searchFormState)
+        [ Element.el [ paddingXY 0 15 ] (viewSearch (Just initialForm) allKeywords submitting searchFormState)
         , viewLayoutSwitch layout (urlFromLayout sorting)
         , toggleTitleSorting sorting urlFromSorting
         , case initialForm.keywords of
@@ -1413,11 +1413,11 @@ viewKeywords model keywordview =
                             KeywordSearch nonEmpty RC.ByUse (Page 1) |> appUrlFromKeywordViewState
             in
             Element.row [ Element.spacingXY 15 0 ]
-                [ Element.Input.search [ width (px 200), onEnter HitEnter ]
+                [ Element.Input.search [ Element.Border.rounded 0, width (px 200), height (px 40), onEnter HitEnter ]
                     { onChange = ChangedQuery
                     , text = model.query
-                    , placeholder = Just (Element.Input.placeholder [] (Element.text "search for keyword"))
-                    , label = Element.Input.labelAbove [] (Element.text "keyword")
+                    , placeholder = Just (Element.Input.placeholder [ Font.size 16 ] (Element.text "search for keyword"))
+                    , label = Element.Input.labelAbove [ Font.size 16 ] (Element.text "keyword")
                     }
                 , Element.link (Element.moveDown 12 :: linkStyle shouldEnable BigLink)
                     { url = url
@@ -1459,10 +1459,7 @@ viewKeywords model keywordview =
         lazyf : SearchAction -> Element Msg -> Element Msg
         lazyf result searchbox =
             Element.column [ width fill, spacingXY 0 15 ]
-                [ Element.row [ Element.spacingXY 25 25, width fill ]
-                    [ Element.el [ width shrink ] (toggleSorting sorting)
-                    ]
-                , searchbox
+                [ searchbox
                 , case result of
                     FoundKeywords results ->
                         let
@@ -1470,7 +1467,8 @@ viewKeywords model keywordview =
                                 pageOfList page results
                         in
                         Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
-                            [ viewCount results
+                            [ Element.el [ width shrink, Element.paddingXY 0 5 ] (toggleSorting sorting)
+                            , viewCount results
                             , currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
                             , pageNavigation results page
                             ]
@@ -1739,7 +1737,8 @@ searchGUI keywords =
             , view =
                 \info ->
                     [ Html.div []
-                        [ Html.label []
+                        [ Html.h1 headerStyle [ Html.text "search form:" ]
+                        , Html.label []
                             [ Html.div [ Attr.style "display" "flex" ]
                                 [ fieldView info "title" title
                                 , fieldView info "author" author
@@ -1749,7 +1748,7 @@ searchGUI keywords =
                                 , keywordField keywords info "" keyword2
                                 ]
                             ]
-                        , Html.button []
+                        , Html.button submitButtonStyle
                             [ if info.submitting then
                                 Html.text "searching..."
 
@@ -1793,6 +1792,24 @@ fieldStyle =
     , Attr.style "margin" "5px 0"
     , Attr.style "border" "1px solid gray"
     , Attr.style "display" "block"
+    ]
+
+
+headerStyle : List (Html.Attribute msg)
+headerStyle =
+    [ Attr.style "font-size" "16px"
+    , Attr.style "margin" "5px 0 15px 5px"
+    , Attr.style "font-weight" "600"
+    ]
+
+
+submitButtonStyle : List (Html.Attribute msg)
+submitButtonStyle =
+    [ Attr.style "border" "1px solid gray"
+    , Attr.style "padding" "10px"
+    , Attr.style "background-color" "white"
+    , Attr.style "margin" "0px 5px"
+    , Attr.style "float" "right"
     ]
 
 

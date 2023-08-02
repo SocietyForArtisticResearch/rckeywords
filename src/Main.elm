@@ -116,7 +116,8 @@ scaleFromString scale =
 viewScaleSwitch : Scale -> (Scale -> String) -> Element Msg
 viewScaleSwitch scale urlWithScale =
     Element.row [ paddingXY 0 0, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (scale == Micro) SmallLink) { url = urlWithScale Micro, label = Element.text "micro" }
+        [ Element.el toggleLabelStyle <| Element.text "zoom:"
+        , Element.link (linkStyle (scale == Micro) SmallLink) { url = urlWithScale Micro, label = Element.text "micro" }
         , Element.link (linkStyle (scale == Small) SmallLink) { url = urlWithScale Small, label = Element.text "small" }
         , Element.link (linkStyle (scale == Medium) SmallLink) { url = urlWithScale Medium, label = Element.text "medium" }
         , Element.link (linkStyle (scale == Large) SmallLink) { url = urlWithScale Large, label = Element.text "large" }
@@ -135,7 +136,8 @@ viewLayoutSwitch layout makeurl =
                     False
     in
     Element.row [ paddingXY 0 0, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (isScreenLayout layout) SmallLink) { url = makeurl (ScreenLayout Medium), label = Element.text "visual" }
+        [ Element.el toggleLabelStyle <| text "layout:"
+        , Element.link (linkStyle (isScreenLayout layout) SmallLink) { url = makeurl (ScreenLayout Medium), label = Element.text "visual" }
         , Element.link (linkStyle (layout == ListLayout) SmallLink) { url = makeurl ListLayout, label = Element.text "list" }
         ]
 
@@ -642,7 +644,6 @@ handleUrl url model =
                                     |> Queries.searchWithKeywords (Set.fromList keywords)
                                     |> Queries.withAuthor author
                                     |> Queries.withTitle title
-                                    
                                 )
                             )
                         )
@@ -1099,7 +1100,7 @@ viewResearchResults allKeywords submitting searchFormState dimensions sv lst =
         render =
             case layout of
                 ListLayout ->
-                    Element.column [] (sorted |> List.map viewResearchMicro)
+                    makeColumns 2 [] (sorted |> List.map viewResearchMicro)
 
                 ScreenLayout scale ->
                     viewScreenshots dimensions sv scale sorted
@@ -1116,23 +1117,17 @@ viewResearchResults allKeywords submitting searchFormState dimensions sv lst =
         numberOfPages =
             lst |> List.length |> (\n -> n // pageSize)
     in
-    Element.column [ anchor "top", spacingXY 0 5 ] <|
-        [ Element.el [ paddingXY 0 15 ] (viewSearch (Just initialForm) allKeywords submitting searchFormState)
-        , viewLayoutSwitch layout (urlFromLayout sv)
-        , toggleTitleSorting sorting (urlFromSorting sv)
-        , case initialForm.keywords of
-            [] ->
-                Element.none
-
-            kws ->
-                Element.el [] ("showing research for keywords: " ++ (kws |> String.join ",") |> Element.text)
+    Element.column [ anchor "top", spacingXY 0 5, width fill ] <|
+        [ Element.el [ paddingXY 0 15 ]
+            (viewSearch (Just initialForm) allKeywords submitting searchFormState)
+        , Element.row
+            [ width fill ]
+            [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch layout (urlFromLayout sv)
+            , Element.el [ Element.alignRight ] <| toggleTitleSorting sorting (urlFromSorting sv)
+            ]
         , render
         , pageNav numberOfPages (SearchView sv) dimensions sorted (Page p)
         ]
-
-
-
--- TODO: should construct link in a more global way?
 
 
 toggleSorting : RC.KeywordSorting -> Element Msg
@@ -1147,7 +1142,8 @@ toggleSorting sorting =
 toggleTitleSorting : RC.TitleSorting -> (RC.TitleSorting -> String) -> Element Msg
 toggleTitleSorting sorting sortingToUrl =
     Element.row [ paddingXY 0 0, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (sorting == RC.Random) SmallLink) { url = sortingToUrl RC.Random, label = Element.text "random" }
+        [ Element.el toggleLabelStyle <| Element.text "sort:"
+        , Element.link (linkStyle (sorting == RC.Random) SmallLink) { url = sortingToUrl RC.Random, label = Element.text "random" }
         , Element.link (linkStyle (sorting == RC.NewestFirst) SmallLink) { url = sortingToUrl RC.NewestFirst, label = Element.text "newest first" }
         , Element.link (linkStyle (sorting == RC.OldestFirst) SmallLink) { url = sortingToUrl RC.OldestFirst, label = Element.text "oldest first" }
         ]
@@ -1665,15 +1661,18 @@ viewScreenshots screenDimensions sv scale research =
         viewGroup group =
             Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
 
-        -- this is currently missing the keyword context
         urlWithScale screenScale =
             appUrlFromSearchViewState { sv | layout = ScreenLayout screenScale }
     in
-    Element.column []
-        [ viewScaleSwitch scale urlWithScale
-        , Element.el [ Element.Region.heading 1 ] <| text "Visual"
+    Element.column [ Element.paddingEach { paddingEachZero | top = 15 }, width fill ]
+        [ Element.el [ Element.alignRight, Element.paddingEach { paddingEachZero | bottom = 15 } ] (viewScaleSwitch scale urlWithScale)
         , Element.html (Html.div [] (List.map viewGroup groups))
         ]
+
+
+paddingEachZero : { top : Int, left : Int, right : Int, bottom : Int }
+paddingEachZero =
+    { top = 0, left = 0, right = 0, bottom = 0 }
 
 
 
@@ -1781,7 +1780,7 @@ searchGUI keywords =
                                 , fieldView info "author" author
                                 ]
                             , Html.div [ Attr.style "display" "flex" ]
-                                [ keywordField keywords info "keyword" keyword1
+                                [ keywordField keywords info "keywords" keyword1
                                 , keywordField keywords info "" keyword2
                                 ]
                             ]
@@ -1850,6 +1849,11 @@ submitButtonStyle =
     ]
 
 
+toggleLabelStyle : List (Element.Attr decorative msg)
+toggleLabelStyle =
+    [ Font.size 12, Font.color black ]
+
+
 fieldView formState label field =
     Html.div []
         [ Html.label labelStyle
@@ -1871,6 +1875,7 @@ fieldView formState label field =
         ]
 
 
+keywordField : List KeywordString -> { a | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Validation String (Maybe String) Form.FieldView.Input { field : Form.FieldView.Input } -> Html msg
 keywordField keywords formState label field =
     let
         lengthIfParsed =

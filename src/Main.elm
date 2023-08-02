@@ -115,7 +115,7 @@ scaleFromString scale =
 
 viewScaleSwitch : Scale -> (Scale -> String) -> Element Msg
 viewScaleSwitch scale urlWithScale =
-    Element.row [ paddingXY 0 15, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+    Element.row [ paddingXY 0 0, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
         [ Element.link (linkStyle (scale == Micro) SmallLink) { url = urlWithScale Micro, label = Element.text "micro" }
         , Element.link (linkStyle (scale == Small) SmallLink) { url = urlWithScale Small, label = Element.text "small" }
         , Element.link (linkStyle (scale == Medium) SmallLink) { url = urlWithScale Medium, label = Element.text "medium" }
@@ -134,7 +134,7 @@ viewLayoutSwitch layout makeurl =
                 _ ->
                     False
     in
-    Element.row [ paddingXY 0 15, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+    Element.row [ paddingXY 0 0, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
         [ Element.link (linkStyle (isScreenLayout layout) SmallLink) { url = makeurl (ScreenLayout Medium), label = Element.text "visual" }
         , Element.link (linkStyle (layout == ListLayout) SmallLink) { url = makeurl ListLayout, label = Element.text "list" }
         ]
@@ -904,7 +904,7 @@ linkStyle active style =
 
 viewNav : View -> Element Msg
 viewNav currentView =
-    Element.row [ paddingXY 0 5, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+    Element.row [ paddingXY 0 0, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
         [ Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "browse by keyword" }
         , Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search/list", label = Element.text "search" }
         ]
@@ -1075,8 +1075,8 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
         numberOfPages =
             lst |> List.length |> (\n -> n // pageSize)
     in
-    Element.column [ anchor "top" ] <|
-        [ Element.el RCStyles.defaultPadding (Element.text "search form")
+    Element.column [ anchor "top", spacingXY 0 5 ] <|
+        [ Element.el [] (Element.text "search form")
         , viewSearch (Just initialForm) allKeywords submitting searchFormState
         , viewLayoutSwitch layout (urlFromLayout sorting)
         , toggleTitleSorting sorting urlFromSorting
@@ -1097,7 +1097,7 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
 
 toggleSorting : RC.KeywordSorting -> Element Msg
 toggleSorting sorting =
-    Element.row [ paddingXY 0 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+    Element.row [ paddingXY 0 0, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
         [ Element.link (linkStyle (sorting == RC.ByUse) SmallLink) { url = "/#/keywords?sorting=" ++ RC.sortingToString RC.ByUse, label = Element.text "by use" }
         , Element.link (linkStyle (sorting == RC.Alphabetical) SmallLink) { url = "/#/keywords?sorting=" ++ RC.sortingToString RC.Alphabetical, label = Element.text "alphabetical" }
         , Element.link (linkStyle (sorting == RC.RandomKeyword) SmallLink) { url = "/#/keywords?sorting=" ++ RC.sortingToString RC.RandomKeyword, label = Element.text "random" }
@@ -1106,7 +1106,7 @@ toggleSorting sorting =
 
 toggleTitleSorting : RC.TitleSorting -> (RC.TitleSorting -> String) -> Element Msg
 toggleTitleSorting sorting sortingToUrl =
-    Element.row [ paddingXY 0 25, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+    Element.row [ paddingXY 0 0, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
         [ Element.link (linkStyle (sorting == RC.Random) SmallLink) { url = sortingToUrl RC.Random, label = Element.text "random" }
         , Element.link (linkStyle (sorting == RC.NewestFirst) SmallLink) { url = sortingToUrl RC.NewestFirst, label = Element.text "newest first" }
         , Element.link (linkStyle (sorting == RC.OldestFirst) SmallLink) { url = sortingToUrl RC.OldestFirst, label = Element.text "oldest first" }
@@ -1741,8 +1741,10 @@ searchGUI keywords =
                 \info ->
                     [ Html.div []
                         [ Html.label []
-                            [ fieldView info "title" title
-                            , fieldView info "author" author
+                            [ Html.div [ Attr.style "display" "flex" ]
+                                [ fieldView info "title" title
+                                , fieldView info "author" author
+                                ]
                             , Html.div [ Attr.style "display" "flex" ]
                                 [ keywordField keywords info "keyword" keyword1
                                 , keywordField keywords info "" keyword2
@@ -1778,11 +1780,28 @@ getSecondKeyword form =
         |> Maybe.withDefault ""
 
 
+labelStyle : List (Html.Attribute msg)
+labelStyle =
+    [ Attr.style "display" "block"
+    , Attr.style "font-size" "14px"
+    , Attr.style "margin" "5px"
+    ]
+
+
+fieldStyle : List (Html.Attribute msg)
+fieldStyle =
+    [ Attr.style "padding" "5px"
+    , Attr.style "margin" "5px 0"
+    , Attr.style "border" "1px solid gray"
+    , Attr.style "display" "block"
+    ]
+
+
 fieldView formState label field =
     Html.div []
-        [ Html.label []
+        [ Html.label labelStyle
             [ Html.text (label ++ " ")
-            , field |> Form.FieldView.input []
+            , field |> Form.FieldView.input fieldStyle
             ]
         , (if formState.submitAttempted then
             formState.errors
@@ -1826,9 +1845,9 @@ keywordField keywords formState label field =
                 |> List.sortBy String.length
     in
     Html.div []
-        [ Html.label []
+        [ Html.label labelStyle
             [ Html.text (label ++ " ")
-            , field |> Form.FieldView.input [ Attr.list "keyword-field" ]
+            , field |> Form.FieldView.input ([ Attr.list "keyword-field" ] ++ fieldStyle)
             , Html.datalist [ Attr.id "keyword-field", Attr.autocomplete False ]
                 (List.map
                     (\kw ->
@@ -1856,19 +1875,26 @@ viewSearch : Maybe SearchForm -> List KeywordString -> Bool -> Form.Model -> Ele
 viewSearch initialForm keywords submitting searchFormState =
     case initialForm of
         Just formInput ->
-            Element.html
-                (searchGUI keywords
-                    |> Form.renderHtml
-                        { submitting = submitting
-                        , state = searchFormState
-                        , toMsg = FormMsg
-                        }
-                        (Form.options "signUpForm"
-                            |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
-                            |> Form.withInput formInput
-                        )
-                        []
-                )
+            Element.el
+                [ paddingXY 15 15
+                , Element.Border.solid
+                , Element.Border.color black
+                , Element.Border.width 1
+                ]
+            <|
+                Element.html
+                    (searchGUI keywords
+                        |> Form.renderHtml
+                            { submitting = submitting
+                            , state = searchFormState
+                            , toMsg = FormMsg
+                            }
+                            (Form.options "signUpForm"
+                                |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
+                                |> Form.withInput formInput
+                            )
+                            []
+                    )
 
         Nothing ->
             Element.text "loading form data.."

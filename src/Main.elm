@@ -136,7 +136,7 @@ viewLayoutSwitch layout makeurl =
                     False
     in
     Element.row [ paddingXY 0 0, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.el toggleLabelStyle <| text "layout:"
+        [ Element.el toggleLabelStyle <| text "display expositions as:"
         , Element.link (linkStyle (isScreenLayout layout) SmallLink) { url = makeurl (ScreenLayout Medium), label = Element.text "visual" }
         , Element.link (linkStyle (layout == ListLayout) SmallLink) { url = makeurl ListLayout, label = Element.text "list" }
         ]
@@ -274,7 +274,7 @@ init { width, height } url key =
         initView : View
         initView =
             SearchView
-                { layout = ListLayout
+                { layout = ScreenLayout Medium
                 , form = emptyForm
                 , sorting = RC.Random
                 , page = Page 1
@@ -956,8 +956,8 @@ linkStyle active style =
 viewNav : View -> Element Msg
 viewNav currentView =
     Element.row [ paddingXY 0 0, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "browse by keyword" }
-        , Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search/list", label = Element.text "search" }
+        [ Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "Keyword Map" }
+        , Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search/list", label = Element.text "Search" }
         ]
 
 
@@ -986,7 +986,7 @@ view model =
                             viewResearchResults model.allKeywords model.submitting model.searchGUI model.screenDimensions sv lst
 
                         FoundKeywords _ ->
-                            Element.text "hmm, found keywords"
+                            Element.none 
 
                         Searching ->
                             Element.text "waiting"
@@ -1773,7 +1773,7 @@ searchGUI keywords =
             , view =
                 \info ->
                     [ Html.div []
-                        [ Html.h1 headerStyle [ Html.text "search form:" ]
+                        [ Html.h1 headerStyle [ Html.text "search:" ]
                         , Html.label []
                             [ Html.div [ Attr.style "display" "flex" ]
                                 [ fieldView info "title" title

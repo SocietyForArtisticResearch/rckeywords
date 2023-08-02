@@ -144,9 +144,17 @@ type Page
     = Page Int
 
 
+type alias SearchViewState =
+    { layout : Layout
+    , form : SearchForm
+    , sorting : RC.TitleSorting
+    , page : Page
+    }
+
+
 type View
     = KeywordsView KeywordsViewState
-    | SearchView Layout SearchForm RC.TitleSorting Page
+    | SearchView SearchViewState
 
 
 
@@ -260,11 +268,20 @@ init { width, height } url key =
         initUrl : AppUrl
         initUrl =
             urlWhereFragmentIsPath url
+
+        initView : View
+        initView =
+            SearchView
+                { layout = ListLayout
+                , form = emptyForm
+                , sorting = RC.Random
+                , page = Page 1
+                }
     in
     { query = ""
     , search = Idle
     , screenDimensions = { w = width, h = height }
-    , view = SearchView ListLayout emptyForm RC.Random (Page 1)
+    , view = initView
     , numberOfResults = 8
     , url = initUrl
     , key = key
@@ -430,8 +447,12 @@ updateViewWithSearch srch v =
         KeywordsView s ->
             KeywordsView s
 
-        SearchView layout _ sorting _ ->
-            SearchView layout srch sorting (Page 1)
+        SearchView state ->
+            SearchView
+                { state
+                    | page = Page 1
+                    , form = srch
+                }
 
 
 urlWhereFragmentIsPath : Url -> AppUrl.AppUrl
@@ -557,7 +578,17 @@ handleUrl url model =
                             )
                         )
             in
-            ( { model | view = SearchView ListLayout (formWith title author keywords) sorting (Page page) }, cmd )
+            ( { model
+                | view =
+                    SearchView
+                        { layout = ListLayout
+                        , form = formWith title author keywords
+                        , sorting = sorting
+                        , page = Page page
+                        }
+              }
+            , cmd
+            )
 
         [ "research", "search", "screen" ] ->
             let
@@ -613,11 +644,27 @@ handleUrl url model =
                             )
                         )
             in
-            ( { model | view = SearchView (ScreenLayout scale) (formWith title author keywords) sorting (Page page) }, cmd )
+            ( { model
+                | view =
+                    SearchView
+                        { layout = ScreenLayout scale
+                        , form = formWith title author keywords
+                        , sorting = sorting
+                        , page = Page page
+                        }
+              }
+            , cmd
+            )
 
         _ ->
             ( { model
-                | view = SearchView ListLayout (formWith "" "" []) RC.NewestFirst (Page 1)
+                | view =
+                    SearchView
+                        { layout = ListLayout
+                        , form = formWith "" "" []
+                        , sorting = RC.NewestFirst
+                        , page = Page 1
+                        }
               }
             , Nav.pushUrl model.key "/#/research/search/list"
             )
@@ -913,7 +960,7 @@ viewNav currentView =
 isSearchView : View -> Bool
 isSearchView v =
     case v of
-        SearchView _ _ _ _ ->
+        SearchView _ ->
             True
 
         _ ->
@@ -929,14 +976,10 @@ view model =
                 KeywordsView kwtype ->
                     viewKeywords model kwtype
 
-                SearchView layout keywords sorting page ->
+                SearchView sv ->
                     case model.search of
                         FoundResearch lst ->
-                            let
-                                _ =
-                                    Debug.log "found research" lst
-                            in
-                            viewResearchResults model.allKeywords model.submitting model.searchGUI model.screenDimensions layout model.view lst keywords sorting page
+                            viewResearchResults model.allKeywords model.submitting model.searchGUI model.screenDimensions  sv lst
 
                         FoundKeywords _ ->
                             Element.text "hmm, found keywords"
@@ -971,8 +1014,11 @@ gotoPageView p v =
         KeywordsView kwstate ->
             KeywordsView (gotoPage p kwstate)
 
-        SearchView layout keywords sorting _ ->
-            SearchView layout keywords sorting p
+        SearchView sv ->
+            SearchView
+                { sv
+                    | page = p
+                }
 
 
 getPageOfView : View -> Page
@@ -981,8 +1027,8 @@ getPageOfView v =
         KeywordsView (KeywordMainView _ page) ->
             page
 
-        SearchView _ _ _ page ->
-            page
+        SearchView sv ->
+            sv.page
 
         _ ->
             Page 1
@@ -1027,9 +1073,17 @@ anchor anchorId =
     Element.htmlAttribute (Attr.id anchorId)
 
 
-viewResearchResults : List KeywordString -> Bool -> Form.Model -> ScreenDimensions -> Layout -> View -> List Research -> SearchForm -> RC.TitleSorting -> Page -> Element Msg
-viewResearchResults allKeywords submitting searchFormState dimensions layout v lst initialForm sorting (Page p) =
+viewResearchResults : List KeywordString -> Bool -> Form.Model -> ScreenDimensions  -> SearchViewState -> List Research -> Element Msg
+viewResearchResults allKeywords submitting searchFormState dimensions  sv lst =
     let
+        layout = sv.layout
+
+        (Page p)= sv.page
+
+        sorting = sv.sorting
+
+        initialForm = sv.form
+
         sorted : List Research
         sorted =
             lst |> sortResearch sorting |> List.drop ((p - 1) * pageSize) |> List.take pageSize
@@ -1043,33 +1097,13 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
                 ScreenLayout scale ->
                     viewScreenshots initialForm.keywords dimensions scale sorted
 
-        urlFromLayout : RC.TitleSorting -> Layout -> String
-        urlFromLayout s l =
-            case l of
-                ListLayout ->
-                    AppUrl.fromPath [ "research", "search", "list" ]
-                        |> withParametersList
-                            [ ( "keywords", initialForm.keywords )
-                            , ( "sorting", [ RC.titleSortingToString s ] )
-                            , ( "page", [ pageAsString (Page p) ] )
-                            ]
-                        |> AppUrl.toString
-                        |> prefixHash
+        urlFromLayout :SearchViewState -> Layout -> String
+        urlFromLayout  st layou =
+            SearchView { st | layout = layou } |> appUrlFromView
 
-                ScreenLayout scale ->
-                    AppUrl.fromPath [ "research", "search", "screen" ]
-                        |> withParametersList
-                            [ ( "keywords", initialForm.keywords )
-                            , ( "sorting", [ RC.titleSortingToString s ] )
-                            , ( "scale", [ scaleToString scale ] )
-                            , ( "page", [ pageAsString (Page p) ] )
-                            ]
-                        |> AppUrl.toString
-                        |> prefixHash
-
-        urlFromSorting : RC.TitleSorting -> String
-        urlFromSorting s =
-            urlFromLayout s layout
+        urlFromSorting : SearchViewState -> RC.TitleSorting -> String
+        urlFromSorting  st s =
+            SearchView { st | sorting = s } |> appUrlFromView
 
         numberOfPages : Int
         numberOfPages =
@@ -1077,8 +1111,8 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
     in
     Element.column [ anchor "top", spacingXY 0 5 ] <|
         [ Element.el [ paddingXY 0 15 ] (viewSearch (Just initialForm) allKeywords submitting searchFormState)
-        , viewLayoutSwitch layout (urlFromLayout sorting)
-        , toggleTitleSorting sorting urlFromSorting
+        , viewLayoutSwitch layout (urlFromLayout sv)
+        , toggleTitleSorting sorting (urlFromSorting sv)
         , case initialForm.keywords of
             [] ->
                 Element.none
@@ -1086,7 +1120,7 @@ viewResearchResults allKeywords submitting searchFormState dimensions layout v l
             kws ->
                 Element.el [] ("showing research for keywords: " ++ (kws |> String.join ",") |> Element.text)
         , render
-        , pageNav numberOfPages v dimensions sorted (Page p)
+        , pageNav numberOfPages (SearchView sv) dimensions sorted (Page p)
         ]
 
 
@@ -1298,32 +1332,37 @@ appUrlFromView v =
         KeywordsView kwstate ->
             appUrlFromKeywordViewState kwstate
 
-        SearchView layout searchFormState sorting page ->
-            let
-                appurl =
-                    case layout of
-                        ListLayout ->
-                            AppUrl.fromPath [ "research", "search", "list" ]
-                                |> withParametersList
-                                    [ ( "keyword", searchFormState.keywords )
-                                    , ( "title", [ searchFormState.title ] )
-                                    , ( "author", [ searchFormState.author ] )
-                                    , ( "sorting", [ RC.titleSortingToString sorting ] )
-                                    , ( "page", [ pageAsString page ] )
-                                    ]
+        SearchView sv ->
+            appUrlFromSearchViewState sv
 
-                        ScreenLayout scale ->
-                            AppUrl.fromPath [ "research", "search", "screen" ]
-                                |> withParametersList
-                                    [ ( "keyword", searchFormState.keywords )
-                                    , ( "title", [ searchFormState.title ] )
-                                    , ( "author", [ searchFormState.author ] )
-                                    , ( "sorting", [ RC.titleSortingToString sorting ] )
-                                    , ( "page", [ pageAsString page ] )
-                                    , ( "scale", [ scaleToString scale ] )
-                                    ]
-            in
-            appurl |> AppUrl.toString |> prefixHash
+
+appUrlFromSearchViewState : SearchViewState -> String
+appUrlFromSearchViewState sv =
+    let
+        appurl =
+            case sv.layout of
+                ListLayout ->
+                    AppUrl.fromPath [ "research", "search", "list" ]
+                        |> withParametersList
+                            [ ( "keyword", sv.form.keywords )
+                            , ( "title", [ sv.form.title ] )
+                            , ( "author", [ sv.form.author ] )
+                            , ( "sorting", [ RC.titleSortingToString sv.sorting ] )
+                            , ( "page", [ pageAsString sv.page ] )
+                            ]
+
+                ScreenLayout scale ->
+                    AppUrl.fromPath [ "research", "search", "screen" ]
+                        |> withParametersList
+                            [ ( "keyword", sv.form.keywords )
+                            , ( "title", [ sv.form.title ] )
+                            , ( "author", [ sv.form.author ] )
+                            , ( "sorting", [ RC.titleSortingToString sv.sorting ] )
+                            , ( "page", [ pageAsString sv.page ] )
+                            , ( "scale", [ scaleToString scale ] )
+                            ]
+    in
+    appurl |> AppUrl.toString |> prefixHash
 
 
 appUrlFromKeywordViewState : KeywordsViewState -> String

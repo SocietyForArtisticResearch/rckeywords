@@ -640,6 +640,9 @@ handleUrl url model =
                             (FindResearch
                                 (Queries.emptySearch
                                     |> Queries.searchWithKeywords (Set.fromList keywords)
+                                    |> Queries.withAuthor author
+                                    |> Queries.withTitle title
+                                    
                                 )
                             )
                         )
@@ -979,7 +982,7 @@ view model =
                 SearchView sv ->
                     case model.search of
                         FoundResearch lst ->
-                            viewResearchResults model.allKeywords model.submitting model.searchGUI model.screenDimensions  sv lst
+                            viewResearchResults model.allKeywords model.submitting model.searchGUI model.screenDimensions sv lst
 
                         FoundKeywords _ ->
                             Element.text "hmm, found keywords"
@@ -1073,16 +1076,20 @@ anchor anchorId =
     Element.htmlAttribute (Attr.id anchorId)
 
 
-viewResearchResults : List KeywordString -> Bool -> Form.Model -> ScreenDimensions  -> SearchViewState -> List Research -> Element Msg
-viewResearchResults allKeywords submitting searchFormState dimensions  sv lst =
+viewResearchResults : List KeywordString -> Bool -> Form.Model -> ScreenDimensions -> SearchViewState -> List Research -> Element Msg
+viewResearchResults allKeywords submitting searchFormState dimensions sv lst =
     let
-        layout = sv.layout
+        layout =
+            sv.layout
 
-        (Page p)= sv.page
+        (Page p) =
+            sv.page
 
-        sorting = sv.sorting
+        sorting =
+            sv.sorting
 
-        initialForm = sv.form
+        initialForm =
+            sv.form
 
         sorted : List Research
         sorted =
@@ -1095,14 +1102,14 @@ viewResearchResults allKeywords submitting searchFormState dimensions  sv lst =
                     Element.column [] (sorted |> List.map viewResearchMicro)
 
                 ScreenLayout scale ->
-                    viewScreenshots initialForm.keywords dimensions scale sorted
+                    viewScreenshots dimensions sv scale sorted
 
-        urlFromLayout :SearchViewState -> Layout -> String
-        urlFromLayout  st layou =
+        urlFromLayout : SearchViewState -> Layout -> String
+        urlFromLayout st layou =
             SearchView { st | layout = layou } |> appUrlFromView
 
         urlFromSorting : SearchViewState -> RC.TitleSorting -> String
-        urlFromSorting  st s =
+        urlFromSorting st s =
             SearchView { st | sorting = s } |> appUrlFromView
 
         numberOfPages : Int
@@ -1643,8 +1650,8 @@ sortResearch sorting research =
             research |> List.sortBy (\r -> r.created) |> List.reverse
 
 
-viewScreenshots : List String -> ScreenDimensions -> Scale -> List Research -> Element Msg
-viewScreenshots keywords screenDimensions scale research =
+viewScreenshots : ScreenDimensions -> SearchViewState -> Scale -> List Research -> Element Msg
+viewScreenshots screenDimensions sv scale research =
     let
         groupSize : Int
         groupSize =
@@ -1659,17 +1666,8 @@ viewScreenshots keywords screenDimensions scale research =
             Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
 
         -- this is currently missing the keyword context
-        urlWithScale : Scale -> String
-        urlWithScale s =
-            AppUrl.fromPath
-                [ "research"
-                , "search"
-                , "screen"
-                ]
-                |> withParameter ( "scale", scaleToString s )
-                |> withParametersList [ ( "keyword", keywords ) ]
-                |> AppUrl.toString
-                |> prefixHash
+        urlWithScale screenScale =
+            appUrlFromSearchViewState { sv | layout = ScreenLayout screenScale }
     in
     Element.column []
         [ viewScaleSwitch scale urlWithScale

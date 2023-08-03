@@ -14,18 +14,16 @@ import Element.Lazy
 import Element.Region
 import Form
 import Form.Field as Field
-import Form.FieldView exposing (inputStyled)
+import Form.FieldView
 import Form.Validation as Validation
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events
-import Iso8601
 import Json.Decode
 import Json.Encode
 import KeywordString exposing (KeywordString)
 import List
 import Queries exposing (SearchQuery(..))
-import RCStyles
 import Research as RC exposing (Research)
 import Set exposing (Set)
 import String
@@ -362,7 +360,11 @@ update msg model =
                 Ok (Queries.AllKeywords kws) ->
                     ( { model | allKeywords = kws |> List.map (RC.kwName >> KeywordString.fromString) }, Cmd.none )
 
-                Err _ ->
+                Err err ->
+                    let
+                        _ =
+                            Debug.log "why i don't see anything" err
+                    in
                     ( model, Cmd.none )
 
         HitEnter ->
@@ -505,6 +507,7 @@ handleUrl url model =
             )
 
         [ "keywords", "search" ] ->
+            -- keywords/search?
             let
                 q =
                     url.queryParameters |> Dict.get "q" |> Maybe.andThen List.head |> Maybe.withDefault ""
@@ -567,6 +570,13 @@ handleUrl url model =
                         |> Maybe.andThen List.head
                         |> Maybe.withDefault ""
 
+                portal : String
+                portal =
+                    url.queryParameters
+                        |> Dict.get "portal"
+                        |> Maybe.andThen List.head
+                        |> Maybe.withDefault ""
+
                 cmd : Cmd msg
                 cmd =
                     sendQuery
@@ -584,7 +594,7 @@ handleUrl url model =
                 | view =
                     SearchView
                         { layout = ListLayout
-                        , form = formWith title author keywords
+                        , form = formWith title author keywords portal
                         , sorting = sorting
                         , page = Page page
                         }
@@ -635,6 +645,13 @@ handleUrl url model =
                         |> Maybe.andThen String.toInt
                         |> Maybe.withDefault 1
 
+                portal : String
+                portal =
+                    url.queryParameters
+                        |> Dict.get "portal"
+                        |> Maybe.andThen List.head
+                        |> Maybe.withDefault ""
+
                 cmd : Cmd msg
                 cmd =
                     sendQuery
@@ -652,7 +669,7 @@ handleUrl url model =
                 | view =
                     SearchView
                         { layout = ScreenLayout scale
-                        , form = formWith title author keywords
+                        , form = formWith title author keywords portal
                         , sorting = sorting
                         , page = Page page
                         }
@@ -665,7 +682,7 @@ handleUrl url model =
                 | view =
                     SearchView
                         { layout = ListLayout
-                        , form = formWith "" "" []
+                        , form = formWith "" "" [] ""
                         , sorting = RC.NewestFirst
                         , page = Page 1
                         }
@@ -789,57 +806,6 @@ viewResearchMicro research =
                 ]
 
 
-
--- listView : RC.TitleSorting -> Model -> Element Msg
--- listView sorting model =
---     let
---         filtered : List Research
---         filtered =
---             List.filter
---                 (\r ->
---                     case r.thumbnail of
---                         Just _ ->
---                             True
---                         Nothing ->
---                             False
---                 )
---                 model.research
---         -- researchInProgress =
---         --     List.filter (\r -> r.publicationStatus == InProgress) model.research
---         published : List Research
---         published =
---             List.filter (\r -> r.publicationStatus == RC.Published || r.publicationStatus == RC.InProgress) filtered
---         sorted : List Research
---         sorted =
---             case sorting of
---                 RC.Random ->
---                     RC.shuffleWithSeed 42 published
---                 RC.NewestFirst ->
---                     List.sortBy (\r -> r.created) published |> List.reverse
---                 RC.OldestFirst ->
---                     List.sortBy (\r -> r.created) published
---         researchColumn : List Research -> Element Msg
---         researchColumn lst =
---             Element.column [ Element.spacing 5, Element.alignTop, width fill, Element.paddingXY 5 5 ]
---                 (List.map viewResearchMicro lst)
---     in
---     Element.column [ Element.spacingXY 0 25, Element.paddingXY 0 25 ]
---         [ Element.row
---             []
---             [ sorted |> List.take model.numberOfResults |> researchColumn
---             , sorted |> List.drop (model.numberOfResults * 2) |> List.take model.numberOfResults |> researchColumn
---             , sorted |> List.drop (model.numberOfResults * 3) |> List.take model.numberOfResults |> researchColumn
---             ]
---         , Element.column [ width fill ]
---             [ Element.Input.button
---                 (Element.centerX :: List.map Element.htmlAttribute RCStyles.rcButtonStyle)
---                 { onPress = Just LoadMore
---                 , label = Element.el [ Element.centerX, Font.size 18 ] <| Element.text "LOAD MORE"
---                 }
---             ]
---         ]
-
-
 isKeywordView : View -> Bool
 isKeywordView v =
     case v of
@@ -956,8 +922,8 @@ linkStyle active style =
 viewNav : View -> Element Msg
 viewNav currentView =
     Element.row [ paddingXY 0 0, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "Keyword Map" }
-        , Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search/list", label = Element.text "Search" }
+        [ Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search/list", label = Element.text "Search" }
+        , Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "Keyword Map" }
         ]
 
 
@@ -986,7 +952,7 @@ view model =
                             viewResearchResults model.allKeywords model.submitting model.searchGUI model.screenDimensions sv lst
 
                         FoundKeywords _ ->
-                            Element.none 
+                            Element.none
 
                         Searching ->
                             Element.text "waiting"
@@ -1149,43 +1115,6 @@ toggleTitleSorting sorting sortingToUrl =
         ]
 
 
-
--- viewKeywordDetail : List RC.Keyword -> RC.TitleSorting -> Model -> Element Msg
--- viewKeywordDetail keywords sorting model =
---     let
---         researchWithKeyword : RC.Keyword -> List Research
---         researchWithKeyword kw =
---             Dict.get (RC.kwName kw) model.reverseKeywordDict |> Maybe.withDefault []
---         union : List RC.Keyword -> List Research
---         union kws =
---             kws
---                 |> List.concatMap (\kw -> kw |> researchWithKeyword)
---         -- the keywords that research with the same keyword uses:
---         relatedKeywords : List Research -> List RC.Keyword
---         relatedKeywords expositions =
---             expositions
---                 |> List.concatMap (getKeywordsOfResearch model.keywords)
---                 |> List.Extra.unique
---                 |> List.sortBy RC.getCount
---                 |> List.reverse
---         count =
---             keywords |> List.map RC.getCount |> List.foldl (+) 0
---     in
---     -- generate a simple layout with two columns using Element
---     Element.column [ width fill, Element.spacingXY 0 0 ]
---         [ Element.row [ Element.spacingXY 25 5, width fill ] [ detailViewOrderSwitch keywords sorting ]
---         , Element.link [] { url = "/#/keywords", label = Element.text "Back" }
---         , Element.column
---             [ Font.size 36, paddingXY 0 25, width fill, spacingXY 0 10 ]
---             [ Element.text (keywords |> List.map RC.kwName |> String.join ", ")
---             , Element.el [ Font.size 14 ] <| Element.text ((count |> String.fromInt) ++ " expositions use this keyword")
---             ]
---         , Element.el [] (Element.text "related keywords : ")
---         , union keywords |> relatedKeywords |> List.take 12 |> List.map (viewKeywordAsButton 15) |> makeColumns 6 [ width fill, spacing 5, Element.paddingXY 0 25, Font.size 9 ]
---         , union keywords |> sortResearch sorting |> List.map viewResearch |> makeColumns 3 [ width fill, spacing 25, Element.paddingXY 0 25 ]
---         ]
-
-
 viewKeywordAsButton : Int -> RC.Keyword -> Element Msg
 viewKeywordAsButton fontsize kw =
     let
@@ -1205,16 +1134,9 @@ viewKeywordAsButton fontsize kw =
         , Element.Border.width 1
         , Element.Background.color (rgb255 250 250 250)
         , Element.clipX
-
-        -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
         , width fill
         ]
         [ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
-
-        -- [ Element.Input.button [ Font.color (rgb 0.0 0.0 1.0), width fill ]
-        --     { onPress = Just (ShowKeyword (Keyword k))
-        --     , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
-        --     }
         , Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
         ]
 
@@ -1705,6 +1627,7 @@ type alias SearchForm =
     { title : String
     , author : String
     , keywords : List String
+    , portal : String
     }
 
 
@@ -1713,19 +1636,21 @@ emptyForm =
     { title = ""
     , author = ""
     , keywords = []
+    , portal = ""
     }
 
 
-formWith : String -> String -> List String -> SearchForm
-formWith title author keywords =
+formWith : String -> String -> List String -> String -> SearchForm
+formWith title author keywords portal =
     { title = title
     , author = author
     , keywords = keywords
+    , portal = portal
     }
 
 
-searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> SearchForm
-searchForm title author keyword1 keyword2 =
+searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> SearchForm
+searchForm title author keyword1 keyword2 portal =
     let
         nothingIsJustEmpty =
             Maybe.withDefault ""
@@ -1734,6 +1659,7 @@ searchForm title author keyword1 keyword2 =
         (nothingIsJustEmpty title)
         (nothingIsJustEmpty author)
         (List.filterMap identity [ keyword1, keyword2 ])
+        (nothingIsJustEmpty portal)
 
 
 searchGUI keywords =
@@ -1755,7 +1681,7 @@ searchGUI keywords =
                         Err "this is not a keyword"
     in
     Form.form
-        (\title author keyword1 keyword2 ->
+        (\title author keyword1 keyword2 portal ->
             { combine =
                 Validation.succeed searchForm
                     |> Validation.andMap title
@@ -1770,6 +1696,8 @@ searchGUI keywords =
                             |> Validation.map parseKeyword
                             |> Validation.fromResult
                         )
+                    |> Validation.andMap
+                        portal
             , view =
                 \info ->
                     [ Html.div []
@@ -1791,6 +1719,7 @@ searchGUI keywords =
                               else
                                 Html.text "search"
                             ]
+                        , fieldView info "portal" portal
                         ]
                     ]
             }
@@ -1799,6 +1728,7 @@ searchGUI keywords =
         |> Form.field "author" (Field.text |> Field.search |> Field.withInitialValue .author)
         |> Form.field "keyword 1" (Field.text |> Field.search |> Field.withInitialValue getFirstKeyword)
         |> Form.field "keyword 2" (Field.text |> Field.search |> Field.withInitialValue getSecondKeyword)
+        |> Form.field "portal" (Field.text |> Field.search |> Field.withInitialValue .portal)
 
 
 getFirstKeyword : SearchForm -> String

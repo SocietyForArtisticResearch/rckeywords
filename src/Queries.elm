@@ -27,6 +27,16 @@ import Set exposing (Set)
 import Time
 
 
+
+
+
+
+--
+-- type Portal
+--     = Journal String
+--     | Portal String
+
+
 type Search
     = Search
         { title : String
@@ -34,6 +44,7 @@ type Search
         , keywords : Set String
         , after : Time.Posix
         , before : Time.Posix
+        , portal : String
         }
 
 
@@ -63,6 +74,7 @@ emptySearch =
         , keywords = Set.empty
         , after = Time.millisToPosix 0
         , before = Time.millisToPosix ((2 ^ 31) - 1)
+        , portal = ""
         }
 
 
@@ -79,25 +91,27 @@ searchWithKeywords kws (Search s) =
         }
 
 
-search : String -> String -> Set String -> Time.Posix -> Time.Posix -> Search
-search title author keywords after before =
+search : String -> String -> Set String -> Time.Posix -> Time.Posix -> String -> Search
+search title author keywords after before portal =
     Search
         { title = title
         , author = author
         , keywords = keywords
         , after = after
         , before = before
+        , portal = portal
         }
 
 
 decodeSearch : Json.Decode.Decoder Search
 decodeSearch =
-    Json.Decode.map5 search
+    Json.Decode.map6 search
         (field "title" string)
         (field "author" string)
         (field "keywords" (list string) |> map Set.fromList)
         (field "after" (int |> map Time.millisToPosix))
         (field "before" (int |> map Time.millisToPosix))
+        (field "portal" string)
 
 
 encodeSearch : Search -> E.Value
@@ -108,6 +122,7 @@ encodeSearch (Search data) =
         , ( "keywords", E.list E.string (data.keywords |> Set.toList) )
         , ( "after", E.int (Time.posixToMillis data.after) )
         , ( "before", E.int (Time.posixToMillis data.before) )
+        , ( "portal", E.string data.portal)
         ]
 
 

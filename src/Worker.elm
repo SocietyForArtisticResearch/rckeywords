@@ -80,6 +80,7 @@ update msg model =
                         Err _ ->
                             ( problemize DecodeError model, Cmd.none )
 
+        -- Easiest place for seeing how a search is processed:
         Loaded lmodel ->
             case msg of
                 SearchQuery json ->
@@ -89,8 +90,14 @@ update msg model =
                                 Queries.FindKeywords str kwSorting ->
                                     ( Loaded lmodel, findKeywords str kwSorting lmodel.keywords |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults )
 
+                                -- This is actual search form query
                                 Queries.FindResearch search ->
-                                    ( Loaded lmodel, searchResearch search lmodel.reverseKeywordDict lmodel.research |> Queries.Expositions |> Queries.encodeSearchResult |> returnResults )
+                                    ( Loaded lmodel
+                                    , searchResearch search lmodel.reverseKeywordDict lmodel.research
+                                        |> Queries.Expositions -- SO this  is just packaging it into the rigth type for tranposrt
+                                        |> Queries.encodeSearchResult
+                                        |> returnResults
+                                    )
 
                                 Queries.GetAllKeywords ->
                                     ( Loaded lmodel, findKeywords "" Alphabetical lmodel.keywords |> Queries.AllKeywords |> Queries.encodeSearchResult |> returnResults )
@@ -163,7 +170,7 @@ update msg model =
                 SearchQuery json ->
                     case D.decodeValue Queries.decodeSearchQuery json of
                         Ok query ->
-                            ( LoadingWithQuery q (query::otherQs) , Cmd.none )
+                            ( LoadingWithQuery q (query :: otherQs), Cmd.none )
 
                         Err _ ->
                             ( problemize DecodeError model, Cmd.none )
@@ -244,6 +251,7 @@ main =
 --             Debug.log ("* length is * " ++ label) (List.length lst)
 --     in
 --     lst
+--
 
 
 searchResearch : Search -> ReverseKeywordDict -> List Research -> List Research
@@ -255,6 +263,7 @@ searchResearch (Search search) revDict lst =
         |> RC.findResearchWithAuthor search.author
         -- |> printLength "author"
         |> RC.findResearchWithKeywords search.keywords revDict
+        |> RC.findResearchWithPortal search.portal
 
 
 

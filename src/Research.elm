@@ -9,6 +9,7 @@ module Research exposing
     , Keyword(..)
     , KeywordSet(..)
     , KeywordSorting(..)
+    , Portal
     , PublicationStatus(..)
     , Research
     , ReverseKeywordDict
@@ -30,6 +31,7 @@ module Research exposing
     , findResearchWithAuthor
     , findResearchWithKeywords
     , findResearchWithTitle
+    , findResearchWithPortal
     , getAuthorId
     , getCount
     , getName
@@ -66,6 +68,95 @@ type alias ExpositionID =
     Int
 
 
+type alias Portal =
+    { id : Int
+    , name : String
+    , type_ : PortalType
+    }
+
+-- Worker
+encodePortal : Portal -> Json.Encode.Value
+encodePortal portal =
+    Json.Encode.object
+        [ ( "id", Json.Encode.int portal.id )
+        , ( "name", Json.Encode.string portal.name )
+        , ( "type_", Json.Encode.string (portal.type_ |> portalTypeToString) )
+        ]
+
+-- Worker
+decodeWorkerPortal : Json.Decode.Decoder Portal
+decodeWorkerPortal =
+    Json.Decode.map3 Portal
+        (Json.Decode.field "id" Json.Decode.int)
+        (Json.Decode.field "name" Json.Decode.string)
+        (Json.Decode.field "type_" Json.Decode.string |> Json.Decode.map portalTypeFromString)
+
+
+type PortalType
+    = Institutional
+    | Journal
+    | Project
+    | MainPortal
+
+
+-- Worker
+portalTypeToString : PortalType -> String
+portalTypeToString portaltype =
+    case portaltype of
+        Institutional ->
+            "Institutional"
+
+        Journal ->
+            "Journal"
+
+        Project ->
+            "Project"
+
+        MainPortal ->
+            "MainPortal"
+
+
+portalTypeFromString : String -> PortalType
+portalTypeFromString str =
+    case str of
+        "Institutional" ->
+            Institutional
+
+        "Journal" ->
+            Journal
+
+        "Project" ->
+            Project
+
+        "MainPortal" ->
+            MainPortal
+
+        _ ->
+            Institutional
+
+-- RC API portal lookup:
+portalType : String -> PortalType
+portalType portalName =
+    let
+        institutional =
+            [ "KC Research Portal", "Stockholm University of the Arts (SKH)", "University of the Arts Helsinki", "Norwegian Academy of Music", "The Danish National School of Performing Arts", "Rhythmic Music Conservatory Copenhagen", "Konstfack - University of Arts, Crafts and Design", "NTNU", "i2ADS - Research Institute in Art, Design and Society", "University of Applied Arts Vienna", "Academy of Creative and Performing Arts", "International Center for Knowledge in the Arts (Denmark)", "Inland Norway University of Applied Sciences, The Norwegian Film School", "Fontys Academy of the Arts (internal)" ]
+    in
+    -- TODO match  for other types of portal !
+    if List.member portalName institutional then
+        Institutional
+
+    else
+        Journal
+
+-- RC API
+rcPortalDecoder : Json.Decode.Decoder Portal
+rcPortalDecoder =
+    Json.Decode.map3 Portal
+        (Json.Decode.field "id" Json.Decode.int)
+        (Json.Decode.field "name" Json.Decode.string)
+        (Json.Decode.field "name" Json.Decode.string |> Json.Decode.map portalType)
+
+
 type Author
     = Author { id : Int, name : String }
 
@@ -90,7 +181,7 @@ type PublicationStatus
     | Published
     | Undecided
 
-
+-- RC API
 publicationstatus : PublicationStatus -> Json.Encode.Value
 publicationstatus status =
     Json.Encode.string
@@ -105,7 +196,7 @@ publicationstatus status =
                 "undecided"
         )
 
-
+-- RC API
 decodePublicationStatus : Json.Decode.Decoder PublicationStatus
 decodePublicationStatus =
     Json.Decode.string
@@ -323,7 +414,7 @@ shuffleWithSeed seed lst =
         |> Random.step (Random.List.shuffle lst)
         |> Tuple.first
 
-
+-- RC API
 author : Decoder Author
 author =
     let
@@ -335,6 +426,10 @@ author =
         makeAuthor
         (Json.Decode.field "id" Json.Decode.int)
         (Json.Decode.field "name" Json.Decode.string)
+
+
+
+-- WORKER exposition
 
 
 decodeExposition : Decoder Research
@@ -364,8 +459,9 @@ decodeExposition =
             -> Maybe String
             -> Maybe String
             -> String
+            -> List Portal
             -> Research
-        mkExp i t kw cr au iss pub publ thum abs d =
+        mkExp i t kw cr au iss pub publ thum abs d rcportal =
             { id = i
             , title = t
             , keywords = kw
@@ -377,6 +473,7 @@ decodeExposition =
             , thumbnail = thum
             , abstract = abs
             , defaultPage = d
+            , portals = rcportal
             }
     in
     field "type" string
@@ -396,6 +493,7 @@ decodeExposition =
                             |> andMap (JDE.optionalField "thumbnail" string)
                             |> andMap (JDE.optionalField "abstract" string)
                             |> andMap (field "defaultPage" string)
+                            |> andMap (field "portals" (Json.Decode.list decodeWorkerPortal))
 
                     _ ->
                         Json.Decode.fail "expected an exposition"
@@ -462,6 +560,8 @@ encodeExposition exp =
                     (\a ->
                         ( "abstract", string a )
                     )
+
+        
     in
     Json.Encode.object
         ([ ( "type", string "exposition" )
@@ -472,6 +572,7 @@ encodeExposition exp =
          , ( "author", encodeAuthor exp.author )
          , ( "publicationStatus", publicationstatus exp.publicationStatus )
          , ( "defaultPage", string exp.defaultPage )
+         , ( "portals", list encodePortal exp.portals)
          ]
             |> maybeAppend issueId
             |> maybeAppend publication
@@ -518,6 +619,7 @@ decoder =
             |> JDE.andMap (maybe (field "thumb" string))
             |> JDE.andMap (maybe (field "abstract" string))
             |> JDE.andMap (field "default-page" string)
+            |> JDE.andMap (field "published_in" (Json.Decode.list rcPortalDecoder))
         )
 
 
@@ -548,6 +650,7 @@ type alias Research =
     , thumbnail : Maybe String
     , abstract : Maybe String
     , defaultPage : String
+    , portals : List Portal
     }
 
 
@@ -703,5 +806,24 @@ findResearchAfter posix lst =
                     research.created |> rcDateToPosix |> Result.toMaybe |> Maybe.withDefault (Time.millisToPosix 0)
             in
             List.member (comparePosix researchDate posix) [ Bigger, Equal ]
+    in
+    List.filter test lst
+
+
+findResearchWithPortal : String -> List Research -> List Research
+findResearchWithPortal portalq lst =
+    let
+        test : Research -> Bool
+        test research =
+            case research.portals of
+                [] ->
+                    True 
+
+                prtls -> 
+                    let
+                        portalstrs =
+                            prtls |> List.map (.name >> String.toLower)
+                    in
+                    portalstrs |> List.any (\p -> String.contains (String.toLower portalq) p)
     in
     List.filter test lst

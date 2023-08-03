@@ -94,13 +94,22 @@ update msg model =
                                 Queries.FindResearch search ->
                                     ( Loaded lmodel
                                     , searchResearch search lmodel.reverseKeywordDict lmodel.research
-                                        |> Queries.Expositions -- SO this  is just packaging it into the rigth type for tranposrt
+                                        |> Queries.Expositions
+                                        -- SO this  is just packaging it into the rigth type for tranposrt
                                         |> Queries.encodeSearchResult
                                         |> returnResults
                                     )
 
                                 Queries.GetAllKeywords ->
                                     ( Loaded lmodel, findKeywords "" Alphabetical lmodel.keywords |> Queries.AllKeywords |> Queries.encodeSearchResult |> returnResults )
+
+                                Queries.GetAllPortals ->
+                                    ( Loaded lmodel
+                                    , RC.getAllPortals lmodel.research
+                                        |> Queries.AllPortals
+                                        |> Queries.encodeSearchResult
+                                        |> returnResults
+                                    )
 
                         Err _ ->
                             ( problemize DecodeError (Loaded lmodel), Cmd.none )
@@ -110,7 +119,7 @@ update msg model =
                         Ok data ->
                             ( Loaded
                                 { lmodel
-                                    | research = data
+                                    | research = data 
                                     , keywords = RC.keywordSet data
                                 }
                             , Cmd.none
@@ -154,10 +163,13 @@ update msg model =
                                                 |> Queries.AllKeywords
                                                 |> Queries.encodeSearchResult
                                                 |> returnResults
+
+                                        Queries.GetAllPortals ->
+                                            RC.getAllPortals data |> Queries.AllPortals |> Queries.encodeSearchResult |> returnResults
                             in
                             ( Loaded
                                 { problems = []
-                                , research = data
+                                , research = data 
                                 , keywords = kws
                                 , reverseKeywordDict = reverseKeywordDict
                                 }
@@ -244,14 +256,14 @@ main =
 
 
 
--- printLength : String -> List a -> List a
--- printLength label lst =
---     let
---         _ =
---             Debug.log ("* length is * " ++ label) (List.length lst)
---     in
---     lst
---
+printLength : String -> List a -> List a
+printLength label lst =
+    let
+        _ =
+            Debug.log ("* length is * " ++ label) (List.length lst)
+    in
+    lst
+
 
 
 searchResearch : Search -> ReverseKeywordDict -> List Research -> List Research
@@ -259,11 +271,13 @@ searchResearch (Search search) revDict lst =
     -- TODO implement dates
     lst
         |> RC.findResearchWithTitle search.title
-        -- |> printLength "title"
+        |> printLength "title"
         |> RC.findResearchWithAuthor search.author
-        -- |> printLength "author"
+        |> printLength "author"
         |> RC.findResearchWithKeywords search.keywords revDict
+        |> printLength "keywords"
         |> RC.findResearchWithPortal search.portal
+        |> printLength "portal"
 
 
 

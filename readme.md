@@ -74,6 +74,9 @@ viewResearch : Research -> Element Msg
 
 # Todo
 
+- Bug with search results
+- WHy does back and forward not work?
+
 - browse just allows you to see the whole RC, but it is not about searching, it is about choosing a certain layout for all research (by keyword, by date, by portal etc..)
 - implement a search interface with the following fields:
     * title, string

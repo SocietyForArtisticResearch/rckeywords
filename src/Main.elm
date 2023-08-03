@@ -14,7 +14,7 @@ import Element.Lazy
 import Element.Region
 import Form
 import Form.Field as Field
-import Form.FieldView
+import Form.FieldView as FieldView
 import Form.Validation as Validation
 import Html exposing (Html)
 import Html.Attributes as Attr
@@ -152,6 +152,12 @@ type alias SearchViewState =
     }
 
 
+
+-- This should always contain all the state of the view.
+-- If it is in this type, it should also get encoded in the URL.
+-- handleUrl will parse a url into this view type. They should be "watertight"
+
+
 type View
     = KeywordsView KeywordsViewState
     | SearchView SearchViewState
@@ -235,6 +241,7 @@ type alias Model =
     , searchGUI : Form.Model
     , submitting : Bool
     , allKeywords : List KeywordString
+    , allPortals : List RC.Portal
     }
 
 
@@ -290,21 +297,24 @@ init { width, height } url key =
     , searchGUI = Form.init
     , submitting = False
     , allKeywords = []
+    , allPortals = []
     }
         |> handleUrl initUrl
-        |> fetchAllKeywords
+        |> fetchKeywordsAndPortals
 
 
 
 -- before doing anything else, ask worker for all keywords
 
 
-fetchAllKeywords : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
-fetchAllKeywords ( model, cmd ) =
+fetchKeywordsAndPortals : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+fetchKeywordsAndPortals ( model, cmd ) =
     ( model
     , Cmd.batch
         [ sendQuery
             (Queries.encodeSearchQuery Queries.GetAllKeywords)
+        , sendQuery
+            (Queries.encodeSearchQuery Queries.GetAllPortals)
         , cmd
         ]
     )
@@ -327,7 +337,11 @@ update msg model =
             )
 
         UrlChanged url ->
-            ( { model | url = url |> urlWhereFragmentIsPath }, Cmd.none )
+            let
+                ( mdl, cmd ) =
+                    handleUrl (url |> urlWhereFragmentIsPath) model
+            in
+            ( { mdl | url = url |> urlWhereFragmentIsPath }, cmd )
 
         LinkClicked urlRequest ->
             case urlRequest of
@@ -360,7 +374,11 @@ update msg model =
                 Ok (Queries.AllKeywords kws) ->
                     ( { model | allKeywords = kws |> List.map (RC.kwName >> KeywordString.fromString) }, Cmd.none )
 
+                Ok (Queries.AllPortals portals) ->
+                    ( { model | allPortals = portals }, Cmd.none )
+
                 Err err ->
+                    -- should turn into actual problem
                     let
                         _ =
                             Debug.log "why i don't see anything" err
@@ -416,33 +434,23 @@ update msg model =
                 Form.Valid srch ->
                     -- should update key
                     let
+                        _ = Debug.log "srch" srch
                         newView =
                             updateViewWithSearch srch model.view
-
-                        searchCmd =
-                            sendQuery
-                                (Queries.encodeSearchQuery
-                                    (FindResearch
-                                        (Queries.emptySearch
-                                            |> Queries.searchWithKeywords (Set.fromList srch.keywords)
-                                            |> Queries.withTitle srch.title
-                                            |> Queries.withAuthor srch.author
-                                        )
-                                    )
-                                )
                     in
                     ( { model
                         | view = newView
                         , search = Searching
                       }
                     , Cmd.batch
-                        [ searchCmd
-                        , Nav.pushUrl model.key (appUrlFromView newView)
+                        [ Nav.pushUrl model.key (appUrlFromView newView)
                         ]
                     )
 
                 Form.Invalid m x ->
+                    
                     ( model, Cmd.none )
+
 
 
 updateViewWithSearch : SearchForm -> View -> View
@@ -949,7 +957,7 @@ view model =
                 SearchView sv ->
                     case model.search of
                         FoundResearch lst ->
-                            viewResearchResults model.allKeywords model.submitting model.searchGUI model.screenDimensions sv lst
+                            viewResearchResults model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions sv lst
 
                         FoundKeywords _ ->
                             Element.none
@@ -1043,8 +1051,8 @@ anchor anchorId =
     Element.htmlAttribute (Attr.id anchorId)
 
 
-viewResearchResults : List KeywordString -> Bool -> Form.Model -> ScreenDimensions -> SearchViewState -> List Research -> Element Msg
-viewResearchResults allKeywords submitting searchFormState dimensions sv lst =
+viewResearchResults : List RC.Portal -> List KeywordString -> Bool -> Form.Model -> ScreenDimensions -> SearchViewState -> List Research -> Element Msg
+viewResearchResults allPortals allKeywords submitting searchFormState dimensions sv lst =
     let
         layout =
             sv.layout
@@ -1085,7 +1093,7 @@ viewResearchResults allKeywords submitting searchFormState dimensions sv lst =
     in
     Element.column [ anchor "top", spacingXY 0 5, width fill ] <|
         [ Element.el [ paddingXY 0 15 ]
-            (viewSearch (Just initialForm) allKeywords submitting searchFormState)
+            (viewSearch (Just initialForm) allPortals allKeywords submitting searchFormState)
         , Element.row
             [ width fill ]
             [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch layout (urlFromLayout sv)
@@ -1274,6 +1282,7 @@ appUrlFromSearchViewState sv =
                             , ( "author", [ sv.form.author ] )
                             , ( "sorting", [ RC.titleSortingToString sv.sorting ] )
                             , ( "page", [ pageAsString sv.page ] )
+                            , ( "portal", [ sv.form.portal ] )
                             ]
 
                 ScreenLayout scale ->
@@ -1285,6 +1294,7 @@ appUrlFromSearchViewState sv =
                             , ( "sorting", [ RC.titleSortingToString sv.sorting ] )
                             , ( "page", [ pageAsString sv.page ] )
                             , ( "scale", [ scaleToString scale ] )
+                            , ( "portal", [ sv.form.portal ] )
                             ]
     in
     appurl |> AppUrl.toString |> prefixHash
@@ -1649,7 +1659,7 @@ formWith title author keywords portal =
     }
 
 
-searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> SearchForm
+searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> String -> SearchForm
 searchForm title author keyword1 keyword2 portal =
     let
         nothingIsJustEmpty =
@@ -1659,10 +1669,14 @@ searchForm title author keyword1 keyword2 portal =
         (nothingIsJustEmpty title)
         (nothingIsJustEmpty author)
         (List.filterMap identity [ keyword1, keyword2 ])
-        (nothingIsJustEmpty portal)
+        portal
 
 
-searchGUI keywords =
+quote str =
+    "\"" ++ str ++ "\""
+
+
+searchGUI portals keywords =
     let
         parseKeyword mk =
             case mk of
@@ -1678,7 +1692,10 @@ searchGUI keywords =
                         Ok (Just k)
 
                     else
-                        Err "this is not a keyword"
+                        Err (quote k ++ " not used in RC")
+
+        portalsAsOptions =
+            ( "", "" ) :: (portals |> List.map (\p -> ( p.name, p.name )))
     in
     Form.form
         (\title author keyword1 keyword2 portal ->
@@ -1719,7 +1736,9 @@ searchGUI keywords =
                               else
                                 Html.text "search"
                             ]
-                        , fieldView info "portal" portal
+                        , FieldView.select []
+                            (\entry -> ( [], entry ))
+                            portal
                         ]
                     ]
             }
@@ -1728,7 +1747,7 @@ searchGUI keywords =
         |> Form.field "author" (Field.text |> Field.search |> Field.withInitialValue .author)
         |> Form.field "keyword 1" (Field.text |> Field.search |> Field.withInitialValue getFirstKeyword)
         |> Form.field "keyword 2" (Field.text |> Field.search |> Field.withInitialValue getSecondKeyword)
-        |> Form.field "portal" (Field.text |> Field.search |> Field.withInitialValue .portal)
+        |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "Error !!!") |> Field.required "req")
 
 
 getFirstKeyword : SearchForm -> String
@@ -1788,7 +1807,7 @@ fieldView formState label field =
     Html.div []
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
-            , field |> Form.FieldView.input fieldStyle
+            , field |> FieldView.input fieldStyle
             ]
         , (if formState.submitAttempted then
             formState.errors
@@ -1805,14 +1824,16 @@ fieldView formState label field =
         ]
 
 
-keywordField : List KeywordString -> { a | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Validation String (Maybe String) Form.FieldView.Input { field : Form.FieldView.Input } -> Html msg
+keywordField : List KeywordString -> { a | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Validation String (Maybe String) FieldView.Input { field : FieldView.Input } -> Html msg
 keywordField keywords formState label field =
     let
+        lengthIfParsed : Maybe (Maybe Int)
         lengthIfParsed =
             field
                 |> Validation.value
                 |> Maybe.map (Maybe.map String.length)
 
+        isLongEnough : String -> Bool
         isLongEnough str =
             case lengthIfParsed of
                 Nothing ->
@@ -1824,9 +1845,11 @@ keywordField keywords formState label field =
                 _ ->
                     False
 
+        kwStrings : List String
         kwStrings =
             keywords |> List.map KeywordString.toString
 
+        optimizedSuggestions : List String
         optimizedSuggestions =
             kwStrings
                 |> List.filter isLongEnough
@@ -1835,7 +1858,7 @@ keywordField keywords formState label field =
     Html.div []
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
-            , field |> Form.FieldView.input ([ Attr.list "keyword-field" ] ++ fieldStyle)
+            , field |> FieldView.input ([ Attr.list "keyword-field" ] ++ fieldStyle)
             , Html.datalist [ Attr.id "keyword-field", Attr.autocomplete False ]
                 (List.map
                     (\kw ->
@@ -1859,8 +1882,41 @@ keywordField keywords formState label field =
         ]
 
 
-viewSearch : Maybe SearchForm -> List KeywordString -> Bool -> Form.Model -> Element Msg
-viewSearch initialForm keywords submitting searchFormState =
+
+-- portalField allPortals formState label field =
+--     let
+--         allPortalStrings : List String
+--         allPortalStrings =
+--             List.map .name allPortals
+--     in
+--     Html.div []
+--         [ Html.label labelStyle
+--             [ Html.text (label ++ " ")
+--             , field |> Form.FieldView.input ([ Attr.list "portal-field", Attr.attribute "autocomplete" "off" ] ++ fieldStyle)
+--             , Html.datalist [ Attr.id "portal-field" ]
+--                 (List.map
+--                     (\portal ->
+--                         Html.option [ Attr.value portal ] []
+--                     )
+--                     allPortalStrings
+--                 )
+--             ]
+--         , (if formState.submitAttempted then
+--             formState.errors
+--                 |> Form.errorsForField field
+--                 |> List.map
+--                     (\error ->
+--                         Html.li [] [ Html.text error ]
+--                     )
+--            else
+--             []
+--           )
+--             |> Html.ul [ Attr.style "color" "red" ]
+--         ]
+
+
+viewSearch : Maybe SearchForm -> List RC.Portal -> List KeywordString -> Bool -> Form.Model -> Element Msg
+viewSearch initialForm portals keywords submitting searchFormState =
     case initialForm of
         Just formInput ->
             Element.el
@@ -1871,7 +1927,7 @@ viewSearch initialForm keywords submitting searchFormState =
                 ]
             <|
                 Element.html
-                    (searchGUI keywords
+                    (searchGUI portals keywords
                         |> Form.renderHtml
                             { submitting = submitting
                             , state = searchFormState

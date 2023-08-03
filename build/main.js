@@ -5226,6 +5226,7 @@ var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
 var $author$project$Main$emptyForm = {author: '', keywords: _List_Nil, portal: '', title: ''};
 var $author$project$Queries$GetAllKeywords = {$: 'GetAllKeywords'};
+var $author$project$Queries$GetAllPortals = {$: 'GetAllPortals'};
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Queries$encodeKeywordSorting = function (sorting) {
@@ -5327,7 +5328,7 @@ var $author$project$Queries$encodeSearchQuery = function (query) {
 						'search',
 						$author$project$Queries$encodeSearch(src))
 					]));
-		default:
+		case 'GetAllKeywords':
 			return $elm$json$Json$Encode$object(
 				_List_fromArray(
 					[
@@ -5335,10 +5336,18 @@ var $author$project$Queries$encodeSearchQuery = function (query) {
 						'type',
 						$elm$json$Json$Encode$string('GetAllKeywords'))
 					]));
+		default:
+			return $elm$json$Json$Encode$object(
+				_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'type',
+						$elm$json$Json$Encode$string('GetAllPortals'))
+					]));
 	}
 };
 var $author$project$Main$sendQuery = _Platform_outgoingPort('sendQuery', $elm$core$Basics$identity);
-var $author$project$Main$fetchAllKeywords = function (_v0) {
+var $author$project$Main$fetchKeywordsAndPortals = function (_v0) {
 	var model = _v0.a;
 	var cmd = _v0.b;
 	return _Utils_Tuple2(
@@ -5348,6 +5357,8 @@ var $author$project$Main$fetchAllKeywords = function (_v0) {
 				[
 					$author$project$Main$sendQuery(
 					$author$project$Queries$encodeSearchQuery($author$project$Queries$GetAllKeywords)),
+					$author$project$Main$sendQuery(
+					$author$project$Queries$encodeSearchQuery($author$project$Queries$GetAllPortals)),
 					cmd
 				])));
 };
@@ -6478,12 +6489,13 @@ var $author$project$Main$init = F3(
 				sorting: $author$project$Research$Random
 			});
 		var initUrl = $author$project$Main$urlWhereFragmentIsPath(url);
-		return $author$project$Main$fetchAllKeywords(
+		return $author$project$Main$fetchKeywordsAndPortals(
 			A2(
 				$author$project$Main$handleUrl,
 				initUrl,
 				{
 					allKeywords: _List_Nil,
+					allPortals: _List_Nil,
 					key: key,
 					keywords: $elm$core$Set$empty,
 					numberOfResults: 8,
@@ -6977,7 +6989,11 @@ var $author$project$Main$appUrlFromSearchViewState = function (sv) {
 						_List_fromArray(
 							[
 								$author$project$Main$pageAsString(sv.page)
-							]))
+							])),
+						_Utils_Tuple2(
+						'portal',
+						_List_fromArray(
+							[sv.form.portal]))
 					]),
 				$lydell$elm_app_url$AppUrl$fromPath(
 					_List_fromArray(
@@ -7014,7 +7030,11 @@ var $author$project$Main$appUrlFromSearchViewState = function (sv) {
 						_List_fromArray(
 							[
 								$author$project$Main$scaleToString(scale)
-							]))
+							])),
+						_Utils_Tuple2(
+						'portal',
+						_List_fromArray(
+							[sv.form.portal]))
 					]),
 				$lydell$elm_app_url$AppUrl$fromPath(
 					_List_fromArray(
@@ -7035,6 +7055,9 @@ var $author$project$Main$appUrlFromView = function (v) {
 };
 var $author$project$Queries$AllKeywords = function (a) {
 	return {$: 'AllKeywords', a: a};
+};
+var $author$project$Queries$AllPortals = function (a) {
+	return {$: 'AllPortals', a: a};
 };
 var $author$project$Queries$Expositions = function (a) {
 	return {$: 'Expositions', a: a};
@@ -7276,6 +7299,14 @@ var $author$project$Queries$decodeSearchResult = function () {
 						$elm$json$Json$Decode$map,
 						$author$project$Queries$AllKeywords,
 						$elm$json$Json$Decode$list($author$project$Research$decodeKeyword)));
+			case 'allportals':
+				return A2(
+					$elm$json$Json$Decode$field,
+					'portals',
+					A2(
+						$elm$json$Json$Decode$map,
+						$author$project$Queries$AllPortals,
+						$elm$json$Json$Decode$list($author$project$Research$decodeWorkerPortal)));
 			default:
 				return $elm$json$Json$Decode$fail('expected expositions or keywords');
 		}
@@ -7473,23 +7504,29 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'UrlChanged':
 				var url = msg.a;
+				var _v1 = A2(
+					$author$project$Main$handleUrl,
+					$author$project$Main$urlWhereFragmentIsPath(url),
+					model);
+				var mdl = _v1.a;
+				var cmd = _v1.b;
 				return _Utils_Tuple2(
 					_Utils_update(
-						model,
+						mdl,
 						{
 							url: $author$project$Main$urlWhereFragmentIsPath(url)
 						}),
-					$elm$core$Platform$Cmd$none);
+					cmd);
 			case 'LinkClicked':
 				var urlRequest = msg.a;
 				if (urlRequest.$ === 'Internal') {
 					var url = urlRequest.a;
-					var _v2 = A2(
+					var _v3 = A2(
 						$author$project$Main$handleUrl,
 						$author$project$Main$urlWhereFragmentIsPath(url),
 						model);
-					var mdl = _v2.a;
-					var cmd = _v2.b;
+					var mdl = _v3.a;
+					var cmd = _v3.b;
 					return _Utils_Tuple2(
 						mdl,
 						$elm$core$Platform$Cmd$batch(
@@ -7531,7 +7568,7 @@ var $author$project$Main$update = F2(
 										search: $author$project$Main$FoundResearch(exps)
 									}),
 								$elm$core$Platform$Cmd$none);
-						default:
+						case 'AllKeywords':
 							var kws = result.a.a;
 							return _Utils_Tuple2(
 								_Utils_update(
@@ -7543,18 +7580,25 @@ var $author$project$Main$update = F2(
 											kws)
 									}),
 								$elm$core$Platform$Cmd$none);
+						default:
+							var portals = result.a.a;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{allPortals: portals}),
+								$elm$core$Platform$Cmd$none);
 					}
 				} else {
 					var err = result.a;
-					var _v4 = A2($elm$core$Debug$log, 'why i don\'t see anything', err);
+					var _v5 = A2($elm$core$Debug$log, 'why i don\'t see anything', err);
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 			case 'HitEnter':
-				var _v5 = model.view;
-				if (_v5.$ === 'KeywordsView') {
-					if (_v5.a.$ === 'KeywordMainView') {
-						var _v6 = _v5.a;
-						var sorting = _v6.a;
+				var _v6 = model.view;
+				if (_v6.$ === 'KeywordsView') {
+					if (_v6.a.$ === 'KeywordMainView') {
+						var _v7 = _v6.a;
+						var sorting = _v7.a;
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
@@ -7578,8 +7622,8 @@ var $author$project$Main$update = F2(
 										'/#/keywords/search?q=' + (model.query + ('&sorting=' + $author$project$Research$sortingToString(sorting))))
 									])));
 					} else {
-						var _v7 = _v5.a;
-						var sorting = _v7.b;
+						var _v8 = _v6.a;
+						var sorting = _v8.b;
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
@@ -7631,9 +7675,9 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'FormMsg':
 				var formMsg = msg.a;
-				var _v8 = A2($dillonkearns$elm_form$Form$update, formMsg, model.searchGUI);
-				var updatedFormModel = _v8.a;
-				var cmd = _v8.b;
+				var _v9 = A2($dillonkearns$elm_form$Form$update, formMsg, model.searchGUI);
+				var updatedFormModel = _v9.a;
+				var cmd = _v9.b;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -7643,20 +7687,8 @@ var $author$project$Main$update = F2(
 				var validated = msg.a;
 				if (validated.$ === 'Valid') {
 					var srch = validated.a;
-					var searchCmd = $author$project$Main$sendQuery(
-						$author$project$Queries$encodeSearchQuery(
-							$author$project$Queries$FindResearch(
-								A2(
-									$author$project$Queries$withAuthor,
-									srch.author,
-									A2(
-										$author$project$Queries$withTitle,
-										srch.title,
-										A2(
-											$author$project$Queries$searchWithKeywords,
-											$elm$core$Set$fromList(srch.keywords),
-											$author$project$Queries$emptySearch))))));
 					var newView = A2($author$project$Main$updateViewWithSearch, srch, model.view);
+					var _v11 = A2($elm$core$Debug$log, 'srch', srch);
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -7664,7 +7696,6 @@ var $author$project$Main$update = F2(
 						$elm$core$Platform$Cmd$batch(
 							_List_fromArray(
 								[
-									searchCmd,
 									A2(
 									$elm$browser$Browser$Navigation$pushUrl,
 									model.key,
@@ -17550,9 +17581,42 @@ var $elm$core$List$member = F2(
 			},
 			xs);
 	});
+var $author$project$Main$quote = function (str) {
+	return '\"' + (str + '\"');
+};
 var $dillonkearns$elm_form$Internal$Field$Field = F2(
 	function (a, b) {
 		return {$: 'Field', a: a, b: b};
+	});
+var $dillonkearns$elm_form$Form$Field$required = F2(
+	function (missingError, _v0) {
+		var field = _v0.a;
+		var kind = _v0.b;
+		return A2(
+			$dillonkearns$elm_form$Internal$Field$Field,
+			{
+				compare: field.compare,
+				decode: function (rawValue) {
+					var isEmpty = _Utils_eq(
+						rawValue,
+						$elm$core$Maybe$Just('')) || _Utils_eq(rawValue, $elm$core$Maybe$Nothing);
+					var _v1 = field.decode(rawValue);
+					var parsed = _v1.a;
+					var allErrors = _v1.b;
+					return _Utils_Tuple2(
+						A2($elm$core$Maybe$andThen, $elm$core$Basics$identity, parsed),
+						isEmpty ? A2($elm$core$List$cons, missingError, allErrors) : allErrors);
+				},
+				initialToString: field.initialToString,
+				initialValue: field.initialValue,
+				properties: A2(
+					$elm$core$List$cons,
+					_Utils_Tuple2(
+						'required',
+						$elm$json$Json$Encode$bool(true)),
+					field.properties)
+			},
+			kind);
 	});
 var $dillonkearns$elm_form$Internal$Input$Input = function (a) {
 	return {$: 'Input', a: a};
@@ -17581,7 +17645,142 @@ var $author$project$Main$searchForm = F5(
 				$elm$core$Basics$identity,
 				_List_fromArray(
 					[keyword1, keyword2])),
-			nothingIsJustEmpty(portal));
+			portal);
+	});
+var $dillonkearns$elm_form$Internal$Input$Options = F2(
+	function (a, b) {
+		return {$: 'Options', a: a, b: b};
+	});
+var $dillonkearns$elm_form$Form$Field$enumToString = F2(
+	function (optionsMapping, a) {
+		var _v0 = $elm$core$List$head(
+			A2(
+				$elm$core$List$filter,
+				function (_v1) {
+					var b = _v1.b;
+					return _Utils_eq(b, a);
+				},
+				optionsMapping));
+		if (_v0.$ === 'Just') {
+			var _v2 = _v0.a;
+			var str = _v2.a;
+			return str;
+		} else {
+			return 'Missing enum';
+		}
+	});
+var $dillonkearns$elm_form$Form$Field$select = F2(
+	function (optionsMapping, invalidError) {
+		var dict = $elm$core$Dict$fromList(optionsMapping);
+		var fromString = function (string) {
+			return A2($elm$core$Dict$get, string, dict);
+		};
+		return A2(
+			$dillonkearns$elm_form$Internal$Field$Field,
+			{
+				compare: F2(
+					function (_v0, _v1) {
+						return $elm$core$Basics$EQ;
+					}),
+				decode: function (rawValue) {
+					if (rawValue.$ === 'Nothing') {
+						return _Utils_Tuple2(
+							$elm$core$Maybe$Just($elm$core$Maybe$Nothing),
+							_List_Nil);
+					} else {
+						if (rawValue.a === '') {
+							return _Utils_Tuple2(
+								$elm$core$Maybe$Just($elm$core$Maybe$Nothing),
+								_List_Nil);
+						} else {
+							var justValue = rawValue.a;
+							var parsed = fromString(justValue);
+							if (parsed.$ === 'Just') {
+								var okParsed = parsed.a;
+								return _Utils_Tuple2(
+									$elm$core$Maybe$Just(
+										$elm$core$Maybe$Just(okParsed)),
+									_List_Nil);
+							} else {
+								return _Utils_Tuple2(
+									$elm$core$Maybe$Just($elm$core$Maybe$Nothing),
+									_List_fromArray(
+										[
+											invalidError(justValue)
+										]));
+							}
+						}
+					}
+				},
+				initialToString: $dillonkearns$elm_form$Form$Field$enumToString(optionsMapping),
+				initialValue: function (_v4) {
+					return $elm$core$Maybe$Nothing;
+				},
+				properties: _List_Nil
+			},
+			A2(
+				$dillonkearns$elm_form$Internal$Input$Options,
+				fromString,
+				A2($elm$core$List$map, $elm$core$Tuple$first, optionsMapping)));
+	});
+var $elm$html$Html$select = _VirtualDom_node('select');
+var $elm$html$Html$Attributes$selected = $elm$html$Html$Attributes$boolProperty('selected');
+var $dillonkearns$elm_form$Form$FieldView$select = F3(
+	function (selectAttrs, enumToOption, _v0) {
+		var viewField = _v0.a;
+		var fieldName = _v0.b;
+		var justViewField = $dillonkearns$elm_form$Form$FieldView$expectViewField(viewField);
+		var rawField = {
+			kind: justViewField.kind,
+			name: A2($elm$core$Maybe$withDefault, '', fieldName),
+			value: justViewField.value
+		};
+		var _v1 = rawField.kind.a;
+		var parseValue = _v1.a;
+		var possibleValues = _v1.b;
+		return A2(
+			$elm$html$Html$select,
+			_Utils_ap(
+				selectAttrs,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$value(
+						A2($elm$core$Maybe$withDefault, '', rawField.value)),
+						$elm$html$Html$Attributes$name(rawField.name)
+					])),
+			A2(
+				$elm$core$List$filterMap,
+				function (possibleValue) {
+					var parsed = parseValue(possibleValue);
+					if (parsed.$ === 'Just') {
+						var justParsed = parsed.a;
+						var _v3 = enumToOption(justParsed);
+						var optionAttrs = _v3.a;
+						var content = _v3.b;
+						return $elm$core$Maybe$Just(
+							A2(
+								$elm$html$Html$option,
+								_Utils_eq(
+									rawField.value,
+									$elm$core$Maybe$Just(possibleValue)) ? A2(
+									$elm$core$List$cons,
+									$elm$html$Html$Attributes$selected(true),
+									A2(
+										$elm$core$List$cons,
+										$elm$html$Html$Attributes$value(possibleValue),
+										optionAttrs)) : A2(
+									$elm$core$List$cons,
+									$elm$html$Html$Attributes$value(possibleValue),
+									optionAttrs),
+								_List_fromArray(
+									[
+										$elm$html$Html$text(content)
+									])));
+					} else {
+						return $elm$core$Maybe$Nothing;
+					}
+				},
+				possibleValues));
 	});
 var $author$project$Main$submitButtonStyle = _List_fromArray(
 	[
@@ -17626,139 +17825,159 @@ var $dillonkearns$elm_form$Form$Field$withInitialValue = F2(
 				}),
 			kind);
 	});
-var $author$project$Main$searchGUI = function (keywords) {
-	var parseKeyword = function (mk) {
-		if (mk.$ === 'Nothing') {
-			return $elm$core$Result$Ok($elm$core$Maybe$Nothing);
-		} else {
-			var k = mk.a;
-			return A2(
-				$elm$core$List$member,
-				k,
-				A2($elm$core$List$map, $author$project$KeywordString$toString, keywords)) ? $elm$core$Result$Ok(
-				$elm$core$Maybe$Just(k)) : $elm$core$Result$Err('this is not a keyword');
-		}
-	};
-	return A3(
-		$dillonkearns$elm_form$Form$field,
-		'portal',
-		A2(
-			$dillonkearns$elm_form$Form$Field$withInitialValue,
-			function ($) {
-				return $.portal;
-			},
-			$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text)),
-		A3(
-			$dillonkearns$elm_form$Form$field,
-			'keyword 2',
+var $author$project$Main$searchGUI = F2(
+	function (portals, keywords) {
+		var portalsAsOptions = A2(
+			$elm$core$List$cons,
+			_Utils_Tuple2('', ''),
 			A2(
-				$dillonkearns$elm_form$Form$Field$withInitialValue,
-				$author$project$Main$getSecondKeyword,
-				$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text)),
+				$elm$core$List$map,
+				function (p) {
+					return _Utils_Tuple2(p.name, p.name);
+				},
+				portals));
+		var parseKeyword = function (mk) {
+			if (mk.$ === 'Nothing') {
+				return $elm$core$Result$Ok($elm$core$Maybe$Nothing);
+			} else {
+				var k = mk.a;
+				return A2(
+					$elm$core$List$member,
+					k,
+					A2($elm$core$List$map, $author$project$KeywordString$toString, keywords)) ? $elm$core$Result$Ok(
+					$elm$core$Maybe$Just(k)) : $elm$core$Result$Err(
+					$author$project$Main$quote(k) + ' not used in RC');
+			}
+		};
+		return A3(
+			$dillonkearns$elm_form$Form$field,
+			'portal',
+			A2(
+				$dillonkearns$elm_form$Form$Field$required,
+				'req',
+				A2(
+					$dillonkearns$elm_form$Form$Field$select,
+					portalsAsOptions,
+					function (_v0) {
+						return 'Error !!!';
+					})),
 			A3(
 				$dillonkearns$elm_form$Form$field,
-				'keyword 1',
+				'keyword 2',
 				A2(
 					$dillonkearns$elm_form$Form$Field$withInitialValue,
-					$author$project$Main$getFirstKeyword,
+					$author$project$Main$getSecondKeyword,
 					$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text)),
 				A3(
 					$dillonkearns$elm_form$Form$field,
-					'author',
+					'keyword 1',
 					A2(
 						$dillonkearns$elm_form$Form$Field$withInitialValue,
-						function ($) {
-							return $.author;
-						},
+						$author$project$Main$getFirstKeyword,
 						$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text)),
 					A3(
 						$dillonkearns$elm_form$Form$field,
-						'title',
+						'author',
 						A2(
 							$dillonkearns$elm_form$Form$Field$withInitialValue,
 							function ($) {
-								return $.title;
+								return $.author;
 							},
 							$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text)),
-						$dillonkearns$elm_form$Form$form(
-							F5(
-								function (title, author, keyword1, keyword2, portal) {
-									return {
-										combine: A2(
-											$dillonkearns$elm_form$Form$Validation$andMap,
-											portal,
-											A2(
+						A3(
+							$dillonkearns$elm_form$Form$field,
+							'title',
+							A2(
+								$dillonkearns$elm_form$Form$Field$withInitialValue,
+								function ($) {
+									return $.title;
+								},
+								$dillonkearns$elm_form$Form$Field$search($dillonkearns$elm_form$Form$Field$text)),
+							$dillonkearns$elm_form$Form$form(
+								F5(
+									function (title, author, keyword1, keyword2, portal) {
+										return {
+											combine: A2(
 												$dillonkearns$elm_form$Form$Validation$andMap,
-												$dillonkearns$elm_form$Form$Validation$fromResult(
-													A2($dillonkearns$elm_form$Form$Validation$map, parseKeyword, keyword2)),
+												portal,
 												A2(
 													$dillonkearns$elm_form$Form$Validation$andMap,
 													$dillonkearns$elm_form$Form$Validation$fromResult(
-														A2($dillonkearns$elm_form$Form$Validation$map, parseKeyword, keyword1)),
+														A2($dillonkearns$elm_form$Form$Validation$map, parseKeyword, keyword2)),
 													A2(
 														$dillonkearns$elm_form$Form$Validation$andMap,
-														author,
+														$dillonkearns$elm_form$Form$Validation$fromResult(
+															A2($dillonkearns$elm_form$Form$Validation$map, parseKeyword, keyword1)),
 														A2(
 															$dillonkearns$elm_form$Form$Validation$andMap,
-															title,
-															$dillonkearns$elm_form$Form$Validation$succeed($author$project$Main$searchForm)))))),
-										view: function (info) {
-											return _List_fromArray(
-												[
-													A2(
-													$elm$html$Html$div,
-													_List_Nil,
-													_List_fromArray(
-														[
+															author,
 															A2(
-															$elm$html$Html$h1,
-															$author$project$Main$headerStyle,
-															_List_fromArray(
-																[
-																	$elm$html$Html$text('search:')
-																])),
-															A2(
-															$elm$html$Html$label,
-															_List_Nil,
-															_List_fromArray(
-																[
-																	A2(
-																	$elm$html$Html$div,
-																	_List_fromArray(
-																		[
-																			A2($elm$html$Html$Attributes$style, 'display', 'flex')
-																		]),
-																	_List_fromArray(
-																		[
-																			A3($author$project$Main$fieldView, info, 'title', title),
-																			A3($author$project$Main$fieldView, info, 'author', author)
-																		])),
-																	A2(
-																	$elm$html$Html$div,
-																	_List_fromArray(
-																		[
-																			A2($elm$html$Html$Attributes$style, 'display', 'flex')
-																		]),
-																	_List_fromArray(
-																		[
-																			A4($author$project$Main$keywordField, keywords, info, 'keywords', keyword1),
-																			A4($author$project$Main$keywordField, keywords, info, '', keyword2)
-																		]))
-																])),
-															A2(
-															$elm$html$Html$button,
-															$author$project$Main$submitButtonStyle,
-															_List_fromArray(
-																[
-																	info.submitting ? $elm$html$Html$text('searching...') : $elm$html$Html$text('search')
-																])),
-															A3($author$project$Main$fieldView, info, 'portal', portal)
-														]))
-												]);
-										}
-									};
-								})))))));
-};
+																$dillonkearns$elm_form$Form$Validation$andMap,
+																title,
+																$dillonkearns$elm_form$Form$Validation$succeed($author$project$Main$searchForm)))))),
+											view: function (info) {
+												return _List_fromArray(
+													[
+														A2(
+														$elm$html$Html$div,
+														_List_Nil,
+														_List_fromArray(
+															[
+																A2(
+																$elm$html$Html$h1,
+																$author$project$Main$headerStyle,
+																_List_fromArray(
+																	[
+																		$elm$html$Html$text('search:')
+																	])),
+																A2(
+																$elm$html$Html$label,
+																_List_Nil,
+																_List_fromArray(
+																	[
+																		A2(
+																		$elm$html$Html$div,
+																		_List_fromArray(
+																			[
+																				A2($elm$html$Html$Attributes$style, 'display', 'flex')
+																			]),
+																		_List_fromArray(
+																			[
+																				A3($author$project$Main$fieldView, info, 'title', title),
+																				A3($author$project$Main$fieldView, info, 'author', author)
+																			])),
+																		A2(
+																		$elm$html$Html$div,
+																		_List_fromArray(
+																			[
+																				A2($elm$html$Html$Attributes$style, 'display', 'flex')
+																			]),
+																		_List_fromArray(
+																			[
+																				A4($author$project$Main$keywordField, keywords, info, 'keywords', keyword1),
+																				A4($author$project$Main$keywordField, keywords, info, '', keyword2)
+																			]))
+																	])),
+																A2(
+																$elm$html$Html$button,
+																$author$project$Main$submitButtonStyle,
+																_List_fromArray(
+																	[
+																		info.submitting ? $elm$html$Html$text('searching...') : $elm$html$Html$text('search')
+																	])),
+																A3(
+																$dillonkearns$elm_form$Form$FieldView$select,
+																_List_Nil,
+																function (entry) {
+																	return _Utils_Tuple2(_List_Nil, entry);
+																},
+																portal)
+															]))
+													]);
+											}
+										};
+									})))))));
+	});
 var $dillonkearns$elm_form$Form$withInput = F2(
 	function (input, options_) {
 		return {action: options_.action, extras: options_.extras, id: options_.id, input: input, method: options_.method, onSubmit: options_.onSubmit, serverResponse: options_.serverResponse};
@@ -17775,8 +17994,8 @@ var $dillonkearns$elm_form$Form$withOnSubmit = F2(
 			serverResponse: options_.serverResponse
 		};
 	});
-var $author$project$Main$viewSearch = F4(
-	function (initialForm, keywords, submitting, searchFormState) {
+var $author$project$Main$viewSearch = F5(
+	function (initialForm, portals, keywords, submitting, searchFormState) {
 		if (initialForm.$ === 'Just') {
 			var formInput = initialForm.a;
 			return A2(
@@ -17802,13 +18021,13 @@ var $author$project$Main$viewSearch = F4(
 								},
 								$dillonkearns$elm_form$Form$options('signUpForm'))),
 						_List_Nil,
-						$author$project$Main$searchGUI(keywords))));
+						A2($author$project$Main$searchGUI, portals, keywords))));
 		} else {
 			return $mdgriffith$elm_ui$Element$text('loading form data..');
 		}
 	});
-var $author$project$Main$viewResearchResults = F6(
-	function (allKeywords, submitting, searchFormState, dimensions, sv, lst) {
+var $author$project$Main$viewResearchResults = F7(
+	function (allPortals, allKeywords, submitting, searchFormState, dimensions, sv, lst) {
 		var urlFromSorting = F2(
 			function (st, s) {
 				return $author$project$Main$appUrlFromView(
@@ -17869,9 +18088,10 @@ var $author$project$Main$viewResearchResults = F6(
 						[
 							A2($mdgriffith$elm_ui$Element$paddingXY, 0, 15)
 						]),
-					A4(
+					A5(
 						$author$project$Main$viewSearch,
 						$elm$core$Maybe$Just(initialForm),
+						allPortals,
 						allKeywords,
 						submitting,
 						searchFormState)),
@@ -17922,7 +18142,7 @@ var $author$project$Main$view = function (model) {
 			switch (_v1.$) {
 				case 'FoundResearch':
 					var lst = _v1.a;
-					return A6($author$project$Main$viewResearchResults, model.allKeywords, model.submitting, model.searchGUI, model.screenDimensions, sv, lst);
+					return A7($author$project$Main$viewResearchResults, model.allPortals, model.allKeywords, model.submitting, model.searchGUI, model.screenDimensions, sv, lst);
 				case 'FoundKeywords':
 					return $mdgriffith$elm_ui$Element$none;
 				case 'Searching':

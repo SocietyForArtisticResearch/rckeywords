@@ -17,6 +17,7 @@ module Queries exposing
     , withAuthor
     , withKeywords
     , withTitle
+    , withPortal
     )
 
 import Json.Decode exposing (field, int, list, map, string)
@@ -25,9 +26,6 @@ import KeywordString
 import Research as RC
 import Set exposing (Set)
 import Time
-
-
-
 
 
 
@@ -64,6 +62,12 @@ withTitle title (Search s) =
         { s
             | title = title
         }
+
+
+withPortal : String -> Search -> Search
+withPortal portal (Search s) =
+    Search
+        { s | portal = portal }
 
 
 emptySearch : Search
@@ -122,7 +126,7 @@ encodeSearch (Search data) =
         , ( "keywords", E.list E.string (data.keywords |> Set.toList) )
         , ( "after", E.int (Time.posixToMillis data.after) )
         , ( "before", E.int (Time.posixToMillis data.before) )
-        , ( "portal", E.string data.portal)
+        , ( "portal", E.string data.portal )
         ]
 
 
@@ -130,12 +134,14 @@ type SearchQuery
     = FindKeywords String RC.KeywordSorting
     | FindResearch Search
     | GetAllKeywords
+    | GetAllPortals
 
 
 type SearchResult
     = Expositions (List RC.Research)
     | Keywords (List RC.Keyword)
     | AllKeywords (List RC.Keyword)
+    | AllPortals (List RC.Portal)
 
 
 decodeSearchResult : Json.Decode.Decoder SearchResult
@@ -151,6 +157,9 @@ decodeSearchResult =
 
                 "allkeywords" ->
                     field "keywords" (Json.Decode.list RC.decodeKeyword |> Json.Decode.map AllKeywords)
+
+                "allportals" ->
+                    field "portals" (Json.Decode.list RC.decodeWorkerPortal |> Json.Decode.map AllPortals)
 
                 _ ->
                     Json.Decode.fail "expected expositions or keywords"
@@ -177,6 +186,12 @@ encodeSearchResult result =
             E.object
                 [ ( "type", E.string "allkeywords" )
                 , ( "keywords", E.list RC.encodeKeyword kws )
+                ]
+
+        AllPortals portals ->
+            E.object
+                [ ( "type", E.string "allportals" )
+                , ( "portals", E.list RC.encodePortal portals )
                 ]
 
 
@@ -231,6 +246,9 @@ decodeSearchQuery =
                     "GetAllKeywords" ->
                         Json.Decode.succeed GetAllKeywords
 
+                    "GetAllPortals" ->
+                        Json.Decode.succeed GetAllPortals
+
                     _ ->
                         Json.Decode.fail "Unknown query type"
             )
@@ -255,3 +273,7 @@ encodeSearchQuery query =
         GetAllKeywords ->
             E.object
                 [ ( "type", E.string "GetAllKeywords" ) ]
+
+        GetAllPortals ->
+            E.object
+                [ ( "type", E.string "GetAllPortals" ) ]

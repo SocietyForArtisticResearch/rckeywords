@@ -16,6 +16,7 @@
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
             "elm-community/json-extra": "4.3.0",
+            "elm-community/list-extra": "8.7.0",
             "elm-community/random-extra": "3.2.0",
             "lydell/elm-app-url": "1.0.3",
             "matheus23/elm-default-tailwind-modules": "4.0.1",

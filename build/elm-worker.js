@@ -4177,6 +4177,9 @@ var $author$project$Worker$subscriptions = function (_v0) {
 var $author$project$Queries$AllKeywords = function (a) {
 	return {$: 'AllKeywords', a: a};
 };
+var $author$project$Queries$AllPortals = function (a) {
+	return {$: 'AllPortals', a: a};
+};
 var $author$project$Research$Alphabetical = {$: 'Alphabetical'};
 var $author$project$Worker$DecodeError = {$: 'DecodeError'};
 var $author$project$Queries$Expositions = function (a) {
@@ -4204,6 +4207,7 @@ var $author$project$Queries$FindResearch = function (a) {
 	return {$: 'FindResearch', a: a};
 };
 var $author$project$Queries$GetAllKeywords = {$: 'GetAllKeywords'};
+var $author$project$Queries$GetAllPortals = {$: 'GetAllPortals'};
 var $elm$json$Json$Decode$andThen = _Json_andThen;
 var $author$project$Research$ByUse = {$: 'ByUse'};
 var $author$project$Research$RandomKeyword = {$: 'RandomKeyword'};
@@ -4290,6 +4294,8 @@ var $author$project$Queries$decodeSearchQuery = A2(
 					A2($elm$json$Json$Decode$field, 'search', $author$project$Queries$decodeSearch));
 			case 'GetAllKeywords':
 				return $elm$json$Json$Decode$succeed($author$project$Queries$GetAllKeywords);
+			case 'GetAllPortals':
+				return $elm$json$Json$Decode$succeed($author$project$Queries$GetAllPortals);
 			default:
 				return $elm$json$Json$Decode$fail('Unknown query type');
 		}
@@ -4536,7 +4542,7 @@ var $author$project$Queries$encodeSearchResult = function (result) {
 						'keywords',
 						A2($elm$json$Json$Encode$list, $author$project$Research$encodeKeyword, kws))
 					]));
-		default:
+		case 'AllKeywords':
 			var kws = result.a;
 			return $elm$json$Json$Encode$object(
 				_List_fromArray(
@@ -4547,6 +4553,18 @@ var $author$project$Queries$encodeSearchResult = function (result) {
 						_Utils_Tuple2(
 						'keywords',
 						A2($elm$json$Json$Encode$list, $author$project$Research$encodeKeyword, kws))
+					]));
+		default:
+			var portals = result.a;
+			return $elm$json$Json$Encode$object(
+				_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'type',
+						$elm$json$Json$Encode$string('allportals')),
+						_Utils_Tuple2(
+						'portals',
+						A2($elm$json$Json$Encode$list, $author$project$Research$encodePortal, portals))
 					]));
 	}
 };
@@ -4875,6 +4893,73 @@ var $author$project$Research$findResearchWithKeywords = F3(
 				research);
 		}
 	});
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $elm$core$List$concatMap = F2(
+	function (f, list) {
+		return $elm$core$List$concat(
+			A2($elm$core$List$map, f, list));
+	});
+var $elm_community$list_extra$List$Extra$uniqueHelp = F4(
+	function (f, existing, remaining, accumulator) {
+		uniqueHelp:
+		while (true) {
+			if (!remaining.b) {
+				return $elm$core$List$reverse(accumulator);
+			} else {
+				var first = remaining.a;
+				var rest = remaining.b;
+				var computedFirst = f(first);
+				if (A2($elm$core$List$member, computedFirst, existing)) {
+					var $temp$f = f,
+						$temp$existing = existing,
+						$temp$remaining = rest,
+						$temp$accumulator = accumulator;
+					f = $temp$f;
+					existing = $temp$existing;
+					remaining = $temp$remaining;
+					accumulator = $temp$accumulator;
+					continue uniqueHelp;
+				} else {
+					var $temp$f = f,
+						$temp$existing = A2($elm$core$List$cons, computedFirst, existing),
+						$temp$remaining = rest,
+						$temp$accumulator = A2($elm$core$List$cons, first, accumulator);
+					f = $temp$f;
+					existing = $temp$existing;
+					remaining = $temp$remaining;
+					accumulator = $temp$accumulator;
+					continue uniqueHelp;
+				}
+			}
+		}
+	});
+var $elm_community$list_extra$List$Extra$uniqueBy = F2(
+	function (f, list) {
+		return A4($elm_community$list_extra$List$Extra$uniqueHelp, f, _List_Nil, list, _List_Nil);
+	});
+var $author$project$Research$getAllPortals = function (lst) {
+	return A2(
+		$elm_community$list_extra$List$Extra$uniqueBy,
+		function (p) {
+			return p.id;
+		},
+		A2(
+			$elm$core$List$concatMap,
+			function ($) {
+				return $.portals;
+			},
+			lst));
+};
 var $author$project$Queries$getKeywords = function (_v0) {
 	var s = _v0.a;
 	return s.keywords;
@@ -5014,35 +5099,41 @@ var $author$project$Research$findResearchWithAuthor = F2(
 			return A2($elm$core$List$filter, f, lst);
 		}
 	});
+var $elm$core$Debug$log = _Debug_log;
 var $author$project$Research$findResearchWithPortal = F2(
 	function (portalq, lst) {
-		var test = function (research) {
-			var _v0 = research.portals;
-			if (!_v0.b) {
-				return true;
-			} else {
-				var prtls = _v0;
-				var portalstrs = A2(
-					$elm$core$List$map,
-					A2(
-						$elm$core$Basics$composeR,
-						function ($) {
-							return $.name;
+		var _v0 = A2($elm$core$Debug$log, portalq, 'portalq');
+		if (portalq === '') {
+			return lst;
+		} else {
+			var nonemptyq = portalq;
+			var f = function (research) {
+				var _v2 = research.portals;
+				if (!_v2.b) {
+					return false;
+				} else {
+					var somePortals = _v2;
+					var names = A2(
+						$elm$core$List$map,
+						A2(
+							$elm$core$Basics$composeR,
+							function ($) {
+								return $.name;
+							},
+							$elm$core$String$toLower),
+						somePortals);
+					return A2(
+						$elm$core$List$any,
+						function (p) {
+							return _Utils_eq(
+								p,
+								$elm$core$String$toLower(nonemptyq));
 						},
-						$elm$core$String$toLower),
-					prtls);
-				return A2(
-					$elm$core$List$any,
-					function (p) {
-						return A2(
-							$elm$core$String$contains,
-							$elm$core$String$toLower(portalq),
-							p);
-					},
-					portalstrs);
-			}
-		};
-		return A2($elm$core$List$filter, test, lst);
+						names);
+				}
+			};
+			return A2($elm$core$List$filter, f, lst);
+		}
 	});
 var $author$project$Research$findResearchWithTitle = F2(
 	function (q, lst) {
@@ -5058,20 +5149,40 @@ var $author$project$Research$findResearchWithTitle = F2(
 			return A2($elm$core$List$filter, f, lst);
 		}
 	});
+var $author$project$Worker$printLength = F2(
+	function (label, lst) {
+		var _v0 = A2(
+			$elm$core$Debug$log,
+			'* length is * ' + label,
+			$elm$core$List$length(lst));
+		return lst;
+	});
 var $author$project$Worker$searchResearch = F3(
 	function (_v0, revDict, lst) {
 		var search = _v0.a;
 		return A2(
-			$author$project$Research$findResearchWithPortal,
-			search.portal,
-			A3(
-				$author$project$Research$findResearchWithKeywords,
-				search.keywords,
-				revDict,
+			$author$project$Worker$printLength,
+			'portal',
+			A2(
+				$author$project$Research$findResearchWithPortal,
+				search.portal,
 				A2(
-					$author$project$Research$findResearchWithAuthor,
-					search.author,
-					A2($author$project$Research$findResearchWithTitle, search.title, lst))));
+					$author$project$Worker$printLength,
+					'keywords',
+					A3(
+						$author$project$Research$findResearchWithKeywords,
+						search.keywords,
+						revDict,
+						A2(
+							$author$project$Worker$printLength,
+							'author',
+							A2(
+								$author$project$Research$findResearchWithAuthor,
+								search.author,
+								A2(
+									$author$project$Worker$printLength,
+									'title',
+									A2($author$project$Research$findResearchWithTitle, search.title, lst))))))));
 	});
 var $author$project$Worker$update = F2(
 	function (msg, model) {
@@ -5139,13 +5250,20 @@ var $author$project$Worker$update = F2(
 										$author$project$Queries$encodeSearchResult(
 											$author$project$Queries$Expositions(
 												A3($author$project$Worker$searchResearch, search, lmodel.reverseKeywordDict, lmodel.research)))));
-							default:
+							case 'GetAllKeywords':
 								return _Utils_Tuple2(
 									$author$project$Worker$Loaded(lmodel),
 									$author$project$Worker$returnResults(
 										$author$project$Queries$encodeSearchResult(
 											$author$project$Queries$AllKeywords(
 												A3($author$project$Worker$findKeywords, '', $author$project$Research$Alphabetical, lmodel.keywords)))));
+							default:
+								return _Utils_Tuple2(
+									$author$project$Worker$Loaded(lmodel),
+									$author$project$Worker$returnResults(
+										$author$project$Queries$encodeSearchResult(
+											$author$project$Queries$AllPortals(
+												$author$project$Research$getAllPortals(lmodel.research)))));
 						}
 					} else {
 						return _Utils_Tuple2(
@@ -5203,11 +5321,16 @@ var $author$project$Worker$update = F2(
 										$author$project$Queries$encodeSearchResult(
 											$author$project$Queries$Expositions(
 												A3($author$project$Research$findResearchWithKeywords, keywords, reverseKeywordDict, data))));
-								default:
+								case 'GetAllKeywords':
 									return $author$project$Worker$returnResults(
 										$author$project$Queries$encodeSearchResult(
 											$author$project$Queries$AllKeywords(
 												A3($author$project$Worker$findKeywords, '', $author$project$Research$Alphabetical, kws))));
+								default:
+									return $author$project$Worker$returnResults(
+										$author$project$Queries$encodeSearchResult(
+											$author$project$Queries$AllPortals(
+												$author$project$Research$getAllPortals(data))));
 							}
 						};
 						return _Utils_Tuple2(

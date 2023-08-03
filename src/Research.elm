@@ -21,17 +21,20 @@ module Research exposing
     , decodeExposition
     , decodeKeyword
     , decodePublicationStatus
+    , decodeWorkerPortal
     , decoder
     , dmyToYmd
     , emptyKeywordSet
     , encodeAuthor
     , encodeExposition
     , encodeKeyword
+    , encodePortal
     , findResearchAfter
     , findResearchWithAuthor
     , findResearchWithKeywords
-    , findResearchWithTitle
     , findResearchWithPortal
+    , findResearchWithTitle
+    , getAllPortals
     , getAuthorId
     , getCount
     , getName
@@ -58,6 +61,7 @@ import Json.Decode exposing (Decoder, field, int, maybe, string)
 import Json.Decode.Extra as JDE
 import Json.Encode
 import KeywordString exposing (KeywordString)
+import List.Extra exposing (uniqueBy)
 import Random
 import Random.List
 import Set exposing (Set)
@@ -74,7 +78,11 @@ type alias Portal =
     , type_ : PortalType
     }
 
+
+
 -- Worker
+
+
 encodePortal : Portal -> Json.Encode.Value
 encodePortal portal =
     Json.Encode.object
@@ -83,7 +91,11 @@ encodePortal portal =
         , ( "type_", Json.Encode.string (portal.type_ |> portalTypeToString) )
         ]
 
+
+
 -- Worker
+
+
 decodeWorkerPortal : Json.Decode.Decoder Portal
 decodeWorkerPortal =
     Json.Decode.map3 Portal
@@ -99,7 +111,10 @@ type PortalType
     | MainPortal
 
 
+
 -- Worker
+
+
 portalTypeToString : PortalType -> String
 portalTypeToString portaltype =
     case portaltype of
@@ -134,7 +149,11 @@ portalTypeFromString str =
         _ ->
             Institutional
 
+
+
 -- RC API portal lookup:
+
+
 portalType : String -> PortalType
 portalType portalName =
     let
@@ -148,7 +167,11 @@ portalType portalName =
     else
         Journal
 
+
+
 -- RC API
+
+
 rcPortalDecoder : Json.Decode.Decoder Portal
 rcPortalDecoder =
     Json.Decode.map3 Portal
@@ -181,7 +204,11 @@ type PublicationStatus
     | Published
     | Undecided
 
+
+
 -- RC API
+
+
 publicationstatus : PublicationStatus -> Json.Encode.Value
 publicationstatus status =
     Json.Encode.string
@@ -196,7 +223,11 @@ publicationstatus status =
                 "undecided"
         )
 
+
+
 -- RC API
+
+
 decodePublicationStatus : Json.Decode.Decoder PublicationStatus
 decodePublicationStatus =
     Json.Decode.string
@@ -311,6 +342,13 @@ encodeKeyword (Keyword kw) =
         ]
 
 
+getAllPortals : List Research -> List Portal
+getAllPortals lst =
+    lst
+        |> List.concatMap .portals
+        |> uniqueBy (\p -> p.id)
+
+
 decodeKeyword : Json.Decode.Decoder Keyword
 decodeKeyword =
     Json.Decode.field "type" Json.Decode.string
@@ -414,7 +452,11 @@ shuffleWithSeed seed lst =
         |> Random.step (Random.List.shuffle lst)
         |> Tuple.first
 
+
+
 -- RC API
+
+
 author : Decoder Author
 author =
     let
@@ -560,8 +602,6 @@ encodeExposition exp =
                     (\a ->
                         ( "abstract", string a )
                     )
-
-        
     in
     Json.Encode.object
         ([ ( "type", string "exposition" )
@@ -572,7 +612,7 @@ encodeExposition exp =
          , ( "author", encodeAuthor exp.author )
          , ( "publicationStatus", publicationstatus exp.publicationStatus )
          , ( "defaultPage", string exp.defaultPage )
-         , ( "portals", list encodePortal exp.portals)
+         , ( "portals", list encodePortal exp.portals )
          ]
             |> maybeAppend issueId
             |> maybeAppend publication
@@ -813,17 +853,26 @@ findResearchAfter posix lst =
 findResearchWithPortal : String -> List Research -> List Research
 findResearchWithPortal portalq lst =
     let
-        test : Research -> Bool
-        test research =
-            case research.portals of
-                [] ->
-                    True 
-
-                prtls -> 
-                    let
-                        portalstrs =
-                            prtls |> List.map (.name >> String.toLower)
-                    in
-                    portalstrs |> List.any (\p -> String.contains (String.toLower portalq) p)
+        _ =
+            Debug.log portalq "portalq"
     in
-    List.filter test lst
+    case portalq of
+        "" ->
+            lst
+
+        nonemptyq ->
+            let
+                f : Research -> Bool
+                f research =
+                    case research.portals of
+                        [] ->
+                            False
+
+                        somePortals ->
+                            let
+                                names =
+                                    somePortals |> List.map (.name >> String.toLower)
+                            in
+                            names |> List.any (\p -> p == (nonemptyq |> String.toLower))
+            in
+            List.filter f lst

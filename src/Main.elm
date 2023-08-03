@@ -434,7 +434,9 @@ update msg model =
                 Form.Valid srch ->
                     -- should update key
                     let
-                        _ = Debug.log "srch" srch
+                        _ =
+                            Debug.log "srch" srch
+
                         newView =
                             updateViewWithSearch srch model.view
                     in
@@ -447,10 +449,12 @@ update msg model =
                         ]
                     )
 
-                Form.Invalid m x ->
-                    
+                Form.Invalid m err ->
+                    let
+                        _ =
+                            Debug.log "srch" ( m, err )
+                    in
                     ( model, Cmd.none )
-
 
 
 updateViewWithSearch : SearchForm -> View -> View
@@ -585,6 +589,8 @@ handleUrl url model =
                         |> Maybe.andThen List.head
                         |> Maybe.withDefault ""
 
+--                _ = Debug.log "query parameters" (url.queryParameters,portal)
+
                 cmd : Cmd msg
                 cmd =
                     sendQuery
@@ -594,6 +600,7 @@ handleUrl url model =
                                     |> Queries.searchWithKeywords (Set.fromList keywords)
                                     |> Queries.withTitle title
                                     |> Queries.withAuthor author
+                                    |> Queries.withPortal portal
                                 )
                             )
                         )
@@ -1659,7 +1666,7 @@ formWith title author keywords portal =
     }
 
 
-searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> String -> SearchForm
+searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> SearchForm
 searchForm title author keyword1 keyword2 portal =
     let
         nothingIsJustEmpty =
@@ -1669,7 +1676,7 @@ searchForm title author keyword1 keyword2 portal =
         (nothingIsJustEmpty title)
         (nothingIsJustEmpty author)
         (List.filterMap identity [ keyword1, keyword2 ])
-        portal
+        (nothingIsJustEmpty portal)
 
 
 quote str =
@@ -1747,7 +1754,7 @@ searchGUI portals keywords =
         |> Form.field "author" (Field.text |> Field.search |> Field.withInitialValue .author)
         |> Form.field "keyword 1" (Field.text |> Field.search |> Field.withInitialValue getFirstKeyword)
         |> Form.field "keyword 2" (Field.text |> Field.search |> Field.withInitialValue getSecondKeyword)
-        |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "Error !!!") |> Field.required "req")
+        |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "Error !!!") |> Field.withInitialValue .portal)
 
 
 getFirstKeyword : SearchForm -> String

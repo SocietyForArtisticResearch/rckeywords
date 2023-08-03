@@ -5665,6 +5665,14 @@ var $elm$core$Maybe$withDefault = F2(
 			return _default;
 		}
 	});
+var $author$project$Queries$withPortal = F2(
+	function (portal, _v0) {
+		var s = _v0.a;
+		return $author$project$Queries$Search(
+			_Utils_update(
+				s,
+				{portal: portal}));
+	});
 var $author$project$Queries$withTitle = F2(
 	function (title, _v0) {
 		var s = _v0.a;
@@ -5821,15 +5829,18 @@ var $author$project$Main$handleUrl = F2(
 											$author$project$Queries$encodeSearchQuery(
 												$author$project$Queries$FindResearch(
 													A2(
-														$author$project$Queries$withAuthor,
-														author,
+														$author$project$Queries$withPortal,
+														portal,
 														A2(
-															$author$project$Queries$withTitle,
-															title,
+															$author$project$Queries$withAuthor,
+															author,
 															A2(
-																$author$project$Queries$searchWithKeywords,
-																$elm$core$Set$fromList(keywords),
-																$author$project$Queries$emptySearch))))));
+																$author$project$Queries$withTitle,
+																title,
+																A2(
+																	$author$project$Queries$searchWithKeywords,
+																	$elm$core$Set$fromList(keywords),
+																	$author$project$Queries$emptySearch)))))));
 										return _Utils_Tuple2(
 											_Utils_update(
 												model,
@@ -7703,7 +7714,11 @@ var $author$project$Main$update = F2(
 								])));
 				} else {
 					var m = validated.a;
-					var x = validated.b;
+					var err = validated.b;
+					var _v12 = A2(
+						$elm$core$Debug$log,
+						'srch',
+						_Utils_Tuple2(m, err));
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 		}
@@ -17588,36 +17603,6 @@ var $dillonkearns$elm_form$Internal$Field$Field = F2(
 	function (a, b) {
 		return {$: 'Field', a: a, b: b};
 	});
-var $dillonkearns$elm_form$Form$Field$required = F2(
-	function (missingError, _v0) {
-		var field = _v0.a;
-		var kind = _v0.b;
-		return A2(
-			$dillonkearns$elm_form$Internal$Field$Field,
-			{
-				compare: field.compare,
-				decode: function (rawValue) {
-					var isEmpty = _Utils_eq(
-						rawValue,
-						$elm$core$Maybe$Just('')) || _Utils_eq(rawValue, $elm$core$Maybe$Nothing);
-					var _v1 = field.decode(rawValue);
-					var parsed = _v1.a;
-					var allErrors = _v1.b;
-					return _Utils_Tuple2(
-						A2($elm$core$Maybe$andThen, $elm$core$Basics$identity, parsed),
-						isEmpty ? A2($elm$core$List$cons, missingError, allErrors) : allErrors);
-				},
-				initialToString: field.initialToString,
-				initialValue: field.initialValue,
-				properties: A2(
-					$elm$core$List$cons,
-					_Utils_Tuple2(
-						'required',
-						$elm$json$Json$Encode$bool(true)),
-					field.properties)
-			},
-			kind);
-	});
 var $dillonkearns$elm_form$Internal$Input$Input = function (a) {
 	return {$: 'Input', a: a};
 };
@@ -17645,7 +17630,7 @@ var $author$project$Main$searchForm = F5(
 				$elm$core$Basics$identity,
 				_List_fromArray(
 					[keyword1, keyword2])),
-			portal);
+			nothingIsJustEmpty(portal));
 	});
 var $dillonkearns$elm_form$Internal$Input$Options = F2(
 	function (a, b) {
@@ -17853,8 +17838,10 @@ var $author$project$Main$searchGUI = F2(
 			$dillonkearns$elm_form$Form$field,
 			'portal',
 			A2(
-				$dillonkearns$elm_form$Form$Field$required,
-				'req',
+				$dillonkearns$elm_form$Form$Field$withInitialValue,
+				function ($) {
+					return $.portal;
+				},
 				A2(
 					$dillonkearns$elm_form$Form$Field$select,
 					portalsAsOptions,

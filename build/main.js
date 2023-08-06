@@ -16051,7 +16051,11 @@ var $author$project$Main$viewResearchMicro = function (research) {
 							{
 								label: A2(
 									$mdgriffith$elm_ui$Element$paragraph,
-									$author$project$Main$microLinkStyle,
+									A2(
+										$elm$core$List$cons,
+										$mdgriffith$elm_ui$Element$width(
+											$mdgriffith$elm_ui$Element$px(w)),
+										$author$project$Main$microLinkStyle),
 									_List_fromArray(
 										[
 											$mdgriffith$elm_ui$Element$text(research.title)
@@ -17066,6 +17070,14 @@ var $dillonkearns$elm_form$Form$Validation$map2 = F3(
 	});
 var $dillonkearns$elm_form$Form$Validation$andMap = $dillonkearns$elm_form$Form$Validation$map2($elm$core$Basics$apR);
 var $elm$html$Html$button = _VirtualDom_node('button');
+var $author$project$Main$dropdownStyle = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'padding', '5px'),
+		A2($elm$html$Html$Attributes$style, 'margin', '15px 5px'),
+		A2($elm$html$Html$Attributes$style, 'border', '1px solid gray'),
+		A2($elm$html$Html$Attributes$style, 'display', 'block'),
+		A2($elm$html$Html$Attributes$style, 'max-width', '400px')
+	]);
 var $dillonkearns$elm_form$Internal$Form$Form = F3(
 	function (a, b, c) {
 		return {$: 'Form', a: a, b: b, c: c};
@@ -17945,20 +17957,20 @@ var $author$project$Main$searchGUI = F2(
 																				A4($author$project$Main$keywordField, keywords, info, '', keyword2)
 																			]))
 																	])),
+																A3(
+																$dillonkearns$elm_form$Form$FieldView$select,
+																$author$project$Main$dropdownStyle,
+																function (entry) {
+																	return _Utils_Tuple2(_List_Nil, entry);
+																},
+																portal),
 																A2(
 																$elm$html$Html$button,
 																$author$project$Main$submitButtonStyle,
 																_List_fromArray(
 																	[
 																		info.submitting ? $elm$html$Html$text('searching...') : $elm$html$Html$text('search')
-																	])),
-																A3(
-																$dillonkearns$elm_form$Form$FieldView$select,
-																_List_Nil,
-																function (entry) {
-																	return _Utils_Tuple2(_List_Nil, entry);
-																},
-																portal)
+																	]))
 															]))
 													]);
 											}
@@ -18006,7 +18018,7 @@ var $author$project$Main$viewSearch = F5(
 								function (record) {
 									return $author$project$Main$SubmitSearch(record.parsed);
 								},
-								$dillonkearns$elm_form$Form$options('signUpForm'))),
+								$dillonkearns$elm_form$Form$options('search'))),
 						_List_Nil,
 						A2($author$project$Main$searchGUI, portals, keywords))));
 		} else {

@@ -589,8 +589,7 @@ handleUrl url model =
                         |> Maybe.andThen List.head
                         |> Maybe.withDefault ""
 
---                _ = Debug.log "query parameters" (url.queryParameters,portal)
-
+                --                _ = Debug.log "query parameters" (url.queryParameters,portal)
                 cmd : Cmd msg
                 cmd =
                     sendQuery
@@ -774,7 +773,7 @@ viewResearchMicro research =
                     [ Element.link [ width fill, Element.alignLeft ] <|
                         { label =
                             Element.paragraph
-                                microLinkStyle
+                                (width (px w)::microLinkStyle)
                                 [ Element.text research.title ]
                         , url = research.defaultPage
                         }
@@ -1736,6 +1735,9 @@ searchGUI portals keywords =
                                 , keywordField keywords info "" keyword2
                                 ]
                             ]
+                        , FieldView.select dropdownStyle
+                            (\entry -> ( [], entry ))
+                            portal
                         , Html.button submitButtonStyle
                             [ if info.submitting then
                                 Html.text "searching..."
@@ -1743,9 +1745,6 @@ searchGUI portals keywords =
                               else
                                 Html.text "search"
                             ]
-                        , FieldView.select []
-                            (\entry -> ( [], entry ))
-                            portal
                         ]
                     ]
             }
@@ -1787,6 +1786,16 @@ fieldStyle =
     ]
 
 
+dropdownStyle : List (Html.Attribute msg)
+dropdownStyle =
+    [ Attr.style "padding" "5px"
+    , Attr.style "margin" "15px 5px"
+    , Attr.style "border" "1px solid gray"
+    , Attr.style "display" "block"
+    , Attr.style "max-width" "400px"
+    ]
+
+
 headerStyle : List (Html.Attribute msg)
 headerStyle =
     [ Attr.style "font-size" "16px"
@@ -1815,6 +1824,27 @@ fieldView formState label field =
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
             , field |> FieldView.input fieldStyle
+            ]
+        , (if formState.submitAttempted then
+            formState.errors
+                |> Form.errorsForField field
+                |> List.map
+                    (\error ->
+                        Html.li [] [ Html.text error ]
+                    )
+
+           else
+            []
+          )
+            |> Html.ul [ Attr.style "color" "red" ]
+        ]
+
+
+dropdownView formState label field =
+    Html.div []
+        [ Html.label labelStyle
+            [ Html.text (label ++ " ")
+            , field |> FieldView.input dropdownStyle
             ]
         , (if formState.submitAttempted then
             formState.errors
@@ -1940,7 +1970,7 @@ viewSearch initialForm portals keywords submitting searchFormState =
                             , state = searchFormState
                             , toMsg = FormMsg
                             }
-                            (Form.options "signUpForm"
+                            (Form.options "search"
                                 |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
                                 |> Form.withInput formInput
                             )

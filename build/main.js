@@ -6091,6 +6091,9 @@ var $author$project$Main$FoundKeywords = function (a) {
 var $author$project$Main$FoundResearch = function (a) {
 	return {$: 'FoundResearch', a: a};
 };
+var $author$project$Main$InvalidForm = function (a) {
+	return {$: 'InvalidForm', a: a};
+};
 var $author$project$Main$KeywordMainView = F2(
 	function (a, b) {
 		return {$: 'KeywordMainView', a: a, b: b};
@@ -6098,7 +6101,9 @@ var $author$project$Main$KeywordMainView = F2(
 var $author$project$Main$KeywordsView = function (a) {
 	return {$: 'KeywordsView', a: a};
 };
-var $author$project$Main$Searching = {$: 'Searching'};
+var $author$project$Main$ResultProblem = function (a) {
+	return {$: 'ResultProblem', a: a};
+};
 var $author$project$Main$additionalKeywordsToLoad = 64;
 var $lydell$elm_app_url$AppUrl$fromPath = function (path) {
 	return {fragment: $elm$core$Maybe$Nothing, path: path, queryParameters: $elm$core$Dict$empty};
@@ -6891,6 +6896,18 @@ var $author$project$Queries$decodeSearchResult = function () {
 		parseResult,
 		A2($elm$json$Json$Decode$field, 'type', $elm$json$Json$Decode$string));
 }();
+var $author$project$Main$formToString = function (form) {
+	return A2(
+		$elm$core$String$join,
+		'\n',
+		_List_fromArray(
+			[
+				form.title,
+				form.author,
+				A2($elm$core$String$join, '\n', form.keywords),
+				form.portal
+			]));
+};
 var $author$project$Research$ByUse = {$: 'ByUse'};
 var $author$project$Queries$FindResearch = function (a) {
 	return {$: 'FindResearch', a: a};
@@ -6901,6 +6918,7 @@ var $author$project$Main$KeywordSearch = F3(
 	});
 var $author$project$Main$ListLayout = {$: 'ListLayout'};
 var $author$project$Research$NewestFirst = {$: 'NewestFirst'};
+var $author$project$Main$Searching = {$: 'Searching'};
 var $elm$core$Maybe$andThen = F2(
 	function (callback, maybeValue) {
 		if (maybeValue.$ === 'Just') {
@@ -7327,8 +7345,21 @@ var $author$project$Research$kwName = function (_v0) {
 	return $elm$core$String$toLower(kw.name);
 };
 var $elm$browser$Browser$Navigation$load = _Browser_load;
-var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Main$problem = _Platform_outgoingPort('problem', $elm$json$Json$Encode$string);
+var $author$project$Main$problemToString = function (p) {
+	if (p.$ === 'ResultProblem') {
+		var e = p.a;
+		return $elm$json$Json$Decode$errorToString(e);
+	} else {
+		var s = p.a;
+		return s;
+	}
+};
+var $author$project$Main$problemize = function (p) {
+	return $author$project$Main$problem(
+		$author$project$Main$problemToString(p));
+};
 var $elm$core$Set$remove = F2(
 	function (key, _v0) {
 		var dict = _v0.a;
@@ -7598,15 +7629,17 @@ var $author$project$Main$update = F2(
 					}
 				} else {
 					var err = result.a;
-					var _v6 = A2($elm$core$Debug$log, 'why i don\'t see anything', err);
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					return _Utils_Tuple2(
+						model,
+						$author$project$Main$problemize(
+							$author$project$Main$ResultProblem(err)));
 				}
 			case 'HitEnter':
-				var _v7 = model.view;
-				if (_v7.$ === 'KeywordsView') {
-					if (_v7.a.$ === 'KeywordMainView') {
-						var _v8 = _v7.a;
-						var sorting = _v8.a;
+				var _v6 = model.view;
+				if (_v6.$ === 'KeywordsView') {
+					if (_v6.a.$ === 'KeywordMainView') {
+						var _v7 = _v6.a;
+						var sorting = _v7.a;
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
@@ -7630,8 +7663,8 @@ var $author$project$Main$update = F2(
 										'/#/keywords/search?q=' + (model.query + ('&sorting=' + $author$project$Research$sortingToString(sorting))))
 									])));
 					} else {
-						var _v9 = _v7.a;
-						var sorting = _v9.b;
+						var _v8 = _v6.a;
+						var sorting = _v8.b;
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
@@ -7683,9 +7716,9 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'FormMsg':
 				var formMsg = msg.a;
-				var _v10 = A2($dillonkearns$elm_form$Form$update, formMsg, model.searchGUI);
-				var updatedFormModel = _v10.a;
-				var cmd = _v10.b;
+				var _v9 = A2($dillonkearns$elm_form$Form$update, formMsg, model.searchGUI);
+				var updatedFormModel = _v9.a;
+				var cmd = _v9.b;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -7696,11 +7729,8 @@ var $author$project$Main$update = F2(
 				if (validated.$ === 'Valid') {
 					var srch = validated.a;
 					var newView = A2($author$project$Main$updateViewWithSearch, srch, model.view);
-					var _v12 = A2($elm$core$Debug$log, 'srch', srch);
 					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{search: $author$project$Main$Searching, view: newView}),
+						model,
 						$elm$core$Platform$Cmd$batch(
 							_List_fromArray(
 								[
@@ -7712,11 +7742,21 @@ var $author$project$Main$update = F2(
 				} else {
 					var m = validated.a;
 					var err = validated.b;
-					var _v13 = A2(
-						$elm$core$Debug$log,
-						'srch',
-						_Utils_Tuple2(m, err));
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					var formProblem = $author$project$Main$InvalidForm(
+						'invalid form: ' + (A2(
+							$elm$core$Maybe$withDefault,
+							'',
+							A2($elm$core$Maybe$map, $author$project$Main$formToString, m)) + A3(
+							$elm$core$Dict$foldl,
+							F3(
+								function (k, v, acc) {
+									return k + (' : ' + (A2($elm$core$String$join, '', v) + ('\n' + acc)));
+								}),
+							'',
+							err)));
+					return _Utils_Tuple2(
+						model,
+						$author$project$Main$problemize(formProblem));
 				}
 		}
 	});

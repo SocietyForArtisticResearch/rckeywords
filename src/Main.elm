@@ -43,6 +43,9 @@ port receiveResults : (Json.Decode.Value -> msg) -> Sub msg
 port sendQuery : Json.Encode.Value -> Cmd msg
 
 
+port problem : String -> Cmd msg
+
+
 main : Program Flags Model Msg
 main =
     Browser.application
@@ -69,6 +72,21 @@ type Scale
     | Small
     | Medium
     | Large
+
+
+type Problem
+    = ResultProblem Json.Decode.Error
+    | InvalidForm String
+
+
+problemToString : Problem -> String
+problemToString p =
+    case p of
+        ResultProblem e ->
+            Json.Decode.errorToString e
+
+        InvalidForm s ->
+            s
 
 
 scaleToString : Scale -> String
@@ -245,6 +263,11 @@ type alias Model =
     }
 
 
+problemize : Problem -> Cmd Msg
+problemize p =
+    problem (problemToString p)
+
+
 type Msg
     = ChangedQuery String
     | UrlChanged Url.Url
@@ -375,8 +398,8 @@ update msg model =
                     let
                         updModel =
                             { model | allKeywords = kws |> List.map (RC.kwName >> KeywordString.fromString) }
-                    
-                        (m,c) =
+
+                        ( m, c ) =
                             handleUrl updModel.url updModel
                     in
                     ( m, c )
@@ -385,12 +408,7 @@ update msg model =
                     ( { model | allPortals = portals }, Cmd.none )
 
                 Err err ->
-                    -- should turn into actual problem
-                    let
-                        _ =
-                            Debug.log "why i don't see anything" err
-                    in
-                    ( model, Cmd.none )
+                    ( model , problemize (ResultProblem err) )
 
         HitEnter ->
             case model.view of
@@ -436,21 +454,13 @@ update msg model =
             ( { model | searchGUI = updatedFormModel }, cmd )
 
         SubmitSearch validated ->
-            -- TODO: update url with this search state
             case validated of
                 Form.Valid srch ->
-                    -- should update key
                     let
-                        _ =
-                            Debug.log "srch" srch
-
                         newView =
                             updateViewWithSearch srch model.view
                     in
-                    ( { model
-                        | view = newView
-                        , search = Searching
-                      }
+                    ( model
                     , Cmd.batch
                         [ Nav.pushUrl model.key (appUrlFromView newView)
                         ]
@@ -458,10 +468,14 @@ update msg model =
 
                 Form.Invalid m err ->
                     let
-                        _ =
-                            Debug.log "srch" ( m, err )
+                        formProblem =
+                            InvalidForm
+                                ("invalid form: "
+                                    ++ (Maybe.map formToString m |> Maybe.withDefault "")
+                                    ++ Dict.foldl (\k v acc -> k ++ " : " ++ String.join "" v ++ "\n" ++ acc) "" err
+                                )
                     in
-                    ( model, Cmd.none )
+                    ( model, problemize formProblem  )
 
 
 updateViewWithSearch : SearchForm -> View -> View
@@ -1654,6 +1668,16 @@ type alias SearchForm =
     , keywords : List String
     , portal : String
     }
+
+
+formToString : SearchForm -> String
+formToString form =
+    [ form.title
+    , form.author
+    , form.keywords |> String.join "\n"
+    , form.portal
+    ]
+        |> String.join "\n"
 
 
 emptyForm : SearchForm

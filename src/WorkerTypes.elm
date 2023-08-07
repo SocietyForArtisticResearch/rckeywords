@@ -6,10 +6,12 @@ import Json.Encode exposing (Value)
 import KeywordString exposing (KeywordString)
 import Research as RC exposing (Author, Portal, PublicationStatus(..), Research)
 
-
-
--- Worker
-
+{-
+In Research.elm , the decoders sometimes have to do some calculation to
+retrieve a desired value from the RC API. However, once we have a nice elm type, we can use this 
+to communicate to the Worker.
+So, these types and json encoders/decoders only exist to communicate between main elm.js and the worker.js
+-}
 
 encodePortal : Portal -> Value
 encodePortal portal =
@@ -18,11 +20,6 @@ encodePortal portal =
         , ( "name", Json.Encode.string portal.name )
         , ( "type_", Json.Encode.string (portal.type_ |> RC.portalTypeToString) )
         ]
-
-
-
--- Worker
-
 
 decodeWorkerPortal : Decoder Portal
 decodeWorkerPortal =

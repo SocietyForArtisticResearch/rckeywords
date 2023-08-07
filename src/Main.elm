@@ -299,25 +299,25 @@ init { width, height } url key =
     , allKeywords = []
     , allPortals = []
     }
-        |> handleUrl initUrl
-        |> fetchKeywordsAndPortals
+        |> (\model ->
+                ( model
+                , fetchKeywordsAndPortals
+                )
+           )
 
 
 
 -- before doing anything else, ask worker for all keywords
 
 
-fetchKeywordsAndPortals : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
-fetchKeywordsAndPortals ( model, cmd ) =
-    ( model
-    , Cmd.batch
+fetchKeywordsAndPortals : Cmd Msg
+fetchKeywordsAndPortals =
+    Cmd.batch
         [ sendQuery
             (Queries.encodeSearchQuery Queries.GetAllKeywords)
         , sendQuery
             (Queries.encodeSearchQuery Queries.GetAllPortals)
-        , cmd
         ]
-    )
 
 
 resetViewport : Cmd Msg
@@ -372,7 +372,14 @@ update msg model =
                     ( { model | search = FoundResearch exps }, Cmd.none )
 
                 Ok (Queries.AllKeywords kws) ->
-                    ( { model | allKeywords = kws |> List.map (RC.kwName >> KeywordString.fromString) }, Cmd.none )
+                    let
+                        updModel =
+                            { model | allKeywords = kws |> List.map (RC.kwName >> KeywordString.fromString) }
+                    
+                        (m,c) =
+                            handleUrl updModel.url updModel
+                    in
+                    ( m, c )
 
                 Ok (Queries.AllPortals portals) ->
                     ( { model | allPortals = portals }, Cmd.none )

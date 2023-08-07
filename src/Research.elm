@@ -689,10 +689,10 @@ findResearchAfter posix lst =
 
 findResearchWithPortal : String -> List Research -> List Research
 findResearchWithPortal portalq lst =
-    let
-        _ =
-            Debug.log portalq "portalq"
-    in
+    -- let
+    --     _ =
+    --         Debug.log portalq "portalq"
+    -- in
     case portalq of
         "" ->
             lst

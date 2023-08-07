@@ -119,7 +119,7 @@ update msg model =
                         Ok data ->
                             ( Loaded
                                 { lmodel
-                                    | research = data 
+                                    | research = data
                                     , keywords = RC.keywordSet data
                                 }
                             , Cmd.none
@@ -169,7 +169,7 @@ update msg model =
                             in
                             ( Loaded
                                 { problems = []
-                                , research = data 
+                                , research = data
                                 , keywords = kws
                                 , reverseKeywordDict = reverseKeywordDict
                                 }
@@ -255,15 +255,9 @@ main =
     Platform.worker { init = init, update = update, subscriptions = subscriptions }
 
 
-
 printLength : String -> List a -> List a
 printLength label lst =
-    let
-        _ =
-            Debug.log ("* length is * " ++ label) (List.length lst)
-    in
     lst
-
 
 
 searchResearch : Search -> ReverseKeywordDict -> List Research -> List Research
@@ -271,14 +265,14 @@ searchResearch (Search search) revDict lst =
     -- TODO implement dates
     lst
         |> RC.findResearchWithTitle search.title
-        |> printLength "title"
+        -- |> printLength "title"
         |> RC.findResearchWithAuthor search.author
-        |> printLength "author"
+        -- |> printLength "author"
         |> RC.findResearchWithKeywords search.keywords revDict
-        |> printLength "keywords"
+        -- |> printLength "keywords"
         |> RC.findResearchWithPortal search.portal
-        |> printLength "portal"
 
-    
 
+
+--|> printLength "portal"
 -- |> printLength "keywords"

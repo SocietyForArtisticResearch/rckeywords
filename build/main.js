@@ -5910,15 +5910,18 @@ var $author$project$Main$handleUrl = F2(
 											$author$project$Queries$encodeSearchQuery(
 												$author$project$Queries$FindResearch(
 													A2(
-														$author$project$Queries$withTitle,
-														title,
+														$author$project$Queries$withPortal,
+														portal,
 														A2(
-															$author$project$Queries$withAuthor,
-															author,
+															$author$project$Queries$withTitle,
+															title,
 															A2(
-																$author$project$Queries$searchWithKeywords,
-																$elm$core$Set$fromList(keywords),
-																$author$project$Queries$emptySearch))))));
+																$author$project$Queries$withAuthor,
+																author,
+																A2(
+																	$author$project$Queries$searchWithKeywords,
+																	$elm$core$Set$fromList(keywords),
+																	$author$project$Queries$emptySearch)))))));
 										return _Utils_Tuple2(
 											_Utils_update(
 												model,
@@ -7135,7 +7138,7 @@ var $author$project$Research$portalTypeFromString = function (str) {
 			return $author$project$Research$Institutional;
 	}
 };
-var $author$project$Research$decodeWorkerPortal = A4(
+var $author$project$WorkerTypes$decodeWorkerPortal = A4(
 	$elm$json$Json$Decode$map3,
 	$author$project$Research$Portal,
 	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
@@ -7175,7 +7178,7 @@ var $elm_community$json_extra$Json$Decode$Extra$optionalField = F2(
 		};
 		return A2($elm$json$Json$Decode$andThen, finishDecoding, $elm$json$Json$Decode$value);
 	});
-var $author$project$Research$decodeExposition = function () {
+var $author$project$WorkerTypes$decodeExposition = function () {
 	var string = $elm$json$Json$Decode$string;
 	var mkExp = function (i) {
 		return function (t) {
@@ -7214,7 +7217,7 @@ var $author$project$Research$decodeExposition = function () {
 					A2(
 						field,
 						'portals',
-						$elm$json$Json$Decode$list($author$project$Research$decodeWorkerPortal)),
+						$elm$json$Json$Decode$list($author$project$WorkerTypes$decodeWorkerPortal)),
 					A2(
 						andMap,
 						A2(field, 'defaultPage', string),
@@ -7293,7 +7296,7 @@ var $author$project$Queries$decodeSearchResult = function () {
 					A2(
 						$elm$json$Json$Decode$map,
 						$author$project$Queries$Expositions,
-						$elm$json$Json$Decode$list($author$project$Research$decodeExposition)));
+						$elm$json$Json$Decode$list($author$project$WorkerTypes$decodeExposition)));
 			case 'keywords':
 				return A2(
 					$elm$json$Json$Decode$field,
@@ -7317,7 +7320,7 @@ var $author$project$Queries$decodeSearchResult = function () {
 					A2(
 						$elm$json$Json$Decode$map,
 						$author$project$Queries$AllPortals,
-						$elm$json$Json$Decode$list($author$project$Research$decodeWorkerPortal)));
+						$elm$json$Json$Decode$list($author$project$WorkerTypes$decodeWorkerPortal)));
 			default:
 				return $elm$json$Json$Decode$fail('expected expositions or keywords');
 		}
@@ -16163,6 +16166,66 @@ var $author$project$Main$viewResearchMicro = function (research) {
 				]));
 	}
 };
+var $author$project$Main$viewScaleSwitch = F2(
+	function (scale, urlWithScale) {
+		return A2(
+			$mdgriffith$elm_ui$Element$row,
+			_List_fromArray(
+				[
+					A2($mdgriffith$elm_ui$Element$paddingXY, 0, 0),
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+					$mdgriffith$elm_ui$Element$spacing(5),
+					$mdgriffith$elm_ui$Element$Font$color(
+					A3($mdgriffith$elm_ui$Element$rgb, 0.0, 0.0, 1.0))
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					$author$project$Main$toggleLabelStyle,
+					$mdgriffith$elm_ui$Element$text('zoom:')),
+					A2(
+					$mdgriffith$elm_ui$Element$link,
+					A2(
+						$author$project$Main$linkStyle,
+						_Utils_eq(scale, $author$project$Main$Micro),
+						$author$project$Main$SmallLink),
+					{
+						label: $mdgriffith$elm_ui$Element$text('micro'),
+						url: urlWithScale($author$project$Main$Micro)
+					}),
+					A2(
+					$mdgriffith$elm_ui$Element$link,
+					A2(
+						$author$project$Main$linkStyle,
+						_Utils_eq(scale, $author$project$Main$Small),
+						$author$project$Main$SmallLink),
+					{
+						label: $mdgriffith$elm_ui$Element$text('small'),
+						url: urlWithScale($author$project$Main$Small)
+					}),
+					A2(
+					$mdgriffith$elm_ui$Element$link,
+					A2(
+						$author$project$Main$linkStyle,
+						_Utils_eq(scale, $author$project$Main$Medium),
+						$author$project$Main$SmallLink),
+					{
+						label: $mdgriffith$elm_ui$Element$text('medium'),
+						url: urlWithScale($author$project$Main$Medium)
+					}),
+					A2(
+					$mdgriffith$elm_ui$Element$link,
+					A2(
+						$author$project$Main$linkStyle,
+						_Utils_eq(scale, $author$project$Main$Large),
+						$author$project$Main$SmallLink),
+					{
+						label: $mdgriffith$elm_ui$Element$text('large'),
+						url: urlWithScale($author$project$Main$Large)
+					})
+				]));
+	});
 var $elm$html$Html$a = _VirtualDom_node('a');
 var $author$project$Research$getName = function (_v0) {
 	var data = _v0.a;
@@ -16232,76 +16295,8 @@ var $author$project$Main$splitGroupsOf = F2(
 				A2($author$project$Main$splitGroupsOf, n, rest));
 		}
 	});
-var $author$project$Main$viewScaleSwitch = F2(
-	function (scale, urlWithScale) {
-		return A2(
-			$mdgriffith$elm_ui$Element$row,
-			_List_fromArray(
-				[
-					A2($mdgriffith$elm_ui$Element$paddingXY, 0, 0),
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$spacing(5),
-					$mdgriffith$elm_ui$Element$Font$color(
-					A3($mdgriffith$elm_ui$Element$rgb, 0.0, 0.0, 1.0))
-				]),
-			_List_fromArray(
-				[
-					A2(
-					$mdgriffith$elm_ui$Element$el,
-					$author$project$Main$toggleLabelStyle,
-					$mdgriffith$elm_ui$Element$text('zoom:')),
-					A2(
-					$mdgriffith$elm_ui$Element$link,
-					A2(
-						$author$project$Main$linkStyle,
-						_Utils_eq(scale, $author$project$Main$Micro),
-						$author$project$Main$SmallLink),
-					{
-						label: $mdgriffith$elm_ui$Element$text('micro'),
-						url: urlWithScale($author$project$Main$Micro)
-					}),
-					A2(
-					$mdgriffith$elm_ui$Element$link,
-					A2(
-						$author$project$Main$linkStyle,
-						_Utils_eq(scale, $author$project$Main$Small),
-						$author$project$Main$SmallLink),
-					{
-						label: $mdgriffith$elm_ui$Element$text('small'),
-						url: urlWithScale($author$project$Main$Small)
-					}),
-					A2(
-					$mdgriffith$elm_ui$Element$link,
-					A2(
-						$author$project$Main$linkStyle,
-						_Utils_eq(scale, $author$project$Main$Medium),
-						$author$project$Main$SmallLink),
-					{
-						label: $mdgriffith$elm_ui$Element$text('medium'),
-						url: urlWithScale($author$project$Main$Medium)
-					}),
-					A2(
-					$mdgriffith$elm_ui$Element$link,
-					A2(
-						$author$project$Main$linkStyle,
-						_Utils_eq(scale, $author$project$Main$Large),
-						$author$project$Main$SmallLink),
-					{
-						label: $mdgriffith$elm_ui$Element$text('large'),
-						url: urlWithScale($author$project$Main$Large)
-					})
-				]));
-	});
 var $author$project$Main$viewScreenshots = F4(
 	function (screenDimensions, sv, scale, research) {
-		var urlWithScale = function (screenScale) {
-			return $author$project$Main$appUrlFromSearchViewState(
-				_Utils_update(
-					sv,
-					{
-						layout: $author$project$Main$ScreenLayout(screenScale)
-					}));
-		};
 		var groupSize = $author$project$Main$scaleToGroupSize(scale);
 		var groups = A2($author$project$Main$splitGroupsOf, groupSize, research);
 		var viewGroup = function (group) {
@@ -16319,7 +16314,7 @@ var $author$project$Main$viewScreenshots = F4(
 					group));
 		};
 		return A2(
-			$mdgriffith$elm_ui$Element$column,
+			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$paddingEach(
@@ -16328,25 +16323,11 @@ var $author$project$Main$viewScreenshots = F4(
 						{top: 15})),
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
 				]),
-			_List_fromArray(
-				[
-					A2(
-					$mdgriffith$elm_ui$Element$el,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$alignRight,
-							$mdgriffith$elm_ui$Element$paddingEach(
-							_Utils_update(
-								$author$project$Main$paddingEachZero,
-								{bottom: 15}))
-						]),
-					A2($author$project$Main$viewScaleSwitch, scale, urlWithScale)),
-					$mdgriffith$elm_ui$Element$html(
-					A2(
-						$elm$html$Html$div,
-						_List_Nil,
-						A2($elm$core$List$map, viewGroup, groups)))
-				]));
+			$mdgriffith$elm_ui$Element$html(
+				A2(
+					$elm$html$Html$div,
+					_List_Nil,
+					A2($elm$core$List$map, viewGroup, groups))));
 	});
 var $author$project$Main$FormMsg = function (a) {
 	return {$: 'FormMsg', a: a};
@@ -17076,7 +17057,10 @@ var $author$project$Main$dropdownStyle = _List_fromArray(
 		A2($elm$html$Html$Attributes$style, 'margin', '15px 5px'),
 		A2($elm$html$Html$Attributes$style, 'border', '1px solid gray'),
 		A2($elm$html$Html$Attributes$style, 'display', 'block'),
-		A2($elm$html$Html$Attributes$style, 'max-width', '400px')
+		A2($elm$html$Html$Attributes$style, 'width', '100%'),
+		A2($elm$html$Html$Attributes$style, 'position', 'relative'),
+		A2($elm$html$Html$Attributes$style, 'top', '9px'),
+		A2($elm$html$Html$Attributes$style, 'height', '28px')
 	]);
 var $dillonkearns$elm_form$Internal$Form$Form = F3(
 	function (a, b, c) {
@@ -17482,12 +17466,6 @@ var $author$project$Main$headerStyle = _List_fromArray(
 		A2($elm$html$Html$Attributes$style, 'margin', '5px 0 15px 5px'),
 		A2($elm$html$Html$Attributes$style, 'font-weight', '600')
 	]);
-var $elm$html$Html$Attributes$autocomplete = function (bool) {
-	return A2(
-		$elm$html$Html$Attributes$stringProperty,
-		'autocomplete',
-		bool ? 'on' : 'off');
-};
 var $elm$html$Html$datalist = _VirtualDom_node('datalist');
 var $elm$html$Html$Attributes$list = _VirtualDom_attribute('list');
 var $elm$html$Html$option = _VirtualDom_node('option');
@@ -17549,8 +17527,7 @@ var $author$project$Main$keywordField = F4(
 							$elm$html$Html$datalist,
 							_List_fromArray(
 								[
-									$elm$html$Html$Attributes$id('keyword-field'),
-									$elm$html$Html$Attributes$autocomplete(false)
+									$elm$html$Html$Attributes$id('keyword-field')
 								]),
 							A2(
 								$elm$core$List$map,
@@ -17826,7 +17803,7 @@ var $author$project$Main$searchGUI = F2(
 	function (portals, keywords) {
 		var portalsAsOptions = A2(
 			$elm$core$List$cons,
-			_Utils_Tuple2('', ''),
+			_Utils_Tuple2('', 'All portals'),
 			A2(
 				$elm$core$List$map,
 				function (p) {
@@ -17851,8 +17828,8 @@ var $author$project$Main$searchGUI = F2(
 			'portal',
 			A2(
 				$dillonkearns$elm_form$Form$Field$withInitialValue,
-				function ($) {
-					return $.portal;
+				function (_v1) {
+					return 'All portals';
 				},
 				A2(
 					$dillonkearns$elm_form$Form$Field$select,
@@ -17919,7 +17896,10 @@ var $author$project$Main$searchGUI = F2(
 													[
 														A2(
 														$elm$html$Html$div,
-														_List_Nil,
+														_List_fromArray(
+															[
+																A2($elm$html$Html$Attributes$style, 'width', '100%')
+															]),
 														_List_fromArray(
 															[
 																A2(
@@ -17943,27 +17923,18 @@ var $author$project$Main$searchGUI = F2(
 																		_List_fromArray(
 																			[
 																				A3($author$project$Main$fieldView, info, 'title', title),
-																				A3($author$project$Main$fieldView, info, 'author', author)
-																			])),
-																		A2(
-																		$elm$html$Html$div,
-																		_List_fromArray(
-																			[
-																				A2($elm$html$Html$Attributes$style, 'display', 'flex')
-																			]),
-																		_List_fromArray(
-																			[
+																				A3($author$project$Main$fieldView, info, 'author', author),
 																				A4($author$project$Main$keywordField, keywords, info, 'keywords', keyword1),
-																				A4($author$project$Main$keywordField, keywords, info, '', keyword2)
+																				A4($author$project$Main$keywordField, keywords, info, '', keyword2),
+																				A3(
+																				$dillonkearns$elm_form$Form$FieldView$select,
+																				$author$project$Main$dropdownStyle,
+																				function (entry) {
+																					return _Utils_Tuple2(_List_Nil, entry);
+																				},
+																				portal)
 																			]))
 																	])),
-																A3(
-																$dillonkearns$elm_form$Form$FieldView$select,
-																$author$project$Main$dropdownStyle,
-																function (entry) {
-																	return _Utils_Tuple2(_List_Nil, entry);
-																},
-																portal),
 																A2(
 																$elm$html$Html$button,
 																$author$project$Main$submitButtonStyle,
@@ -18004,7 +17975,8 @@ var $author$project$Main$viewSearch = F5(
 						A2($mdgriffith$elm_ui$Element$paddingXY, 15, 15),
 						$mdgriffith$elm_ui$Element$Border$solid,
 						$mdgriffith$elm_ui$Element$Border$color($author$project$Main$black),
-						$mdgriffith$elm_ui$Element$Border$width(1)
+						$mdgriffith$elm_ui$Element$Border$width(1),
+						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
 					]),
 				$mdgriffith$elm_ui$Element$html(
 					A4(
@@ -18085,7 +18057,8 @@ var $author$project$Main$viewResearchResults = F7(
 					$mdgriffith$elm_ui$Element$el,
 					_List_fromArray(
 						[
-							A2($mdgriffith$elm_ui$Element$paddingXY, 0, 15)
+							A2($mdgriffith$elm_ui$Element$paddingXY, 0, 15),
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
 						]),
 					A5(
 						$author$project$Main$viewSearch,
@@ -18098,7 +18071,8 @@ var $author$project$Main$viewResearchResults = F7(
 					$mdgriffith$elm_ui$Element$row,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							A2($mdgriffith$elm_ui$Element$spacingXY, 15, 0)
 						]),
 					_List_fromArray(
 						[
@@ -18110,6 +18084,24 @@ var $author$project$Main$viewResearchResults = F7(
 								$author$project$Main$viewLayoutSwitch,
 								layout,
 								urlFromLayout(sv))),
+							function () {
+							if (layout.$ === 'ListLayout') {
+								return $mdgriffith$elm_ui$Element$none;
+							} else {
+								var scale = layout.a;
+								return A2(
+									$mdgriffith$elm_ui$Element$el,
+									_List_fromArray(
+										[$mdgriffith$elm_ui$Element$alignRight]),
+									A2(
+										$author$project$Main$viewScaleSwitch,
+										scale,
+										A2(
+											$elm$core$Basics$composeR,
+											$author$project$Main$ScreenLayout,
+											urlFromLayout(sv))));
+							}
+						}(),
 							A2(
 							$mdgriffith$elm_ui$Element$el,
 							_List_fromArray(

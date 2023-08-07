@@ -4356,7 +4356,7 @@ var $author$project$Research$portalTypeToString = function (portaltype) {
 			return 'MainPortal';
 	}
 };
-var $author$project$Research$encodePortal = function (portal) {
+var $author$project$WorkerTypes$encodePortal = function (portal) {
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
 			[
@@ -4408,7 +4408,7 @@ var $author$project$KeywordString$toString = function (_v0) {
 	var k = _v0.a;
 	return k;
 };
-var $author$project$Research$encodeExposition = function (exp) {
+var $author$project$WorkerTypes$encodeExposition = function (exp) {
 	var string = $elm$json$Json$Encode$string;
 	var thumbnail = A2(
 		$elm$core$Maybe$map,
@@ -4497,7 +4497,7 @@ var $author$project$Research$encodeExposition = function (exp) {
 								string(exp.defaultPage)),
 								_Utils_Tuple2(
 								'portals',
-								A2(list, $author$project$Research$encodePortal, exp.portals))
+								A2(list, $author$project$WorkerTypes$encodePortal, exp.portals))
 							]))))));
 };
 var $author$project$Research$encodeKeyword = function (_v0) {
@@ -4528,7 +4528,7 @@ var $author$project$Queries$encodeSearchResult = function (result) {
 						$elm$json$Json$Encode$string('expositions')),
 						_Utils_Tuple2(
 						'expositions',
-						A2($elm$json$Json$Encode$list, $author$project$Research$encodeExposition, exps))
+						A2($elm$json$Json$Encode$list, $author$project$WorkerTypes$encodeExposition, exps))
 					]));
 		case 'Keywords':
 			var kws = result.a;
@@ -4564,7 +4564,7 @@ var $author$project$Queries$encodeSearchResult = function (result) {
 						$elm$json$Json$Encode$string('allportals')),
 						_Utils_Tuple2(
 						'portals',
-						A2($elm$json$Json$Encode$list, $author$project$Research$encodePortal, portals))
+						A2($elm$json$Json$Encode$list, $author$project$WorkerTypes$encodePortal, portals))
 					]));
 	}
 };

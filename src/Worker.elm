@@ -279,6 +279,6 @@ searchResearch (Search search) revDict lst =
         |> RC.findResearchWithPortal search.portal
         |> printLength "portal"
 
-
+    
 
 -- |> printLength "keywords"

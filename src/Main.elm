@@ -675,6 +675,7 @@ handleUrl url model =
                                     |> Queries.searchWithKeywords (Set.fromList keywords)
                                     |> Queries.withAuthor author
                                     |> Queries.withTitle title
+                                    |> Queries.withPortal portal
                                 )
                             )
                         )
@@ -773,7 +774,7 @@ viewResearchMicro research =
                     [ Element.link [ width fill, Element.alignLeft ] <|
                         { label =
                             Element.paragraph
-                                (width (px w)::microLinkStyle)
+                                (width (px w) :: microLinkStyle)
                                 [ Element.text research.title ]
                         , url = research.defaultPage
                         }
@@ -1098,11 +1099,17 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
             lst |> List.length |> (\n -> n // pageSize)
     in
     Element.column [ anchor "top", spacingXY 0 5, width fill ] <|
-        [ Element.el [ paddingXY 0 15 ]
+        [ Element.el [ paddingXY 0 15, width fill ]
             (viewSearch (Just initialForm) allPortals allKeywords submitting searchFormState)
         , Element.row
-            [ width fill ]
+            [ width fill, spacingXY 15 0 ]
             [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch layout (urlFromLayout sv)
+            , case layout of
+                ListLayout ->
+                    Element.none
+
+                ScreenLayout scale ->
+                    Element.el [ Element.alignRight ] (viewScaleSwitch scale (ScreenLayout >> urlFromLayout sv))
             , Element.el [ Element.alignRight ] <| toggleTitleSorting sorting (urlFromSorting sv)
             ]
         , render
@@ -1598,14 +1605,9 @@ viewScreenshots screenDimensions sv scale research =
         viewGroup : List Research -> Html Msg
         viewGroup group =
             Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
-
-        urlWithScale screenScale =
-            appUrlFromSearchViewState { sv | layout = ScreenLayout screenScale }
     in
-    Element.column [ Element.paddingEach { paddingEachZero | top = 15 }, width fill ]
-        [ Element.el [ Element.alignRight, Element.paddingEach { paddingEachZero | bottom = 15 } ] (viewScaleSwitch scale urlWithScale)
-        , Element.html (Html.div [] (List.map viewGroup groups))
-        ]
+    Element.el [ Element.paddingEach { paddingEachZero | top = 15 }, width fill ]
+        (Element.html (Html.div [] (List.map viewGroup groups)))
 
 
 paddingEachZero : { top : Int, left : Int, right : Int, bottom : Int }
@@ -1700,8 +1702,9 @@ searchGUI portals keywords =
                     else
                         Err (quote k ++ " not used in RC")
 
+        portalsAsOptions : List ( String, String )
         portalsAsOptions =
-            ( "", "" ) :: (portals |> List.map (\p -> ( p.name, p.name )))
+            ( "", "All portals" ) :: (portals |> List.map (\p -> ( p.name, p.name )))
     in
     Form.form
         (\title author keyword1 keyword2 portal ->
@@ -1723,21 +1726,19 @@ searchGUI portals keywords =
                         portal
             , view =
                 \info ->
-                    [ Html.div []
+                    [ Html.div [ Attr.style "width" "100%" ]
                         [ Html.h1 headerStyle [ Html.text "search:" ]
                         , Html.label []
                             [ Html.div [ Attr.style "display" "flex" ]
                                 [ fieldView info "title" title
                                 , fieldView info "author" author
-                                ]
-                            , Html.div [ Attr.style "display" "flex" ]
-                                [ keywordField keywords info "keywords" keyword1
+                                , keywordField keywords info "keywords" keyword1
                                 , keywordField keywords info "" keyword2
+                                , FieldView.select dropdownStyle
+                                    (\entry -> ( [], entry ))
+                                    portal
                                 ]
                             ]
-                        , FieldView.select dropdownStyle
-                            (\entry -> ( [], entry ))
-                            portal
                         , Html.button submitButtonStyle
                             [ if info.submitting then
                                 Html.text "searching..."
@@ -1753,7 +1754,7 @@ searchGUI portals keywords =
         |> Form.field "author" (Field.text |> Field.search |> Field.withInitialValue .author)
         |> Form.field "keyword 1" (Field.text |> Field.search |> Field.withInitialValue getFirstKeyword)
         |> Form.field "keyword 2" (Field.text |> Field.search |> Field.withInitialValue getSecondKeyword)
-        |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "Error !!!") |> Field.withInitialValue .portal)
+        |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "Error !!!") |> Field.withInitialValue (\_ -> "All portals"))
 
 
 getFirstKeyword : SearchForm -> String
@@ -1792,7 +1793,10 @@ dropdownStyle =
     , Attr.style "margin" "15px 5px"
     , Attr.style "border" "1px solid gray"
     , Attr.style "display" "block"
-    , Attr.style "max-width" "400px"
+    , Attr.style "width" "100%"
+    , Attr.style "position" "relative"
+    , Attr.style "top" "9px"
+    , Attr.style "height" "28px"
     ]
 
 
@@ -1896,7 +1900,7 @@ keywordField keywords formState label field =
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
             , field |> FieldView.input ([ Attr.list "keyword-field" ] ++ fieldStyle)
-            , Html.datalist [ Attr.id "keyword-field", Attr.autocomplete False ]
+            , Html.datalist [ Attr.id "keyword-field" ]
                 (List.map
                     (\kw ->
                         Html.option [ Attr.value kw ] []
@@ -1961,6 +1965,7 @@ viewSearch initialForm portals keywords submitting searchFormState =
                 , Element.Border.solid
                 , Element.Border.color black
                 , Element.Border.width 1
+                , width fill
                 ]
             <|
                 Element.html

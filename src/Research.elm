@@ -5,11 +5,13 @@
 
 module Research exposing
     ( Author(..)
+    , Compare(..)
     , ExpositionID
     , Keyword(..)
     , KeywordSet(..)
     , KeywordSorting(..)
     , Portal
+    , PortalType(..)
     , PublicationStatus(..)
     , Research
     , ReverseKeywordDict
@@ -18,17 +20,14 @@ module Research exposing
     , authorAsString
     , authorUrl
     , calcStatus
-    , decodeExposition
+    , comparePosix
     , decodeKeyword
     , decodePublicationStatus
-    , decodeWorkerPortal
     , decoder
     , dmyToYmd
     , emptyKeywordSet
     , encodeAuthor
-    , encodeExposition
     , encodeKeyword
-    , encodePortal
     , findResearchAfter
     , findResearchWithAuthor
     , findResearchWithKeywords
@@ -43,8 +42,12 @@ module Research exposing
     , keywordSet
     , kwName
     , newKey
+    , portalType
+    , portalTypeFromString
+    , portalTypeToString
     , publicationstatus
     , rcDateToPosix
+    , rcPortalDecoder
     , reverseKeywordDict
     , shuffleWithSeed
     , sortingFromString
@@ -77,31 +80,6 @@ type alias Portal =
     , name : String
     , type_ : PortalType
     }
-
-
-
--- Worker
-
-
-encodePortal : Portal -> Json.Encode.Value
-encodePortal portal =
-    Json.Encode.object
-        [ ( "id", Json.Encode.int portal.id )
-        , ( "name", Json.Encode.string portal.name )
-        , ( "type_", Json.Encode.string (portal.type_ |> portalTypeToString) )
-        ]
-
-
-
--- Worker
-
-
-decodeWorkerPortal : Json.Decode.Decoder Portal
-decodeWorkerPortal =
-    Json.Decode.map3 Portal
-        (Json.Decode.field "id" Json.Decode.int)
-        (Json.Decode.field "name" Json.Decode.string)
-        (Json.Decode.field "type_" Json.Decode.string |> Json.Decode.map portalTypeFromString)
 
 
 type PortalType
@@ -470,78 +448,6 @@ author =
         (Json.Decode.field "name" Json.Decode.string)
 
 
-
--- WORKER exposition
-
-
-decodeExposition : Decoder Research
-decodeExposition =
-    let
-        field =
-            Json.Decode.field
-
-        int =
-            Json.Decode.int
-
-        string =
-            Json.Decode.string
-
-        andMap =
-            JDE.andMap
-
-        mkExp :
-            ExpositionID
-            -> String
-            -> List KeywordString
-            -> String
-            -> Author
-            -> Maybe Int
-            -> PublicationStatus
-            -> Maybe String
-            -> Maybe String
-            -> Maybe String
-            -> String
-            -> List Portal
-            -> Research
-        mkExp i t kw cr au iss pub publ thum abs d rcportal =
-            { id = i
-            , title = t
-            , keywords = kw
-            , created = cr
-            , author = au
-            , issueId = iss
-            , publicationStatus = pub
-            , publication = publ
-            , thumbnail = thum
-            , abstract = abs
-            , defaultPage = d
-            , portals = rcportal
-            }
-    in
-    field "type" string
-        |> Json.Decode.andThen
-            (\typ ->
-                case typ of
-                    "exposition" ->
-                        Json.Decode.map mkExp
-                            (field "id" int)
-                            |> andMap (field "title" string)
-                            |> andMap (field "keywords" (Json.Decode.list string) |> Json.Decode.map (List.map KeywordString.fromString))
-                            |> andMap (field "created" string)
-                            |> andMap (field "author" author)
-                            |> andMap (JDE.optionalField "issueId" int)
-                            |> andMap (field "publicationStatus" decodePublicationStatus)
-                            |> andMap (JDE.optionalField "publication" string)
-                            |> andMap (JDE.optionalField "thumbnail" string)
-                            |> andMap (JDE.optionalField "abstract" string)
-                            |> andMap (field "defaultPage" string)
-                            |> andMap (field "portals" (Json.Decode.list decodeWorkerPortal))
-
-                    _ ->
-                        Json.Decode.fail "expected an exposition"
-            )
-
-
 encodeAuthor : Author -> Json.Encode.Value
 encodeAuthor au =
     Json.Encode.object
@@ -553,76 +459,7 @@ encodeAuthor au =
 
 -- this is a "local" decoder for communication with the worker.
 -- So here we do not have to calculate the publication status etc..
-
-
-encodeExposition : Research -> Json.Encode.Value
-encodeExposition exp =
-    let
-        int =
-            Json.Encode.int
-
-        string =
-            Json.Encode.string
-
-        list =
-            Json.Encode.list
-
-        maybeAppend x xs =
-            case x of
-                Just v ->
-                    v :: xs
-
-                Nothing ->
-                    xs
-
-        issueId =
-            exp.issueId
-                |> Maybe.map
-                    (\id ->
-                        ( "id", int id )
-                    )
-
-        publication =
-            exp.publication
-                |> Maybe.map
-                    (\p ->
-                        ( "publication", string p )
-                    )
-
-        thumbnail =
-            exp.thumbnail
-                |> Maybe.map
-                    (\t ->
-                        ( "thumbnail", string t )
-                    )
-
-        abstract =
-            exp.abstract
-                |> Maybe.map
-                    (\a ->
-                        ( "abstract", string a )
-                    )
-    in
-    Json.Encode.object
-        ([ ( "type", string "exposition" )
-         , ( "id", int exp.id )
-         , ( "created", string exp.created )
-         , ( "title", string exp.title )
-         , ( "keywords", list string (List.map KeywordString.toString exp.keywords) )
-         , ( "author", encodeAuthor exp.author )
-         , ( "publicationStatus", publicationstatus exp.publicationStatus )
-         , ( "defaultPage", string exp.defaultPage )
-         , ( "portals", list encodePortal exp.portals )
-         ]
-            |> maybeAppend issueId
-            |> maybeAppend publication
-            |> maybeAppend thumbnail
-            |> maybeAppend abstract
-        )
-
-
-
--- This decodes from the RC search output.
+-- This decodes from the RC API
 -- Some properties need to be "calculated", like publication status.
 
 

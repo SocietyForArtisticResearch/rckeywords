@@ -26,6 +26,7 @@ import KeywordString
 import Research as RC
 import Set exposing (Set)
 import Time
+import WorkerTypes as WT
 
 
 
@@ -150,7 +151,7 @@ decodeSearchResult =
         parseResult typ =
             case typ of
                 "expositions" ->
-                    field "expositions" (Json.Decode.list RC.decodeExposition |> Json.Decode.map Expositions)
+                    field "expositions" (Json.Decode.list WT.decodeExposition |> Json.Decode.map Expositions)
 
                 "keywords" ->
                     field "keywords" (Json.Decode.list RC.decodeKeyword |> Json.Decode.map Keywords)
@@ -159,7 +160,7 @@ decodeSearchResult =
                     field "keywords" (Json.Decode.list RC.decodeKeyword |> Json.Decode.map AllKeywords)
 
                 "allportals" ->
-                    field "portals" (Json.Decode.list RC.decodeWorkerPortal |> Json.Decode.map AllPortals)
+                    field "portals" (Json.Decode.list WT.decodeWorkerPortal |> Json.Decode.map AllPortals)
 
                 _ ->
                     Json.Decode.fail "expected expositions or keywords"
@@ -173,7 +174,7 @@ encodeSearchResult result =
         Expositions exps ->
             E.object
                 [ ( "type", E.string "expositions" )
-                , ( "expositions", E.list RC.encodeExposition exps )
+                , ( "expositions", E.list WT.encodeExposition exps )
                 ]
 
         Keywords kws ->
@@ -191,7 +192,7 @@ encodeSearchResult result =
         AllPortals portals ->
             E.object
                 [ ( "type", E.string "allportals" )
-                , ( "portals", E.list RC.encodePortal portals )
+                , ( "portals", E.list WT.encodePortal portals )
                 ]
 
 

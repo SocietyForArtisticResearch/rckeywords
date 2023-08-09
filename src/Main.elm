@@ -32,6 +32,11 @@ import Time
 import Url exposing (Url)
 
 
+
+-- All RC data is managed by the worker. This is done for speed in the GUI, since searches may be quite heavy.
+-- To search, you send a query. The results are returned in receiveResults
+
+
 port receiveResults : (Json.Decode.Value -> msg) -> Sub msg
 
 
@@ -59,14 +64,72 @@ subscriptions _ =
 
 
 
+
+type DateRange
+    = DateRange Time.Posix Time.Posix
+
+
+init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init { width, height } url key =
+    let
+        initUrl : AppUrl
+        initUrl =
+            urlWhereFragmentIsPath url
+
+        initView : View
+        initView =
+            SearchView
+                { layout = ScreenLayout Medium
+                , form = emptyForm
+                , sorting = RC.Random
+                , page = Page 1
+                }
+    in
+    { query = ""
+    , search = Idle
+    , screenDimensions = { w = width, h = height }
+    , view = initView
+    , numberOfResults = 8
+    , url = initUrl
+    , key = key
+    , searchPageSize = 20
+
+    -- , keywords = Set.empty
+    , searchGUI = Form.init
+    , submitting = False
+    , allKeywords = []
+    , allPortals = []
+    }
+        |> (\model ->
+                ( model
+                , fetchKeywordsAndPortals
+                )
+           )
+
+
+
+-- before doing anything else, ask worker for all keywords
+
+
+fetchKeywordsAndPortals : Cmd Msg
+fetchKeywordsAndPortals =
+    Cmd.batch
+        [ sendQuery
+            (Queries.encodeSearchQuery Queries.GetAllKeywords)
+        , sendQuery
+            (Queries.encodeSearchQuery Queries.GetAllPortals)
+        ]
+
+
+resetViewport : Cmd Msg
+resetViewport =
+    Task.perform (\_ -> NoOp) (Dom.setViewport 0 0)
+
+
+
+
 -- | Portal
 
-
-type Scale
-    = Micro
-    | Small
-    | Medium
-    | Large
 
 
 type Problem
@@ -82,6 +145,66 @@ problemToString p =
 
         InvalidForm s ->
             s
+
+
+
+type Page
+    = Page Int
+
+
+pageAsString : Page -> String
+pageAsString (Page p) =
+    p |> String.fromInt
+
+
+pageSize : Int
+pageSize =
+    128
+
+
+-- additionalKeywordsToLoad : Int
+-- additionalKeywordsToLoad =
+--     64
+
+
+pageFromInt : Int -> Page
+pageFromInt p =
+    Page p
+
+type alias SearchViewState =
+    { layout : Layout
+    , form : SearchForm
+    , sorting : RC.TitleSorting
+    , page : Page
+    }
+
+
+
+-- This should always contain all the state of the view.
+-- If it is in this type, it should also get encoded in the URL.
+-- handleUrl will parse a url into this view type. They should be "watertight"
+
+
+type View
+    = KeywordsView KeywordsViewState
+    | SearchView SearchViewState
+
+
+
+-- TODO: add a table layout later
+
+
+type Layout
+    = ListLayout
+    | ScreenLayout Scale
+
+
+
+type Scale
+    = Micro
+    | Small
+    | Medium
+    | Large
 
 
 scaleToString : Scale -> String
@@ -121,7 +244,7 @@ scaleFromString scale =
 
 
 -- urlWithScale is a function to provide the correct link, so you can reuse this
--- in different paths and construct the needed link accordingly
+-- in different paths and construct the needed url accordingly
 
 
 viewScaleSwitch : Scale -> (Scale -> String) -> Element Msg
@@ -153,56 +276,7 @@ viewLayoutSwitch layout makeurl =
         ]
 
 
-type Page
-    = Page Int
 
-
-type alias SearchViewState =
-    { layout : Layout
-    , form : SearchForm
-    , sorting : RC.TitleSorting
-    , page : Page
-    }
-
-
-
--- This should always contain all the state of the view.
--- If it is in this type, it should also get encoded in the URL.
--- handleUrl will parse a url into this view type. They should be "watertight"
-
-
-type View
-    = KeywordsView KeywordsViewState
-    | SearchView SearchViewState
-
-
-
--- TODO: add a table layout later
-
-
-type Layout
-    = ListLayout
-    | ScreenLayout Scale
-
-
-pageAsString : Page -> String
-pageAsString (Page p) =
-    p |> String.fromInt
-
-
-pageSize : Int
-pageSize =
-    128
-
-
-additionalKeywordsToLoad : Int
-additionalKeywordsToLoad =
-    64
-
-
-pageFromInt : Int -> Page
-pageFromInt p =
-    Page p
 
 
 type KeywordsViewState
@@ -250,6 +324,7 @@ type alias Model =
     , key : Nav.Key
     , url : AppUrl
     , searchPageSize : Int
+
     -- , keywords : Set String
     , searchGUI : Form.Model
     , submitting : Bool
@@ -278,68 +353,6 @@ type alias Flags =
     { width : Int
     , height : Int
     }
-
-
-type DateRange
-    = DateRange Time.Posix Time.Posix
-
-
-init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init { width, height } url key =
-    let
-        initUrl : AppUrl
-        initUrl =
-            urlWhereFragmentIsPath url
-
-        initView : View
-        initView =
-            SearchView
-                { layout = ScreenLayout Medium
-                , form = emptyForm
-                , sorting = RC.Random
-                , page = Page 1
-                }
-    in
-    { query = ""
-    , search = Idle
-    , screenDimensions = { w = width, h = height }
-    , view = initView
-    , numberOfResults = 8
-    , url = initUrl
-    , key = key
-    , searchPageSize = 20
-    -- , keywords = Set.empty
-    , searchGUI = Form.init
-    , submitting = False
-    , allKeywords = []
-    , allPortals = []
-    }
-        |> (\model ->
-                ( model
-                , fetchKeywordsAndPortals
-                )
-           )
-
-
-
--- before doing anything else, ask worker for all keywords
-
-
-fetchKeywordsAndPortals : Cmd Msg
-fetchKeywordsAndPortals =
-    Cmd.batch
-        [ sendQuery
-            (Queries.encodeSearchQuery Queries.GetAllKeywords)
-        , sendQuery
-            (Queries.encodeSearchQuery Queries.GetAllPortals)
-        ]
-
-
-resetViewport : Cmd Msg
-resetViewport =
-    Task.perform (\_ -> NoOp) (Dom.setViewport 0 0)
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -1160,13 +1173,13 @@ viewKeywordAsButton fontsize kw =
         ]
 
 
+
 -- viewKeywordAsClickable : Int -> RC.Keyword -> Element Msg
 -- viewKeywordAsClickable fontsize kw =
 --     let
 --         name : String
 --         name =
 --             RC.kwName kw |> String.toLower
-
 --         count : Int
 --         count =
 --             RC.getCount kw
@@ -1179,7 +1192,6 @@ viewKeywordAsButton fontsize kw =
 --         , Element.Border.width 1
 --         , Element.Background.color (rgb255 250 250 250)
 --         , Element.clipX
-
 --         -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
 --         , width fill
 --         ]
@@ -1190,15 +1202,12 @@ viewKeywordAsButton fontsize kw =
 --             }
 --         , Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
 --         ]
-
-
 -- viewSelectedKeyword : Int -> String -> Element Msg
 -- viewSelectedKeyword fontsize kw =
 --     let
 --         name : String
 --         name =
 --             kw
-
 --         count : Int
 --         count =
 --             0
@@ -1211,7 +1220,6 @@ viewKeywordAsButton fontsize kw =
 --         , Element.Border.width 1
 --         , Element.Background.color (rgb255 250 250 250)
 --         , Element.clipX
-
 --         -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
 --         , width (fill |> maximum 200)
 --         ]
@@ -1224,7 +1232,6 @@ viewKeywordAsButton fontsize kw =
 --             { onPress = Just (RemoveKeyword name)
 --             , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
 --             }
-
 --         --Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text "x")
 --         ]
 
@@ -1497,19 +1504,18 @@ pageOfList (Page i) lst =
         |> List.take pageSize
 
 
+
 -- notInSet : Model -> RC.Keyword -> Bool
 -- notInSet model kw =
 --     let
 --         name : String
 --         name =
 --             RC.kwName kw
-
 --         set =
 --             Set.toList model.keywords
 --     in
 --     if List.member name set then
 --         False
-
 --     else
 --         True
 

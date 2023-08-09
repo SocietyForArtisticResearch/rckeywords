@@ -16524,14 +16524,22 @@ var $elm$html$Html$Attributes$target = $elm$html$Html$Attributes$stringProperty(
 var $elm$html$Html$Attributes$title = $elm$html$Html$Attributes$stringProperty('title');
 var $author$project$Main$lazyImageWithErrorHandling = F3(
 	function (groupSize, dimensions, research) {
-		var width = $elm$core$String$fromInt(((dimensions.w - 180) / groupSize) | 0) + 'px';
+		var width = $elm$core$String$fromInt(
+			($elm$core$Basics$floor(dimensions.w * 0.9) / groupSize) | 0) + 'px';
 		var urlFromId = function (i) {
 			return function (fileName) {
 				return '/screenshots/' + (fileName + '.jpeg');
 			}(
 				$elm$core$String$fromInt(i));
 		};
-		var height = $elm$core$String$fromInt((dimensions.h / (groupSize - 1)) | 0) + 'px';
+		var device = $author$project$Main$classifyDevice(dimensions);
+		var height = function () {
+			if (device.$ === 'Desktop') {
+				return $elm$core$String$fromInt((dimensions.h / (groupSize - 1)) | 0) + 'px';
+			} else {
+				return width;
+			}
+		}();
 		return A2(
 			$elm$html$Html$a,
 			_List_fromArray(
@@ -16559,18 +16567,32 @@ var $author$project$Main$lazyImageWithErrorHandling = F3(
 				]));
 	});
 var $author$project$Main$paddingEachZero = {bottom: 0, left: 0, right: 0, top: 0};
-var $author$project$Main$scaleToGroupSize = function (scale) {
-	switch (scale.$) {
-		case 'Micro':
-			return 16;
-		case 'Small':
-			return 8;
-		case 'Medium':
-			return 4;
-		default:
-			return 3;
-	}
-};
+var $author$project$Main$scaleToGroupSize = F2(
+	function (device, scale) {
+		if (device.$ === 'Phone') {
+			switch (scale.$) {
+				case 'Micro':
+					return 6;
+				case 'Small':
+					return 3;
+				case 'Medium':
+					return 2;
+				default:
+					return 1;
+			}
+		} else {
+			switch (scale.$) {
+				case 'Micro':
+					return 16;
+				case 'Small':
+					return 8;
+				case 'Medium':
+					return 4;
+				default:
+					return 3;
+			}
+		}
+	});
 var $author$project$Main$splitGroupsOf = F2(
 	function (n, lst) {
 		if (!lst.b) {
@@ -16584,9 +16606,9 @@ var $author$project$Main$splitGroupsOf = F2(
 				A2($author$project$Main$splitGroupsOf, n, rest));
 		}
 	});
-var $author$project$Main$viewScreenshots = F4(
-	function (screenDimensions, sv, scale, research) {
-		var groupSize = $author$project$Main$scaleToGroupSize(scale);
+var $author$project$Main$viewScreenshots = F5(
+	function (device, screenDimensions, sv, scale, research) {
+		var groupSize = A2($author$project$Main$scaleToGroupSize, device, scale);
 		var groups = A2($author$project$Main$splitGroupsOf, groupSize, research);
 		var viewGroup = function (group) {
 			return A2(
@@ -18272,20 +18294,17 @@ var $author$project$Main$viewResearchResults = F8(
 							{sorting: s})));
 			});
 		var urlFromLayout = F2(
-			function (st, layou) {
+			function (st, newlayout) {
 				return $author$project$Main$appUrlFromView(
 					$author$project$Main$SearchView(
 						_Utils_update(
 							st,
-							{layout: layou})));
+							{layout: newlayout})));
 			});
-		var sorting = sv.sorting;
 		var numberOfPages = function (n) {
 			return (n / $author$project$Main$pageSize) | 0;
 		}(
 			$elm$core$List$length(lst));
-		var layout = sv.layout;
-		var initialForm = sv.form;
 		var _v0 = sv.page;
 		var p = _v0.a;
 		var sorted = A2(
@@ -18294,17 +18313,25 @@ var $author$project$Main$viewResearchResults = F8(
 			A2(
 				$elm$core$List$drop,
 				(p - 1) * $author$project$Main$pageSize,
-				A2($author$project$Main$sortResearch, sorting, lst)));
+				A2($author$project$Main$sortResearch, sv.sorting, lst)));
 		var render = function () {
-			if (layout.$ === 'ListLayout') {
+			var _v2 = sv.layout;
+			if (_v2.$ === 'ListLayout') {
+				var numCollumns = function () {
+					if (device.$ === 'Phone') {
+						return 1;
+					} else {
+						return 2;
+					}
+				}();
 				return A3(
 					$author$project$Main$makeColumns,
-					2,
+					numCollumns,
 					_List_Nil,
 					A2($elm$core$List$map, $author$project$Main$viewResearchMicro, sorted));
 			} else {
-				var scale = layout.a;
-				return A4($author$project$Main$viewScreenshots, dimensions, sv, scale, sorted);
+				var scale = _v2.a;
+				return A5($author$project$Main$viewScreenshots, device, dimensions, sv, scale, sorted);
 			}
 		}();
 		return A2(
@@ -18327,7 +18354,7 @@ var $author$project$Main$viewResearchResults = F8(
 					A6(
 						$author$project$Main$viewSearch,
 						device,
-						$elm$core$Maybe$Just(initialForm),
+						$elm$core$Maybe$Just(sv.form),
 						allPortals,
 						allKeywords,
 						submitting,
@@ -18347,13 +18374,14 @@ var $author$project$Main$viewResearchResults = F8(
 								[$mdgriffith$elm_ui$Element$alignLeft]),
 							A2(
 								$author$project$Main$viewLayoutSwitch,
-								layout,
+								sv.layout,
 								urlFromLayout(sv))),
 							function () {
-							if (layout.$ === 'ListLayout') {
+							var _v1 = sv.layout;
+							if (_v1.$ === 'ListLayout') {
 								return $mdgriffith$elm_ui$Element$none;
 							} else {
-								var scale = layout.a;
+								var scale = _v1.a;
 								return A2(
 									$mdgriffith$elm_ui$Element$el,
 									_List_fromArray(
@@ -18373,7 +18401,7 @@ var $author$project$Main$viewResearchResults = F8(
 								[$mdgriffith$elm_ui$Element$alignRight]),
 							A2(
 								$author$project$Main$toggleTitleSorting,
-								sorting,
+								sv.sorting,
 								urlFromSorting(sv)))
 						])),
 					render,

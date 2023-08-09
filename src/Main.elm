@@ -1113,34 +1113,34 @@ viewResearchResults :
     -> Element Msg
 viewResearchResults allPortals allKeywords submitting searchFormState dimensions device sv lst =
     let
-        layout =
-            sv.layout
-
         (Page p) =
             sv.page
 
-        sorting =
-            sv.sorting
-
-        initialForm =
-            sv.form
-
         sorted : List Research
         sorted =
-            lst |> sortResearch sorting |> List.drop ((p - 1) * pageSize) |> List.take pageSize
+            lst |> sortResearch sv.sorting |> List.drop ((p - 1) * pageSize) |> List.take pageSize
 
         render : Element Msg
         render =
-            case layout of
+            case sv.layout of
                 ListLayout ->
-                    makeColumns 2 [] (sorted |> List.map viewResearchMicro)
+                    let
+                        numCollumns =
+                            case device of
+                                Phone ->
+                                    1
+
+                                Desktop ->
+                                    2
+                    in
+                    makeColumns numCollumns [] (sorted |> List.map viewResearchMicro)
 
                 ScreenLayout scale ->
-                    viewScreenshots dimensions sv scale sorted
+                    viewScreenshots device dimensions sv scale sorted
 
         urlFromLayout : SearchViewState -> Layout -> String
-        urlFromLayout st layou =
-            SearchView { st | layout = layou } |> appUrlFromView
+        urlFromLayout st newlayout =
+            SearchView { st | layout = newlayout } |> appUrlFromView
 
         urlFromSorting : SearchViewState -> RC.TitleSorting -> String
         urlFromSorting st s =
@@ -1152,17 +1152,17 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
     in
     Element.column [ anchor "top", spacingXY 0 5, width fill ] <|
         [ Element.el [ paddingXY 0 15, width fill ]
-            (viewSearch device (Just initialForm) allPortals allKeywords submitting searchFormState)
+            (viewSearch device (Just sv.form) allPortals allKeywords submitting searchFormState)
         , Element.row
             [ width fill, spacingXY 15 0 ]
-            [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch layout (urlFromLayout sv)
-            , case layout of
+            [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
+            , case sv.layout of
                 ListLayout ->
                     Element.none
 
                 ScreenLayout scale ->
                     Element.el [ Element.alignRight ] (viewScaleSwitch scale (ScreenLayout >> urlFromLayout sv))
-            , Element.el [ Element.alignRight ] <| toggleTitleSorting sorting (urlFromSorting sv)
+            , Element.el [ Element.alignRight ] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
             ]
         , render
         , pageNav numberOfPages (SearchView sv) dimensions sorted (Page p)
@@ -1489,7 +1489,7 @@ viewKeywords model keywordview =
             else
                 Element.none
 
-        numCollumns = 
+        numCollumns =
             case model.device of
                 Phone ->
                     1
@@ -1572,17 +1572,28 @@ pageOfList (Page i) lst =
 lazyImageWithErrorHandling : Int -> ScreenDimensions -> Research -> Html Msg
 lazyImageWithErrorHandling groupSize dimensions research =
     let
+        device = 
+            classifyDevice dimensions
+ 
+            
         urlFromId : Int -> String
         urlFromId i =
             String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
 
         width : String
         width =
-            (((dimensions.w - 180) // groupSize) |> String.fromInt) ++ "px"
+            (((toFloat dimensions.w * 0.9 |> floor ) // groupSize) |> String.fromInt) ++ "px"
 
         height : String
         height =
-            (dimensions.h // (groupSize - 1) |> String.fromInt) ++ "px"
+            case device of
+                Desktop -> 
+                    (dimensions.h // (groupSize - 1) |> String.fromInt) ++ "px"
+
+                Phone ->    
+                    width
+
+        
     in
     Html.a [ Attr.target "_blank", Attr.href research.defaultPage, Attr.title (RC.getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
         [ Html.node "lazy-image"
@@ -1615,20 +1626,36 @@ splitGroupsOf n lst =
             first :: splitGroupsOf n rest
 
 
-scaleToGroupSize : Scale -> Int
-scaleToGroupSize scale =
-    case scale of
-        Micro ->
-            16
+scaleToGroupSize : Device -> Scale -> Int
+scaleToGroupSize device scale =
+    case device of
+        Phone ->
+            case scale of
+                Micro ->
+                    6
 
-        Small ->
-            8
+                Small ->
+                    3
 
-        Medium ->
-            4
+                Medium ->
+                    2
 
-        Large ->
-            3
+                Large ->
+                    1
+
+        Desktop ->
+            case scale of
+                Micro ->
+                    16
+
+                Small ->
+                    8
+
+                Medium ->
+                    4
+
+                Large ->
+                    3
 
 
 sortResearch : RC.TitleSorting -> List Research -> List Research
@@ -1644,12 +1671,12 @@ sortResearch sorting research =
             research |> List.sortBy (\r -> r.created) |> List.reverse
 
 
-viewScreenshots : ScreenDimensions -> SearchViewState -> Scale -> List Research -> Element Msg
-viewScreenshots screenDimensions sv scale research =
+viewScreenshots : Device -> ScreenDimensions -> SearchViewState -> Scale -> List Research -> Element Msg
+viewScreenshots device screenDimensions sv scale research =
     let
         groupSize : Int
         groupSize =
-            scaleToGroupSize scale
+            scaleToGroupSize device scale
 
         groups : List (List Research)
         groups =

@@ -32,11 +32,6 @@ import Time
 import Url exposing (Url)
 
 
-
--- TODO:
--- move sorting to main model, since it also applies to list.
-
-
 port receiveResults : (Json.Decode.Value -> msg) -> Sub msg
 
 
@@ -255,7 +250,7 @@ type alias Model =
     , key : Nav.Key
     , url : AppUrl
     , searchPageSize : Int
-    , keywords : Set String
+    -- , keywords : Set String
     , searchGUI : Form.Model
     , submitting : Bool
     , allKeywords : List KeywordString
@@ -275,9 +270,6 @@ type Msg
     | ReceiveResults Json.Decode.Value
     | HitEnter
     | NoOp
-    | LoadMore
-    | AddKeyword String
-    | RemoveKeyword String
     | FormMsg (Form.Msg Msg)
     | SubmitSearch (Form.Validated String SearchForm)
 
@@ -316,7 +308,7 @@ init { width, height } url key =
     , url = initUrl
     , key = key
     , searchPageSize = 20
-    , keywords = Set.empty
+    -- , keywords = Set.empty
     , searchGUI = Form.init
     , submitting = False
     , allKeywords = []
@@ -408,7 +400,7 @@ update msg model =
                     ( { model | allPortals = portals }, Cmd.none )
 
                 Err err ->
-                    ( model , problemize (ResultProblem err) )
+                    ( model, problemize (ResultProblem err) )
 
         HitEnter ->
             case model.view of
@@ -430,21 +422,6 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
-
-        LoadMore ->
-            ( { model | searchPageSize = model.searchPageSize + additionalKeywordsToLoad }
-            , Cmd.none
-            )
-
-        AddKeyword kw ->
-            ( { model | keywords = Set.insert kw model.keywords }
-            , Cmd.none
-            )
-
-        RemoveKeyword kw ->
-            ( { model | keywords = Set.remove kw model.keywords }
-            , Cmd.none
-            )
 
         FormMsg formMsg ->
             let
@@ -475,7 +452,7 @@ update msg model =
                                     ++ Dict.foldl (\k v acc -> k ++ " : " ++ String.join "" v ++ "\n" ++ acc) "" err
                                 )
                     in
-                    ( model, problemize formProblem  )
+                    ( model, problemize formProblem )
 
 
 updateViewWithSearch : SearchForm -> View -> View
@@ -1183,73 +1160,73 @@ viewKeywordAsButton fontsize kw =
         ]
 
 
-viewKeywordAsClickable : Int -> RC.Keyword -> Element Msg
-viewKeywordAsClickable fontsize kw =
-    let
-        name : String
-        name =
-            RC.kwName kw |> String.toLower
+-- viewKeywordAsClickable : Int -> RC.Keyword -> Element Msg
+-- viewKeywordAsClickable fontsize kw =
+--     let
+--         name : String
+--         name =
+--             RC.kwName kw |> String.toLower
 
-        count : Int
-        count =
-            RC.getCount kw
-    in
-    Element.row
-        [ Element.spacing 5
-        , Element.padding 5
-        , Element.Border.solid
-        , Element.Border.color (rgb255 144 144 144)
-        , Element.Border.width 1
-        , Element.Background.color (rgb255 250 250 250)
-        , Element.clipX
+--         count : Int
+--         count =
+--             RC.getCount kw
+--     in
+--     Element.row
+--         [ Element.spacing 5
+--         , Element.padding 5
+--         , Element.Border.solid
+--         , Element.Border.color (rgb255 144 144 144)
+--         , Element.Border.width 1
+--         , Element.Background.color (rgb255 250 250 250)
+--         , Element.clipX
 
-        -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
-        , width fill
-        ]
-        --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
-        [ Element.Input.button [ width fill ]
-            { onPress = Just (AddKeyword name)
-            , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
-            }
-        , Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
-        ]
+--         -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
+--         , width fill
+--         ]
+--         --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
+--         [ Element.Input.button [ width fill ]
+--             { onPress = Just (AddKeyword name)
+--             , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
+--             }
+--         , Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
+--         ]
 
 
-viewSelectedKeyword : Int -> String -> Element Msg
-viewSelectedKeyword fontsize kw =
-    let
-        name : String
-        name =
-            kw
+-- viewSelectedKeyword : Int -> String -> Element Msg
+-- viewSelectedKeyword fontsize kw =
+--     let
+--         name : String
+--         name =
+--             kw
 
-        count : Int
-        count =
-            0
-    in
-    Element.row
-        [ Element.spacing 5
-        , Element.padding 5
-        , Element.Border.solid
-        , Element.Border.color (rgb255 144 144 144)
-        , Element.Border.width 1
-        , Element.Background.color (rgb255 250 250 250)
-        , Element.clipX
+--         count : Int
+--         count =
+--             0
+--     in
+--     Element.row
+--         [ Element.spacing 5
+--         , Element.padding 5
+--         , Element.Border.solid
+--         , Element.Border.color (rgb255 144 144 144)
+--         , Element.Border.width 1
+--         , Element.Background.color (rgb255 250 250 250)
+--         , Element.clipX
 
-        -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
-        , width (fill |> maximum 200)
-        ]
-        --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
-        [ Element.Input.button [ Element.alignRight, Font.size fontsize ]
-            { onPress = Just (RemoveKeyword name)
-            , label = text "x"
-            }
-        , Element.Input.button [ width fill ]
-            { onPress = Just (RemoveKeyword name)
-            , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
-            }
+--         -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
+--         , width (fill |> maximum 200)
+--         ]
+--         --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
+--         [ Element.Input.button [ Element.alignRight, Font.size fontsize ]
+--             { onPress = Just (RemoveKeyword name)
+--             , label = text "x"
+--             }
+--         , Element.Input.button [ width fill ]
+--             { onPress = Just (RemoveKeyword name)
+--             , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
+--             }
 
-        --Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text "x")
-        ]
+--         --Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text "x")
+--         ]
 
 
 {-| on Enter
@@ -1520,21 +1497,21 @@ pageOfList (Page i) lst =
         |> List.take pageSize
 
 
-notInSet : Model -> RC.Keyword -> Bool
-notInSet model kw =
-    let
-        name : String
-        name =
-            RC.kwName kw
+-- notInSet : Model -> RC.Keyword -> Bool
+-- notInSet model kw =
+--     let
+--         name : String
+--         name =
+--             RC.kwName kw
 
-        set =
-            Set.toList model.keywords
-    in
-    if List.member name set then
-        False
+--         set =
+--             Set.toList model.keywords
+--     in
+--     if List.member name set then
+--         False
 
-    else
-        True
+--     else
+--         True
 
 
 lazyImageWithErrorHandling : Int -> ScreenDimensions -> Research -> Html Msg
@@ -1711,8 +1688,92 @@ searchForm title author keyword1 keyword2 portal =
         (nothingIsJustEmpty portal)
 
 
+quote : String -> String
 quote str =
     "\"" ++ str ++ "\""
+
+
+keywordField : List KeywordString -> { a | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Validation String (Maybe String) FieldView.Input { field : FieldView.Input } -> Html msg
+keywordField keywords formState label field =
+    let
+        lengthIfParsed : Maybe (Maybe Int)
+        lengthIfParsed =
+            field
+                |> Validation.value
+                |> Maybe.map (Maybe.map String.length)
+
+        isLongEnough : String -> Bool
+        isLongEnough str =
+            case lengthIfParsed of
+                Nothing ->
+                    True
+
+                Just (Just n) ->
+                    (str |> String.length) - 1 >= n
+
+                _ ->
+                    False
+
+        kwStrings : List String
+        kwStrings =
+            keywords |> List.map KeywordString.toString
+
+        optimizedSuggestions : List String
+        optimizedSuggestions =
+            kwStrings
+                |> List.filter isLongEnough
+                |> List.sortBy String.length
+    in
+    Html.div []
+        [ Html.label labelStyle
+            [ Html.text (label ++ " ")
+            , field |> FieldView.input (Attr.list "keyword-field" :: fieldStyle)
+            , Html.datalist [ Attr.id "keyword-field" ]
+                (List.map
+                    (\kw ->
+                        Html.option [ Attr.value kw ] []
+                    )
+                    optimizedSuggestions
+                )
+            ]
+        , (if formState.submitAttempted then
+            formState.errors
+                |> Form.errorsForField field
+                |> List.map
+                    (\error ->
+                        Html.li [] [ Html.text error ]
+                    )
+
+           else
+            []
+          )
+            |> Html.ul [ Attr.style "color" "red" ]
+        ]
+
+
+
+--searchGUI : List { a | name : String } -> List KeywordString -> Form.Form String { combine : Validation.Validation String SearchForm Never constraints3, view : { b | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg) } parsedCombined SearchForm
+
+
+selectField formState label field =
+    Html.div [ Attr.style "width" "100%" ]
+        [ Html.label labelStyle
+            [ Html.text (label ++ " ")
+            , FieldView.select dropdownStyle (\p -> ( [], p )) field
+            ]
+        , (if formState.submitAttempted then
+            formState.errors
+                |> Form.errorsForField field
+                |> List.map
+                    (\error ->
+                        Html.li [] [ Html.text error ]
+                    )
+
+           else
+            []
+          )
+            |> Html.ul [ Attr.style "color" "red" ]
+        ]
 
 
 searchGUI portals keywords =
@@ -1765,9 +1826,7 @@ searchGUI portals keywords =
                                 , fieldView info "author" author
                                 , keywordField keywords info "keywords" keyword1
                                 , keywordField keywords info "" keyword2
-                                , FieldView.select dropdownStyle
-                                    (\entry -> ( [], entry ))
-                                    portal
+                                , selectField info "portal" portal
                                 ]
                             ]
                         , Html.button submitButtonStyle
@@ -1820,13 +1879,10 @@ fieldStyle =
 
 dropdownStyle : List (Html.Attribute msg)
 dropdownStyle =
-    [ Attr.style "padding" "5px"
-    , Attr.style "margin" "15px 5px"
+    [ Attr.style "margin" "6px 0px"
     , Attr.style "border" "1px solid gray"
     , Attr.style "display" "block"
     , Attr.style "width" "100%"
-    , Attr.style "position" "relative"
-    , Attr.style "top" "9px"
     , Attr.style "height" "28px"
     ]
 
@@ -1880,64 +1936,6 @@ dropdownView formState label field =
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
             , field |> FieldView.input dropdownStyle
-            ]
-        , (if formState.submitAttempted then
-            formState.errors
-                |> Form.errorsForField field
-                |> List.map
-                    (\error ->
-                        Html.li [] [ Html.text error ]
-                    )
-
-           else
-            []
-          )
-            |> Html.ul [ Attr.style "color" "red" ]
-        ]
-
-
-keywordField : List KeywordString -> { a | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Validation String (Maybe String) FieldView.Input { field : FieldView.Input } -> Html msg
-keywordField keywords formState label field =
-    let
-        lengthIfParsed : Maybe (Maybe Int)
-        lengthIfParsed =
-            field
-                |> Validation.value
-                |> Maybe.map (Maybe.map String.length)
-
-        isLongEnough : String -> Bool
-        isLongEnough str =
-            case lengthIfParsed of
-                Nothing ->
-                    True
-
-                Just (Just n) ->
-                    (str |> String.length) - 1 >= n
-
-                _ ->
-                    False
-
-        kwStrings : List String
-        kwStrings =
-            keywords |> List.map KeywordString.toString
-
-        optimizedSuggestions : List String
-        optimizedSuggestions =
-            kwStrings
-                |> List.filter isLongEnough
-                |> List.sortBy String.length
-    in
-    Html.div []
-        [ Html.label labelStyle
-            [ Html.text (label ++ " ")
-            , field |> FieldView.input ([ Attr.list "keyword-field" ] ++ fieldStyle)
-            , Html.datalist [ Attr.id "keyword-field" ]
-                (List.map
-                    (\kw ->
-                        Html.option [ Attr.value kw ] []
-                    )
-                    optimizedSuggestions
-                )
             ]
         , (if formState.submitAttempted then
             formState.errors

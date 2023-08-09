@@ -34,7 +34,7 @@ import Url exposing (Url)
 
 
 
--- All RC data is managed by the worker. This is done for speed in the GUI, since searches may be quite heavy.
+-- All RC data is managed by the Worker. This is done for speed in the GUI, since searches may be quite heavy.
 -- To search, you send a query. The results are returned in receiveResults
 
 
@@ -802,7 +802,11 @@ viewResearchMicro screen device research =
                     ( 200, 200 )
 
                 Tablet ->
-                    ( screen.w - 30, (screen.w - 30) * 3 // 4 )
+                    let
+                        half =
+                            (screen.w - 30) // 4
+                    in
+                    ( half, half )
 
         img : String -> Element msg
         img src =
@@ -863,8 +867,18 @@ viewResearchMicro screen device research =
                     ]
                 ]
 
+        Tablet ->
+            Element.row [ width fill ]
+                [ Element.el [ width (fillPortion 1) ] (img imageUrl)
+                , column [ width (fillPortion 3), Element.alignTop ] <|
+                    [ title
+                    , author
+                    , date
+                    ]
+                ]
+
         -- both phone and tablet
-        _ ->
+        Phone ->
             column
                 [ width fill
                 , Element.clip
@@ -949,6 +963,13 @@ type LinkStyle
     | BigLink
 
 
+{-|
+
+    -----------
+    | Button  |
+    -----------
+
+-}
 linkStyle : Bool -> LinkStyle -> List (Element.Attribute msg)
 linkStyle active style =
     let
@@ -979,6 +1000,7 @@ linkStyle active style =
             , Font.color black
             , Element.mouseOver [ Font.color (Element.rgb 0.5 0.5 0.5) ]
             , Font.size fontSize
+            -- , Element.htmlAttribute <| Attr.class "link"
             ]
     in
     if active then
@@ -1271,7 +1293,7 @@ viewKeywordAsButton fontsize kw =
         , width fill
         ]
         [ Element.link [ width fill ] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
-        , Element.paragraph [ width fill, Element.alignRight, Font.size fontsize ] [Element.text (count |> String.fromInt)]
+        , Element.el [ width fill, Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
         ]
 
 
@@ -1511,7 +1533,7 @@ viewKeywords model keywordview =
                     { onChange = ChangedQuery
                     , text = model.query
                     , placeholder = Just (Element.Input.placeholder [ Font.size 16 ] (Element.text "search for keyword"))
-                    , label = Element.Input.labelAbove [ Font.size 16 ] (Element.text "keyword")
+                    , label = Element.Input.labelAbove [ Font.size 16, paddingXY 0 5 ] (Element.text "filter")
                     }
                 , Element.link (Element.moveDown 12 :: linkStyle shouldEnable BigLink)
                     { url = url
@@ -1996,7 +2018,7 @@ searchGUI device portals keywords =
                     [ div [ Attr.style "width" "100%" ]
                         [ Html.h1 headerStyle [ Html.text "search:" ]
                         , Html.label []
-                            [(case device of
+                            [ case device of
                                 Tablet ->
                                     div []
                                         [ rowdiv
@@ -2018,7 +2040,7 @@ searchGUI device portals keywords =
                                         , keywordField keywords info "" keyword2
                                         , selectField info "portal" portal
                                         ]
-                            )]
+                            ]
                         , Html.button submitButtonStyle
                             [ if info.submitting then
                                 Html.text "searching..."
@@ -2069,7 +2091,7 @@ fieldStyle =
 
 dropdownStyle : List (Html.Attribute msg)
 dropdownStyle =
-    [ Attr.style "margin" "6px 0px"
+    [ Attr.style "margin" "5px 0px"
     , Attr.style "border" "1px solid gray"
     , Attr.style "display" "block"
     , Attr.style "width" "100%"

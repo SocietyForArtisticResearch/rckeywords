@@ -6,7 +6,7 @@ import Browser.Dom as Dom
 import Browser.Events as Events
 import Browser.Navigation as Nav
 import Dict
-import Element exposing (Element, el, fill, fillPortion, height, maximum, padding, paddingXY, px, rgb255, shrink, spacing, spacingXY, text, width)
+import Element exposing (Element, column, el, fill, fillPortion, height, padding, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
 import Element.Background
 import Element.Border
 import Element.Font as Font
@@ -814,7 +814,7 @@ viewResearchMicro research =
                 , Element.clip
                 ]
                 [ Maybe.map img research.thumbnail |> Maybe.withDefault Element.none
-                , Element.column [ width (fillPortion 6), Element.alignTop ] <|
+                , column [ width (fillPortion 6), Element.alignTop ] <|
                     [ Element.link [ width fill, Element.alignLeft ] <|
                         { label =
                             Element.paragraph
@@ -845,7 +845,7 @@ viewResearchMicro research =
                 , Element.clip
                 ]
                 [ Maybe.map img (Just <| urlFromId research.id) |> Maybe.withDefault Element.none
-                , Element.column [ width (fillPortion 6), Element.alignTop ] <|
+                , column [ width (fillPortion 6), Element.alignTop ] <|
                     [ Element.link [ width fill, Element.alignLeft ] <|
                         { label =
                             Element.paragraph
@@ -1025,7 +1025,7 @@ view model =
             , Font.family [ Font.typeface "Helvetica Neue", Font.sansSerif ]
             , Element.paddingEach { top = 40, left = 15, bottom = 25, right = 15 }
             ]
-            (Element.column [ width fill ]
+            (column [ width fill ]
                 [ viewNav model.view, body ]
             )
         ]
@@ -1120,8 +1120,8 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
         sorted =
             lst |> sortResearch sv.sorting |> List.drop ((p - 1) * pageSize) |> List.take pageSize
 
-        render : Element Msg
-        render =
+        expositions : Element Msg
+        expositions =
             case sv.layout of
                 ListLayout ->
                     let
@@ -1149,22 +1149,47 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
         numberOfPages : Int
         numberOfPages =
             lst |> List.length |> (\n -> n // pageSize)
-    in
-    Element.column [ anchor "top", spacingXY 0 5, width fill ] <|
-        [ Element.el [ paddingXY 0 15, width fill ]
-            (viewSearch device (Just sv.form) allPortals allKeywords submitting searchFormState)
-        , Element.row
-            [ width fill, spacingXY 15 0 ]
-            [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
-            , case sv.layout of
+
+        scaleButton : Element Msg
+        scaleButton =
+            case sv.layout of
                 ListLayout ->
                     Element.none
 
                 ScreenLayout scale ->
-                    Element.el [ Element.alignRight ] (viewScaleSwitch scale (ScreenLayout >> urlFromLayout sv))
-            , Element.el [ Element.alignRight ] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
-            ]
-        , render
+                    Element.el
+                        [ case device of
+                            Phone ->
+                                Element.alignLeft
+
+                            Desktop ->
+                                Element.alignRight
+                        ]
+                        (viewScaleSwitch scale (ScreenLayout >> urlFromLayout sv))
+
+        buttons : Element Msg
+        buttons =
+            case device of
+                Phone ->
+                    column [ width fill, spacingXY 0 5 ]
+                        [ Element.el [] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
+                        , scaleButton
+                        , Element.el [] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
+                        ]
+
+                Desktop ->
+                    row
+                        [ width fill, spacingXY 15 0 ]
+                        [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
+                        , scaleButton
+                        , Element.el [ Element.alignRight ] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
+                        ]
+    in
+    column [ anchor "top", spacingXY 0 5, width fill ] <|
+        [ Element.el [ paddingXY 0 15, width fill ]
+            (viewSearch device (Just sv.form) allPortals allKeywords submitting searchFormState)
+        , buttons
+        , expositions
         , pageNav numberOfPages (SearchView sv) dimensions sorted (Page p)
         ]
 
@@ -1507,7 +1532,7 @@ viewKeywords model keywordview =
                             currentPage =
                                 pageOfList page results
                         in
-                        Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
+                        column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
                             [ Element.el [ width shrink, Element.paddingXY 0 5 ] (toggleSorting sorting)
                             , viewCount results
                             , currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns numCollumns [ width fill, spacingXY 25 25 ]
@@ -1572,28 +1597,25 @@ pageOfList (Page i) lst =
 lazyImageWithErrorHandling : Int -> ScreenDimensions -> Research -> Html Msg
 lazyImageWithErrorHandling groupSize dimensions research =
     let
-        device = 
+        device =
             classifyDevice dimensions
- 
-            
+
         urlFromId : Int -> String
         urlFromId i =
             String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
 
         width : String
         width =
-            (((toFloat dimensions.w * 0.9 |> floor ) // groupSize) |> String.fromInt) ++ "px"
+            (((toFloat dimensions.w * 0.9 |> floor) // groupSize) |> String.fromInt) ++ "px"
 
         height : String
         height =
             case device of
-                Desktop -> 
+                Desktop ->
                     (dimensions.h // (groupSize - 1) |> String.fromInt) ++ "px"
 
-                Phone ->    
+                Phone ->
                     width
-
-        
     in
     Html.a [ Attr.target "_blank", Attr.href research.defaultPage, Attr.title (RC.getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
         [ Html.node "lazy-image"

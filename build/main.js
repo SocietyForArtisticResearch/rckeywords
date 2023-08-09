@@ -18301,10 +18301,94 @@ var $author$project$Main$viewResearchResults = F8(
 							st,
 							{layout: newlayout})));
 			});
+		var scaleButton = function () {
+			var _v4 = sv.layout;
+			if (_v4.$ === 'ListLayout') {
+				return $mdgriffith$elm_ui$Element$none;
+			} else {
+				var scale = _v4.a;
+				return A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							function () {
+							if (device.$ === 'Phone') {
+								return $mdgriffith$elm_ui$Element$alignLeft;
+							} else {
+								return $mdgriffith$elm_ui$Element$alignRight;
+							}
+						}()
+						]),
+					A2(
+						$author$project$Main$viewScaleSwitch,
+						scale,
+						A2(
+							$elm$core$Basics$composeR,
+							$author$project$Main$ScreenLayout,
+							urlFromLayout(sv))));
+			}
+		}();
 		var numberOfPages = function (n) {
 			return (n / $author$project$Main$pageSize) | 0;
 		}(
 			$elm$core$List$length(lst));
+		var buttons = function () {
+			if (device.$ === 'Phone') {
+				return A2(
+					$mdgriffith$elm_ui$Element$column,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							A2($mdgriffith$elm_ui$Element$spacingXY, 0, 5)
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_Nil,
+							A2(
+								$author$project$Main$viewLayoutSwitch,
+								sv.layout,
+								urlFromLayout(sv))),
+							scaleButton,
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_Nil,
+							A2(
+								$author$project$Main$toggleTitleSorting,
+								sv.sorting,
+								urlFromSorting(sv)))
+						]));
+			} else {
+				return A2(
+					$mdgriffith$elm_ui$Element$row,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							A2($mdgriffith$elm_ui$Element$spacingXY, 15, 0)
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[$mdgriffith$elm_ui$Element$alignLeft]),
+							A2(
+								$author$project$Main$viewLayoutSwitch,
+								sv.layout,
+								urlFromLayout(sv))),
+							scaleButton,
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[$mdgriffith$elm_ui$Element$alignRight]),
+							A2(
+								$author$project$Main$toggleTitleSorting,
+								sv.sorting,
+								urlFromSorting(sv)))
+						]));
+			}
+		}();
 		var _v0 = sv.page;
 		var p = _v0.a;
 		var sorted = A2(
@@ -18314,9 +18398,9 @@ var $author$project$Main$viewResearchResults = F8(
 				$elm$core$List$drop,
 				(p - 1) * $author$project$Main$pageSize,
 				A2($author$project$Main$sortResearch, sv.sorting, lst)));
-		var render = function () {
-			var _v2 = sv.layout;
-			if (_v2.$ === 'ListLayout') {
+		var expositions = function () {
+			var _v1 = sv.layout;
+			if (_v1.$ === 'ListLayout') {
 				var numCollumns = function () {
 					if (device.$ === 'Phone') {
 						return 1;
@@ -18330,7 +18414,7 @@ var $author$project$Main$viewResearchResults = F8(
 					_List_Nil,
 					A2($elm$core$List$map, $author$project$Main$viewResearchMicro, sorted));
 			} else {
-				var scale = _v2.a;
+				var scale = _v1.a;
 				return A5($author$project$Main$viewScreenshots, device, dimensions, sv, scale, sorted);
 			}
 		}();
@@ -18359,52 +18443,8 @@ var $author$project$Main$viewResearchResults = F8(
 						allKeywords,
 						submitting,
 						searchFormState)),
-					A2(
-					$mdgriffith$elm_ui$Element$row,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-							A2($mdgriffith$elm_ui$Element$spacingXY, 15, 0)
-						]),
-					_List_fromArray(
-						[
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[$mdgriffith$elm_ui$Element$alignLeft]),
-							A2(
-								$author$project$Main$viewLayoutSwitch,
-								sv.layout,
-								urlFromLayout(sv))),
-							function () {
-							var _v1 = sv.layout;
-							if (_v1.$ === 'ListLayout') {
-								return $mdgriffith$elm_ui$Element$none;
-							} else {
-								var scale = _v1.a;
-								return A2(
-									$mdgriffith$elm_ui$Element$el,
-									_List_fromArray(
-										[$mdgriffith$elm_ui$Element$alignRight]),
-									A2(
-										$author$project$Main$viewScaleSwitch,
-										scale,
-										A2(
-											$elm$core$Basics$composeR,
-											$author$project$Main$ScreenLayout,
-											urlFromLayout(sv))));
-							}
-						}(),
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[$mdgriffith$elm_ui$Element$alignRight]),
-							A2(
-								$author$project$Main$toggleTitleSorting,
-								sv.sorting,
-								urlFromSorting(sv)))
-						])),
-					render,
+					buttons,
+					expositions,
 					A5(
 					$author$project$Main$pageNav,
 					numberOfPages,

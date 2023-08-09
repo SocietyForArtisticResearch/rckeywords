@@ -16276,185 +16276,138 @@ var $author$project$Main$microLinkStyle = _List_fromArray(
 		$mdgriffith$elm_ui$Element$htmlAttribute(
 		A2($elm$html$Html$Attributes$attribute, 'style', 'text-transform: unset'))
 	]);
-var $author$project$Main$viewResearchMicro = function (research) {
-	var _v0 = _Utils_Tuple2(200, 200);
-	var w = _v0.a;
-	var h = _v0.b;
-	var img = function (src) {
-		return A2(
+var $author$project$Main$viewResearchMicro = F3(
+	function (screen, device, research) {
+		var imageUrl = function () {
+			var _v3 = research.thumbnail;
+			if (_v3.$ === 'Just') {
+				var thumb = _v3.a;
+				return thumb;
+			} else {
+				return function (fileName) {
+					return '/screenshots/' + (fileName + '.jpeg');
+				}(
+					$elm$core$String$fromInt(research.id));
+			}
+		}();
+		var date = A2(
+			$mdgriffith$elm_ui$Element$el,
+			$author$project$Main$lightLink,
+			$mdgriffith$elm_ui$Element$text(research.created));
+		var author = A2(
 			$mdgriffith$elm_ui$Element$link,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$width(
-					$mdgriffith$elm_ui$Element$fillPortion(1))
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
 				]),
 			{
 				label: A2(
-					$mdgriffith$elm_ui$Element$el,
+					$mdgriffith$elm_ui$Element$paragraph,
+					$author$project$Main$microLinkStyle,
 					_List_fromArray(
 						[
-							$mdgriffith$elm_ui$Element$width(
-							$mdgriffith$elm_ui$Element$px(w)),
-							$mdgriffith$elm_ui$Element$height(
-							$mdgriffith$elm_ui$Element$px(h)),
-							A2($mdgriffith$elm_ui$Element$paddingXY, 0, 5)
-						]),
+							$mdgriffith$elm_ui$Element$text(
+							$author$project$Research$authorAsString(research.author))
+						])),
+				url: $author$project$Research$authorUrl(research.author)
+			});
+		var _v0 = function () {
+			if (device.$ === 'Phone') {
+				return _Utils_Tuple2(screen.w - 30, 200);
+			} else {
+				return _Utils_Tuple2(200, 200);
+			}
+		}();
+		var w = _v0.a;
+		var h = _v0.b;
+		var img = function (src) {
+			return A2(
+				$mdgriffith$elm_ui$Element$link,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width(
+						$mdgriffith$elm_ui$Element$fillPortion(1))
+					]),
+				{
+					label: A2(
+						$mdgriffith$elm_ui$Element$el,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width(
+								$mdgriffith$elm_ui$Element$px(w)),
+								$mdgriffith$elm_ui$Element$height(
+								$mdgriffith$elm_ui$Element$px(h)),
+								A2($mdgriffith$elm_ui$Element$paddingXY, 0, 5)
+							]),
+						A2(
+							$author$project$Main$image,
+							_Utils_Tuple2(w, h),
+							src)),
+					url: research.defaultPage
+				});
+		};
+		var title = A2(
+			$mdgriffith$elm_ui$Element$link,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+					$mdgriffith$elm_ui$Element$alignLeft
+				]),
+			{
+				label: A2(
+					$mdgriffith$elm_ui$Element$paragraph,
 					A2(
-						$author$project$Main$image,
-						_Utils_Tuple2(w, h),
-						src)),
+						$elm$core$List$cons,
+						$mdgriffith$elm_ui$Element$width(
+							$mdgriffith$elm_ui$Element$px(w)),
+						$author$project$Main$microLinkStyle),
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$text(research.title)
+						])),
 				url: research.defaultPage
 			});
-	};
-	var _v1 = research.thumbnail;
-	if (_v1.$ === 'Just') {
-		return A2(
-			$mdgriffith$elm_ui$Element$row,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$height(
-					$mdgriffith$elm_ui$Element$px(200)),
-					$mdgriffith$elm_ui$Element$clip
-				]),
-			_List_fromArray(
-				[
-					A2(
-					$elm$core$Maybe$withDefault,
-					$mdgriffith$elm_ui$Element$none,
-					A2($elm$core$Maybe$map, img, research.thumbnail)),
-					A2(
-					$mdgriffith$elm_ui$Element$column,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width(
-							$mdgriffith$elm_ui$Element$fillPortion(6)),
-							$mdgriffith$elm_ui$Element$alignTop
-						]),
-					_List_fromArray(
-						[
-							A2(
-							$mdgriffith$elm_ui$Element$link,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-									$mdgriffith$elm_ui$Element$alignLeft
-								]),
-							{
-								label: A2(
-									$mdgriffith$elm_ui$Element$paragraph,
-									A2(
-										$elm$core$List$cons,
-										$mdgriffith$elm_ui$Element$width(
-											$mdgriffith$elm_ui$Element$px(w)),
-										$author$project$Main$microLinkStyle),
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$text(research.title)
-										])),
-								url: research.defaultPage
-							}),
-							A2(
-							$mdgriffith$elm_ui$Element$link,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
-								]),
-							{
-								label: A2(
-									$mdgriffith$elm_ui$Element$paragraph,
-									$author$project$Main$microLinkStyle,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$text(
-											$author$project$Research$authorAsString(research.author))
-										])),
-								url: $author$project$Research$authorUrl(research.author)
-							}),
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							$author$project$Main$lightLink,
-							$mdgriffith$elm_ui$Element$text(research.created))
-						]))
-				]));
-	} else {
-		var urlFromId = function (i) {
-			return function (fileName) {
-				return '/screenshots/' + (fileName + '.jpeg');
-			}(
-				$elm$core$String$fromInt(i));
-		};
-		return A2(
-			$mdgriffith$elm_ui$Element$row,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$height(
-					$mdgriffith$elm_ui$Element$px(200)),
-					$mdgriffith$elm_ui$Element$clip
-				]),
-			_List_fromArray(
-				[
-					A2(
-					$elm$core$Maybe$withDefault,
-					$mdgriffith$elm_ui$Element$none,
-					A2(
-						$elm$core$Maybe$map,
-						img,
-						$elm$core$Maybe$Just(
-							urlFromId(research.id)))),
-					A2(
-					$mdgriffith$elm_ui$Element$column,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width(
-							$mdgriffith$elm_ui$Element$fillPortion(6)),
-							$mdgriffith$elm_ui$Element$alignTop
-						]),
-					_List_fromArray(
-						[
-							A2(
-							$mdgriffith$elm_ui$Element$link,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-									$mdgriffith$elm_ui$Element$alignLeft
-								]),
-							{
-								label: A2(
-									$mdgriffith$elm_ui$Element$paragraph,
-									$author$project$Main$microLinkStyle,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$text(research.title)
-										])),
-								url: research.defaultPage
-							}),
-							A2(
-							$mdgriffith$elm_ui$Element$link,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
-								]),
-							{
-								label: A2(
-									$mdgriffith$elm_ui$Element$paragraph,
-									$author$project$Main$microLinkStyle,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$text(
-											$author$project$Research$authorAsString(research.author))
-										])),
-								url: $author$project$Research$authorUrl(research.author)
-							}),
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							$author$project$Main$lightLink,
-							$mdgriffith$elm_ui$Element$text(research.created))
-						]))
-				]));
-	}
-};
+		if (device.$ === 'Desktop') {
+			return A2(
+				$mdgriffith$elm_ui$Element$row,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$height(
+						$mdgriffith$elm_ui$Element$px(200)),
+						$mdgriffith$elm_ui$Element$clip
+					]),
+				_List_fromArray(
+					[
+						img(imageUrl),
+						A2(
+						$mdgriffith$elm_ui$Element$column,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width(
+								$mdgriffith$elm_ui$Element$fillPortion(6)),
+								$mdgriffith$elm_ui$Element$alignTop
+							]),
+						_List_fromArray(
+							[title, author, date]))
+					]));
+		} else {
+			return A2(
+				$mdgriffith$elm_ui$Element$column,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$clip
+					]),
+				_List_fromArray(
+					[
+						img(imageUrl),
+						title,
+						author,
+						date
+					]));
+		}
+	});
 var $author$project$Main$viewScaleSwitch = F2(
 	function (scale, urlWithScale) {
 		return A2(
@@ -18412,7 +18365,10 @@ var $author$project$Main$viewResearchResults = F8(
 					$author$project$Main$makeColumns,
 					numCollumns,
 					_List_Nil,
-					A2($elm$core$List$map, $author$project$Main$viewResearchMicro, sorted));
+					A2(
+						$elm$core$List$map,
+						A2($author$project$Main$viewResearchMicro, dimensions, device),
+						sorted));
 			} else {
 				var scale = _v1.a;
 				return A5($author$project$Main$viewScreenshots, device, dimensions, sv, scale, sorted);
@@ -18455,6 +18411,15 @@ var $author$project$Main$viewResearchResults = F8(
 				]));
 	});
 var $author$project$Main$view = function (model) {
+	var layoutWidth = function () {
+		var _v2 = model.device;
+		if (_v2.$ === 'Phone') {
+			return $mdgriffith$elm_ui$Element$fill;
+		} else {
+			return $mdgriffith$elm_ui$Element$px(
+				$elm$core$Basics$floor(model.screenDimensions.w * 0.9));
+		}
+	}();
 	var body = function () {
 		var _v0 = model.view;
 		if (_v0.$ === 'KeywordsView') {
@@ -18483,9 +18448,7 @@ var $author$project$Main$view = function (model) {
 				$mdgriffith$elm_ui$Element$layout,
 				_List_fromArray(
 					[
-						$mdgriffith$elm_ui$Element$width(
-						$mdgriffith$elm_ui$Element$px(
-							$elm$core$Basics$floor(model.screenDimensions.w * 0.9))),
+						$mdgriffith$elm_ui$Element$width(layoutWidth),
 						$mdgriffith$elm_ui$Element$Font$family(
 						_List_fromArray(
 							[

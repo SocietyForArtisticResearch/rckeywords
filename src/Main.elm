@@ -786,11 +786,16 @@ lightLink =
     ]
 
 
-viewResearchMicro : Research -> Element Msg
-viewResearchMicro research =
+viewResearchMicro : ScreenDimensions -> Device -> Research -> Element Msg
+viewResearchMicro screen device research =
     let
         ( w, h ) =
-            ( 200, 200 )
+            case device of
+                Phone ->
+                    ( screen.w - 30, 200 )
+
+                Desktop ->
+                    ( 200, 200 )
 
         img : String -> Element msg
         img src =
@@ -805,63 +810,61 @@ viewResearchMicro research =
                     <|
                         image ( w, h ) src
                 }
+
+        imageUrl : String
+        imageUrl =
+            case research.thumbnail of
+                Just thumb ->
+                    thumb
+
+                Nothing ->
+                    research.id |> String.fromInt |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
+
+        title =
+            Element.link [ width fill, Element.alignLeft ] <|
+                { label =
+                    Element.paragraph
+                        (width (px w) :: microLinkStyle)
+                        [ Element.text research.title ]
+                , url = research.defaultPage
+                }
+
+        author =
+            Element.link [ width fill ] <|
+                { label =
+                    Element.paragraph
+                        microLinkStyle
+                        [ Element.text <| RC.authorAsString research.author ]
+                , url = RC.authorUrl research.author
+                }
+
+        date =
+            Element.el lightLink (Element.text research.created)
     in
-    case research.thumbnail of
-        Just _ ->
+    case device of
+        Desktop ->
             Element.row
                 [ width fill
                 , height (px 200)
                 , Element.clip
                 ]
-                [ Maybe.map img research.thumbnail |> Maybe.withDefault Element.none
+                [ img imageUrl
                 , column [ width (fillPortion 6), Element.alignTop ] <|
-                    [ Element.link [ width fill, Element.alignLeft ] <|
-                        { label =
-                            Element.paragraph
-                                (width (px w) :: microLinkStyle)
-                                [ Element.text research.title ]
-                        , url = research.defaultPage
-                        }
-                    , Element.link [ width fill ] <|
-                        { label =
-                            Element.paragraph
-                                microLinkStyle
-                                [ Element.text <| RC.authorAsString research.author ]
-                        , url = RC.authorUrl research.author
-                        }
-                    , Element.el lightLink (Element.text research.created)
+                    [ title
+                    , author
+                    , date
                     ]
                 ]
 
-        Nothing ->
-            let
-                urlFromId : Int -> String
-                urlFromId i =
-                    String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
-            in
-            Element.row
+        Phone ->
+            column
                 [ width fill
-                , height (px 200)
                 , Element.clip
                 ]
-                [ Maybe.map img (Just <| urlFromId research.id) |> Maybe.withDefault Element.none
-                , column [ width (fillPortion 6), Element.alignTop ] <|
-                    [ Element.link [ width fill, Element.alignLeft ] <|
-                        { label =
-                            Element.paragraph
-                                microLinkStyle
-                                [ Element.text research.title ]
-                        , url = research.defaultPage
-                        }
-                    , Element.link [ width fill ] <|
-                        { label =
-                            Element.paragraph
-                                microLinkStyle
-                                [ Element.text <| RC.authorAsString research.author ]
-                        , url = RC.authorUrl research.author
-                        }
-                    , Element.el lightLink (Element.text research.created)
-                    ]
+                [ img imageUrl
+                , title
+                , author
+                , date
                 ]
 
 
@@ -1017,11 +1020,19 @@ view model =
 
                         Idle ->
                             Element.none
+
+        layoutWidth =
+            case model.device of
+                Phone ->
+                    fill
+
+                Desktop ->
+                    px (toFloat model.screenDimensions.w * 0.9 |> floor)
     in
     { title = "Research Catalogue - Screenshot Page"
     , body =
         [ Element.layout
-            [ width (Element.px (toFloat model.screenDimensions.w * 0.9 |> floor))
+            [ width layoutWidth
             , Font.family [ Font.typeface "Helvetica Neue", Font.sansSerif ]
             , Element.paddingEach { top = 40, left = 15, bottom = 25, right = 15 }
             ]
@@ -1133,7 +1144,7 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
                                 Desktop ->
                                     2
                     in
-                    makeColumns numCollumns [] (sorted |> List.map viewResearchMicro)
+                    makeColumns numCollumns [] (sorted |> List.map (viewResearchMicro dimensions device))
 
                 ScreenLayout scale ->
                     viewScreenshots device dimensions sv scale sorted

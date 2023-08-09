@@ -5218,6 +5218,13 @@ var $author$project$Main$ScreenLayout = function (a) {
 var $author$project$Main$SearchView = function (a) {
 	return {$: 'SearchView', a: a};
 };
+var $author$project$Main$Desktop = {$: 'Desktop'};
+var $author$project$Main$Phone = {$: 'Phone'};
+var $author$project$Main$classifyDevice = function (_v0) {
+	var w = _v0.w;
+	var h = _v0.h;
+	return (w <= 393) ? $author$project$Main$Phone : $author$project$Main$Desktop;
+};
 var $author$project$Main$emptyForm = {author: '', keywords: _List_Nil, portal: '', title: ''};
 var $author$project$Queries$GetAllKeywords = {$: 'GetAllKeywords'};
 var $author$project$Queries$GetAllPortals = {$: 'GetAllPortals'};
@@ -6055,6 +6062,8 @@ var $author$project$Main$init = F3(
 			{
 				allKeywords: _List_Nil,
 				allPortals: _List_Nil,
+				device: $author$project$Main$classifyDevice(
+					{h: height, w: width}),
 				key: key,
 				numberOfResults: 8,
 				query: '',
@@ -6071,10 +6080,323 @@ var $elm$json$Json$Decode$int = _Json_decodeInt;
 var $author$project$Main$ReceiveResults = function (a) {
 	return {$: 'ReceiveResults', a: a};
 };
+var $author$project$Main$WindowResize = F2(
+	function (a, b) {
+		return {$: 'WindowResize', a: a, b: b};
+	});
+var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $elm$browser$Browser$Events$Window = {$: 'Window'};
+var $elm$browser$Browser$Events$MySub = F3(
+	function (a, b, c) {
+		return {$: 'MySub', a: a, b: b, c: c};
+	});
+var $elm$browser$Browser$Events$State = F2(
+	function (subs, pids) {
+		return {pids: pids, subs: subs};
+	});
+var $elm$browser$Browser$Events$init = $elm$core$Task$succeed(
+	A2($elm$browser$Browser$Events$State, _List_Nil, $elm$core$Dict$empty));
+var $elm$browser$Browser$Events$nodeToKey = function (node) {
+	if (node.$ === 'Document') {
+		return 'd_';
+	} else {
+		return 'w_';
+	}
+};
+var $elm$browser$Browser$Events$addKey = function (sub) {
+	var node = sub.a;
+	var name = sub.b;
+	return _Utils_Tuple2(
+		_Utils_ap(
+			$elm$browser$Browser$Events$nodeToKey(node),
+			name),
+		sub);
+};
+var $elm$core$Dict$fromList = function (assocs) {
+	return A3(
+		$elm$core$List$foldl,
+		F2(
+			function (_v0, dict) {
+				var key = _v0.a;
+				var value = _v0.b;
+				return A3($elm$core$Dict$insert, key, value, dict);
+			}),
+		$elm$core$Dict$empty,
+		assocs);
+};
+var $elm$core$Process$kill = _Scheduler_kill;
+var $elm$core$Dict$foldl = F3(
+	function (func, acc, dict) {
+		foldl:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return acc;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$func = func,
+					$temp$acc = A3(
+					func,
+					key,
+					value,
+					A3($elm$core$Dict$foldl, func, acc, left)),
+					$temp$dict = right;
+				func = $temp$func;
+				acc = $temp$acc;
+				dict = $temp$dict;
+				continue foldl;
+			}
+		}
+	});
+var $elm$core$Dict$merge = F6(
+	function (leftStep, bothStep, rightStep, leftDict, rightDict, initialResult) {
+		var stepState = F3(
+			function (rKey, rValue, _v0) {
+				stepState:
+				while (true) {
+					var list = _v0.a;
+					var result = _v0.b;
+					if (!list.b) {
+						return _Utils_Tuple2(
+							list,
+							A3(rightStep, rKey, rValue, result));
+					} else {
+						var _v2 = list.a;
+						var lKey = _v2.a;
+						var lValue = _v2.b;
+						var rest = list.b;
+						if (_Utils_cmp(lKey, rKey) < 0) {
+							var $temp$rKey = rKey,
+								$temp$rValue = rValue,
+								$temp$_v0 = _Utils_Tuple2(
+								rest,
+								A3(leftStep, lKey, lValue, result));
+							rKey = $temp$rKey;
+							rValue = $temp$rValue;
+							_v0 = $temp$_v0;
+							continue stepState;
+						} else {
+							if (_Utils_cmp(lKey, rKey) > 0) {
+								return _Utils_Tuple2(
+									list,
+									A3(rightStep, rKey, rValue, result));
+							} else {
+								return _Utils_Tuple2(
+									rest,
+									A4(bothStep, lKey, lValue, rValue, result));
+							}
+						}
+					}
+				}
+			});
+		var _v3 = A3(
+			$elm$core$Dict$foldl,
+			stepState,
+			_Utils_Tuple2(
+				$elm$core$Dict$toList(leftDict),
+				initialResult),
+			rightDict);
+		var leftovers = _v3.a;
+		var intermediateResult = _v3.b;
+		return A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v4, result) {
+					var k = _v4.a;
+					var v = _v4.b;
+					return A3(leftStep, k, v, result);
+				}),
+			intermediateResult,
+			leftovers);
+	});
+var $elm$browser$Browser$Events$Event = F2(
+	function (key, event) {
+		return {event: event, key: key};
+	});
+var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
+var $elm$browser$Browser$Events$spawn = F3(
+	function (router, key, _v0) {
+		var node = _v0.a;
+		var name = _v0.b;
+		var actualNode = function () {
+			if (node.$ === 'Document') {
+				return _Browser_doc;
+			} else {
+				return _Browser_window;
+			}
+		}();
+		return A2(
+			$elm$core$Task$map,
+			function (value) {
+				return _Utils_Tuple2(key, value);
+			},
+			A3(
+				_Browser_on,
+				actualNode,
+				name,
+				function (event) {
+					return A2(
+						$elm$core$Platform$sendToSelf,
+						router,
+						A2($elm$browser$Browser$Events$Event, key, event));
+				}));
+	});
+var $elm$core$Dict$union = F2(
+	function (t1, t2) {
+		return A3($elm$core$Dict$foldl, $elm$core$Dict$insert, t2, t1);
+	});
+var $elm$browser$Browser$Events$onEffects = F3(
+	function (router, subs, state) {
+		var stepRight = F3(
+			function (key, sub, _v6) {
+				var deads = _v6.a;
+				var lives = _v6.b;
+				var news = _v6.c;
+				return _Utils_Tuple3(
+					deads,
+					lives,
+					A2(
+						$elm$core$List$cons,
+						A3($elm$browser$Browser$Events$spawn, router, key, sub),
+						news));
+			});
+		var stepLeft = F3(
+			function (_v4, pid, _v5) {
+				var deads = _v5.a;
+				var lives = _v5.b;
+				var news = _v5.c;
+				return _Utils_Tuple3(
+					A2($elm$core$List$cons, pid, deads),
+					lives,
+					news);
+			});
+		var stepBoth = F4(
+			function (key, pid, _v2, _v3) {
+				var deads = _v3.a;
+				var lives = _v3.b;
+				var news = _v3.c;
+				return _Utils_Tuple3(
+					deads,
+					A3($elm$core$Dict$insert, key, pid, lives),
+					news);
+			});
+		var newSubs = A2($elm$core$List$map, $elm$browser$Browser$Events$addKey, subs);
+		var _v0 = A6(
+			$elm$core$Dict$merge,
+			stepLeft,
+			stepBoth,
+			stepRight,
+			state.pids,
+			$elm$core$Dict$fromList(newSubs),
+			_Utils_Tuple3(_List_Nil, $elm$core$Dict$empty, _List_Nil));
+		var deadPids = _v0.a;
+		var livePids = _v0.b;
+		var makeNewPids = _v0.c;
+		return A2(
+			$elm$core$Task$andThen,
+			function (pids) {
+				return $elm$core$Task$succeed(
+					A2(
+						$elm$browser$Browser$Events$State,
+						newSubs,
+						A2(
+							$elm$core$Dict$union,
+							livePids,
+							$elm$core$Dict$fromList(pids))));
+			},
+			A2(
+				$elm$core$Task$andThen,
+				function (_v1) {
+					return $elm$core$Task$sequence(makeNewPids);
+				},
+				$elm$core$Task$sequence(
+					A2($elm$core$List$map, $elm$core$Process$kill, deadPids))));
+	});
+var $elm$core$List$maybeCons = F3(
+	function (f, mx, xs) {
+		var _v0 = f(mx);
+		if (_v0.$ === 'Just') {
+			var x = _v0.a;
+			return A2($elm$core$List$cons, x, xs);
+		} else {
+			return xs;
+		}
+	});
+var $elm$core$List$filterMap = F2(
+	function (f, xs) {
+		return A3(
+			$elm$core$List$foldr,
+			$elm$core$List$maybeCons(f),
+			_List_Nil,
+			xs);
+	});
+var $elm$browser$Browser$Events$onSelfMsg = F3(
+	function (router, _v0, state) {
+		var key = _v0.key;
+		var event = _v0.event;
+		var toMessage = function (_v2) {
+			var subKey = _v2.a;
+			var _v3 = _v2.b;
+			var node = _v3.a;
+			var name = _v3.b;
+			var decoder = _v3.c;
+			return _Utils_eq(subKey, key) ? A2(_Browser_decodeEvent, decoder, event) : $elm$core$Maybe$Nothing;
+		};
+		var messages = A2($elm$core$List$filterMap, toMessage, state.subs);
+		return A2(
+			$elm$core$Task$andThen,
+			function (_v1) {
+				return $elm$core$Task$succeed(state);
+			},
+			$elm$core$Task$sequence(
+				A2(
+					$elm$core$List$map,
+					$elm$core$Platform$sendToApp(router),
+					messages)));
+	});
+var $elm$browser$Browser$Events$subMap = F2(
+	function (func, _v0) {
+		var node = _v0.a;
+		var name = _v0.b;
+		var decoder = _v0.c;
+		return A3(
+			$elm$browser$Browser$Events$MySub,
+			node,
+			name,
+			A2($elm$json$Json$Decode$map, func, decoder));
+	});
+_Platform_effectManagers['Browser.Events'] = _Platform_createManager($elm$browser$Browser$Events$init, $elm$browser$Browser$Events$onEffects, $elm$browser$Browser$Events$onSelfMsg, 0, $elm$browser$Browser$Events$subMap);
+var $elm$browser$Browser$Events$subscription = _Platform_leaf('Browser.Events');
+var $elm$browser$Browser$Events$on = F3(
+	function (node, name, decoder) {
+		return $elm$browser$Browser$Events$subscription(
+			A3($elm$browser$Browser$Events$MySub, node, name, decoder));
+	});
+var $elm$browser$Browser$Events$onResize = function (func) {
+	return A3(
+		$elm$browser$Browser$Events$on,
+		$elm$browser$Browser$Events$Window,
+		'resize',
+		A2(
+			$elm$json$Json$Decode$field,
+			'target',
+			A3(
+				$elm$json$Json$Decode$map2,
+				func,
+				A2($elm$json$Json$Decode$field, 'innerWidth', $elm$json$Json$Decode$int),
+				A2($elm$json$Json$Decode$field, 'innerHeight', $elm$json$Json$Decode$int))));
+};
 var $elm$json$Json$Decode$value = _Json_decodeValue;
 var $author$project$Main$receiveResults = _Platform_incomingPort('receiveResults', $elm$json$Json$Decode$value);
 var $author$project$Main$subscriptions = function (_v0) {
-	return $author$project$Main$receiveResults($author$project$Main$ReceiveResults);
+	return $elm$core$Platform$Sub$batch(
+		_List_fromArray(
+			[
+				$elm$browser$Browser$Events$onResize($author$project$Main$WindowResize),
+				$author$project$Main$receiveResults($author$project$Main$ReceiveResults)
+			]));
 };
 var $author$project$Queries$FindKeywords = F2(
 	function (a, b) {
@@ -6328,31 +6650,6 @@ var $elm$core$List$concatMap = F2(
 		return $elm$core$List$concat(
 			A2($elm$core$List$map, f, list));
 	});
-var $elm$core$Dict$foldl = F3(
-	function (func, acc, dict) {
-		foldl:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return acc;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var $temp$func = func,
-					$temp$acc = A3(
-					func,
-					key,
-					value,
-					A3($elm$core$Dict$foldl, func, acc, left)),
-					$temp$dict = right;
-				func = $temp$func;
-				acc = $temp$acc;
-				dict = $temp$dict;
-				continue foldl;
-			}
-		}
-	});
 var $elm$core$Dict$filter = F2(
 	function (isGood, dict) {
 		return A3(
@@ -6412,18 +6709,6 @@ var $lydell$elm_app_url$AppUrl$toString = function (url) {
 		_Utils_ap(
 			$lydell$elm_app_url$AppUrl$queryParametersToString(url.queryParameters),
 			$lydell$elm_app_url$AppUrl$fragmentToString(url.fragment)));
-};
-var $elm$core$Dict$fromList = function (assocs) {
-	return A3(
-		$elm$core$List$foldl,
-		F2(
-			function (_v0, dict) {
-				var key = _v0.a;
-				var value = _v0.b;
-				return A3($elm$core$Dict$insert, key, value, dict);
-			}),
-		$elm$core$Dict$empty,
-		assocs);
 };
 var $elm$core$Tuple$mapSecond = F2(
 	function (func, _v0) {
@@ -7692,7 +7977,7 @@ var $author$project$Main$update = F2(
 						model,
 						{searchGUI: updatedFormModel}),
 					cmd);
-			default:
+			case 'SubmitSearch':
 				var validated = msg.a;
 				if (validated.$ === 'Valid') {
 					var srch = validated.a;
@@ -7726,6 +8011,18 @@ var $author$project$Main$update = F2(
 						model,
 						$author$project$Main$problemize(formProblem));
 				}
+			default:
+				var width = msg.a;
+				var height = msg.b;
+				var screendim = {h: height, w: width};
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							device: $author$project$Main$classifyDevice(screendim),
+							screenDimensions: screendim
+						}),
+					$elm$core$Platform$Cmd$none);
 		}
 	});
 var $mdgriffith$elm_ui$Internal$Model$Unkeyed = function (a) {
@@ -8043,24 +8340,6 @@ var $mdgriffith$elm_ui$Internal$Model$Style = F2(
 var $mdgriffith$elm_ui$Internal$Style$dot = function (c) {
 	return '.' + c;
 };
-var $elm$core$List$maybeCons = F3(
-	function (f, mx, xs) {
-		var _v0 = f(mx);
-		if (_v0.$ === 'Just') {
-			var x = _v0.a;
-			return A2($elm$core$List$cons, x, xs);
-		} else {
-			return xs;
-		}
-	});
-var $elm$core$List$filterMap = F2(
-	function (f, xs) {
-		return A3(
-			$elm$core$List$foldr,
-			$elm$core$List$maybeCons(f),
-			_List_Nil,
-			xs);
-	});
 var $elm$core$String$fromFloat = _String_fromNumber;
 var $mdgriffith$elm_ui$Internal$Model$formatColor = function (_v0) {
 	var red = _v0.a;
@@ -15237,8 +15516,8 @@ var $author$project$Main$viewKeywords = F2(
 			}
 		}();
 		var pageNavigation = F2(
-			function (lst, _v4) {
-				var p = _v4.a;
+			function (lst, _v5) {
+				var p = _v5.a;
 				var total = function (n) {
 					return (n / $author$project$Main$pageSize) | 0;
 				}(
@@ -15332,6 +15611,14 @@ var $author$project$Main$viewKeywords = F2(
 					]),
 				$mdgriffith$elm_ui$Element$text(showing));
 		};
+		var numCollumns = function () {
+			var _v3 = model.device;
+			if (_v3.$ === 'Phone') {
+				return 1;
+			} else {
+				return 4;
+			}
+		}();
 		var lazyf = F2(
 			function (result, searchbox) {
 				return A2(
@@ -15371,7 +15658,7 @@ var $author$project$Main$viewKeywords = F2(
 												viewCount(results),
 												A3(
 												$author$project$Main$makeColumns,
-												4,
+												numCollumns,
 												_List_fromArray(
 													[
 														$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
@@ -16504,67 +16791,6 @@ var $dillonkearns$elm_form$Form$insertIfNonempty = F3(
 	function (key, values, dict) {
 		return $elm$core$List$isEmpty(values) ? dict : A3($elm$core$Dict$insert, key, values, dict);
 	});
-var $elm$core$Dict$merge = F6(
-	function (leftStep, bothStep, rightStep, leftDict, rightDict, initialResult) {
-		var stepState = F3(
-			function (rKey, rValue, _v0) {
-				stepState:
-				while (true) {
-					var list = _v0.a;
-					var result = _v0.b;
-					if (!list.b) {
-						return _Utils_Tuple2(
-							list,
-							A3(rightStep, rKey, rValue, result));
-					} else {
-						var _v2 = list.a;
-						var lKey = _v2.a;
-						var lValue = _v2.b;
-						var rest = list.b;
-						if (_Utils_cmp(lKey, rKey) < 0) {
-							var $temp$rKey = rKey,
-								$temp$rValue = rValue,
-								$temp$_v0 = _Utils_Tuple2(
-								rest,
-								A3(leftStep, lKey, lValue, result));
-							rKey = $temp$rKey;
-							rValue = $temp$rValue;
-							_v0 = $temp$_v0;
-							continue stepState;
-						} else {
-							if (_Utils_cmp(lKey, rKey) > 0) {
-								return _Utils_Tuple2(
-									list,
-									A3(rightStep, rKey, rValue, result));
-							} else {
-								return _Utils_Tuple2(
-									rest,
-									A4(bothStep, lKey, lValue, rValue, result));
-							}
-						}
-					}
-				}
-			});
-		var _v3 = A3(
-			$elm$core$Dict$foldl,
-			stepState,
-			_Utils_Tuple2(
-				$elm$core$Dict$toList(leftDict),
-				initialResult),
-			rightDict);
-		var leftovers = _v3.a;
-		var intermediateResult = _v3.b;
-		return A3(
-			$elm$core$List$foldl,
-			F2(
-				function (_v4, result) {
-					var k = _v4.a;
-					var v = _v4.b;
-					return A3(leftStep, k, v, result);
-				}),
-			intermediateResult,
-			leftovers);
-	});
 var $dillonkearns$elm_form$Form$mergeErrors = F2(
 	function (errors1, errors2) {
 		return A6(
@@ -16610,10 +16836,6 @@ var $dillonkearns$elm_form$Form$mergeResults = function (parsed) {
 			A2($dillonkearns$elm_form$Form$mergeErrors, combineErrors, individualFieldErrors)));
 };
 var $elm$html$Html$Attributes$name = $elm$html$Html$Attributes$stringProperty('name');
-var $elm$core$Dict$union = F2(
-	function (t1, t2) {
-		return A3($elm$core$Dict$foldl, $elm$core$Dict$insert, t2, t1);
-	});
 var $dillonkearns$elm_form$Form$unwrapValidation = function (_v0) {
 	var _v1 = _v0.c;
 	var maybeParsed = _v1.a;
@@ -17840,8 +18062,8 @@ var $dillonkearns$elm_form$Form$Field$withInitialValue = F2(
 				}),
 			kind);
 	});
-var $author$project$Main$searchGUI = F2(
-	function (portals, keywords) {
+var $author$project$Main$searchGUI = F3(
+	function (device, portals, keywords) {
 		var portalsAsOptions = A2(
 			$elm$core$List$cons,
 			_Utils_Tuple2('', 'All portals'),
@@ -17864,6 +18086,16 @@ var $author$project$Main$searchGUI = F2(
 					$author$project$Main$quote(k) + ' not used in RC');
 			}
 		};
+		var formStyle = function () {
+			if (device.$ === 'Phone') {
+				return _List_Nil;
+			} else {
+				return _List_fromArray(
+					[
+						A2($elm$html$Html$Attributes$style, 'display', 'flex')
+					]);
+			}
+		}();
 		return A3(
 			$dillonkearns$elm_form$Form$field,
 			'portal',
@@ -17957,10 +18189,7 @@ var $author$project$Main$searchGUI = F2(
 																	[
 																		A2(
 																		$elm$html$Html$div,
-																		_List_fromArray(
-																			[
-																				A2($elm$html$Html$Attributes$style, 'display', 'flex')
-																			]),
+																		formStyle,
 																		_List_fromArray(
 																			[
 																				A3($author$project$Main$fieldView, info, 'title', title),
@@ -17999,8 +18228,8 @@ var $dillonkearns$elm_form$Form$withOnSubmit = F2(
 			serverResponse: options_.serverResponse
 		};
 	});
-var $author$project$Main$viewSearch = F5(
-	function (initialForm, portals, keywords, submitting, searchFormState) {
+var $author$project$Main$viewSearch = F6(
+	function (device, initialForm, portals, keywords, submitting, searchFormState) {
 		if (initialForm.$ === 'Just') {
 			var formInput = initialForm.a;
 			return A2(
@@ -18027,13 +18256,13 @@ var $author$project$Main$viewSearch = F5(
 								},
 								$dillonkearns$elm_form$Form$options('search'))),
 						_List_Nil,
-						A2($author$project$Main$searchGUI, portals, keywords))));
+						A3($author$project$Main$searchGUI, device, portals, keywords))));
 		} else {
 			return $mdgriffith$elm_ui$Element$text('loading form data..');
 		}
 	});
-var $author$project$Main$viewResearchResults = F7(
-	function (allPortals, allKeywords, submitting, searchFormState, dimensions, sv, lst) {
+var $author$project$Main$viewResearchResults = F8(
+	function (allPortals, allKeywords, submitting, searchFormState, dimensions, device, sv, lst) {
 		var urlFromSorting = F2(
 			function (st, s) {
 				return $author$project$Main$appUrlFromView(
@@ -18095,8 +18324,9 @@ var $author$project$Main$viewResearchResults = F7(
 							A2($mdgriffith$elm_ui$Element$paddingXY, 0, 15),
 							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
 						]),
-					A5(
+					A6(
 						$author$project$Main$viewSearch,
+						device,
 						$elm$core$Maybe$Just(initialForm),
 						allPortals,
 						allKeywords,
@@ -18168,13 +18398,13 @@ var $author$project$Main$view = function (model) {
 			switch (_v1.$) {
 				case 'FoundResearch':
 					var lst = _v1.a;
-					return A7($author$project$Main$viewResearchResults, model.allPortals, model.allKeywords, model.submitting, model.searchGUI, model.screenDimensions, sv, lst);
+					return A8($author$project$Main$viewResearchResults, model.allPortals, model.allKeywords, model.submitting, model.searchGUI, model.screenDimensions, model.device, sv, lst);
 				case 'FoundKeywords':
 					return $mdgriffith$elm_ui$Element$none;
 				case 'Searching':
-					return $mdgriffith$elm_ui$Element$text('waiting');
+					return $mdgriffith$elm_ui$Element$text('...');
 				default:
-					return $mdgriffith$elm_ui$Element$text('idle');
+					return $mdgriffith$elm_ui$Element$none;
 			}
 		}
 	}();

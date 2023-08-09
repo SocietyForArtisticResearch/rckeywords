@@ -3,6 +3,7 @@ port module Main exposing (Flags, Model, Msg, SearchAction, View, main)
 import AppUrl exposing (AppUrl)
 import Browser
 import Browser.Dom as Dom
+import Browser.Events as Events
 import Browser.Navigation as Nav
 import Dict
 import Element exposing (Element, el, fill, fillPortion, height, maximum, padding, paddingXY, px, rgb255, shrink, spacing, spacingXY, text, width)
@@ -46,6 +47,31 @@ port sendQuery : Json.Encode.Value -> Cmd msg
 port problem : String -> Cmd msg
 
 
+type alias Model =
+    { query : String
+    , search : SearchAction
+    , screenDimensions : { w : Int, h : Int }
+    , device : Device
+    , view : View
+    , numberOfResults : Int
+    , key : Nav.Key
+    , url : AppUrl
+    , searchPageSize : Int
+
+    -- , keywords : Set String
+    , searchGUI : Form.Model
+    , submitting : Bool
+    , allKeywords : List KeywordString
+    , allPortals : List RC.Portal
+    }
+
+
+type alias Flags =
+    { width : Int
+    , height : Int
+    }
+
+
 main : Program Flags Model Msg
 main =
     Browser.application
@@ -60,9 +86,10 @@ main =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    receiveResults ReceiveResults
-
-
+    Sub.batch
+        [ Events.onResize WindowResize
+        , receiveResults ReceiveResults
+        ]
 
 
 type DateRange
@@ -93,6 +120,7 @@ init { width, height } url key =
     , url = initUrl
     , key = key
     , searchPageSize = 20
+    , device = classifyDevice { w = width, h = height }
 
     -- , keywords = Set.empty
     , searchGUI = Form.init
@@ -127,9 +155,7 @@ resetViewport =
 
 
 
-
 -- | Portal
-
 
 
 type Problem
@@ -147,7 +173,6 @@ problemToString p =
             s
 
 
-
 type Page
     = Page Int
 
@@ -162,6 +187,7 @@ pageSize =
     128
 
 
+
 -- additionalKeywordsToLoad : Int
 -- additionalKeywordsToLoad =
 --     64
@@ -170,6 +196,7 @@ pageSize =
 pageFromInt : Int -> Page
 pageFromInt p =
     Page p
+
 
 type alias SearchViewState =
     { layout : Layout
@@ -197,7 +224,6 @@ type View
 type Layout
     = ListLayout
     | ScreenLayout Scale
-
 
 
 type Scale
@@ -276,9 +302,6 @@ viewLayoutSwitch layout makeurl =
         ]
 
 
-
-
-
 type KeywordsViewState
     = KeywordMainView RC.KeywordSorting Page -- query, sorting, page
     | KeywordSearch String RC.KeywordSorting Page -- could be opaque type?
@@ -315,22 +338,18 @@ type alias ScreenDimensions =
     { w : Int, h : Int }
 
 
-type alias Model =
-    { query : String
-    , search : SearchAction
-    , screenDimensions : { w : Int, h : Int }
-    , view : View
-    , numberOfResults : Int
-    , key : Nav.Key
-    , url : AppUrl
-    , searchPageSize : Int
+type Device
+    = Phone
+    | Desktop
 
-    -- , keywords : Set String
-    , searchGUI : Form.Model
-    , submitting : Bool
-    , allKeywords : List KeywordString
-    , allPortals : List RC.Portal
-    }
+
+classifyDevice : ScreenDimensions -> Device
+classifyDevice { w, h } =
+    if w <= 393 then
+        Phone
+
+    else
+        Desktop
 
 
 problemize : Problem -> Cmd Msg
@@ -347,12 +366,9 @@ type Msg
     | NoOp
     | FormMsg (Form.Msg Msg)
     | SubmitSearch (Form.Validated String SearchForm)
+    | WindowResize Int Int
 
 
-type alias Flags =
-    { width : Int
-    , height : Int
-    }
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -467,6 +483,18 @@ update msg model =
                     in
                     ( model, problemize formProblem )
 
+        WindowResize width height ->
+            let
+                screendim =
+                    { w = width, h = height }
+            in
+            ( { model
+                | screenDimensions = screendim
+                , device = classifyDevice screendim
+              }
+            , Cmd.none
+            )
+
 
 updateViewWithSearch : SearchForm -> View -> View
 updateViewWithSearch srch v =
@@ -510,6 +538,11 @@ getSortingOfUrl url =
         |> Maybe.map RC.titleSortingFromString
 
 
+{-|
+
+    When the url has changed, we update the view and/or send out a query
+
+-}
 handleUrl : AppUrl.AppUrl -> Model -> ( Model, Cmd Msg )
 handleUrl url model =
     case url.path of
@@ -870,17 +903,16 @@ withParameters pars u =
     { u | queryParameters = Dict.fromList singles }
 
 
-
-{-
-   A single parameter
+{-| A single parameter
 -}
-
-
 withParameter : ( String, String ) -> AppUrl.AppUrl -> AppUrl.AppUrl
 withParameter ( key, value ) appurl =
     { appurl | queryParameters = appurl.queryParameters |> Dict.insert key [ value ] }
 
 
+{-| We prefix all URLS with a hash, so we always route to index.html no matter
+what the subpath is (instead of customizing the server config)
+-}
 prefixHash : String -> String
 prefixHash str =
     "/#" ++ str
@@ -975,16 +1007,16 @@ view model =
                 SearchView sv ->
                     case model.search of
                         FoundResearch lst ->
-                            viewResearchResults model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions sv lst
+                            viewResearchResults model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions model.device sv lst
 
                         FoundKeywords _ ->
                             Element.none
 
                         Searching ->
-                            Element.text "waiting"
+                            Element.text "..."
 
                         Idle ->
-                            Element.text "idle"
+                            Element.none
     in
     { title = "Research Catalogue - Screenshot Page"
     , body =
@@ -1069,8 +1101,17 @@ anchor anchorId =
     Element.htmlAttribute (Attr.id anchorId)
 
 
-viewResearchResults : List RC.Portal -> List KeywordString -> Bool -> Form.Model -> ScreenDimensions -> SearchViewState -> List Research -> Element Msg
-viewResearchResults allPortals allKeywords submitting searchFormState dimensions sv lst =
+viewResearchResults :
+    List RC.Portal
+    -> List KeywordString
+    -> Bool
+    -> Form.Model
+    -> ScreenDimensions
+    -> Device
+    -> SearchViewState
+    -> List Research
+    -> Element Msg
+viewResearchResults allPortals allKeywords submitting searchFormState dimensions device sv lst =
     let
         layout =
             sv.layout
@@ -1111,7 +1152,7 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
     in
     Element.column [ anchor "top", spacingXY 0 5, width fill ] <|
         [ Element.el [ paddingXY 0 15, width fill ]
-            (viewSearch (Just initialForm) allPortals allKeywords submitting searchFormState)
+            (viewSearch device (Just initialForm) allPortals allKeywords submitting searchFormState)
         , Element.row
             [ width fill, spacingXY 15 0 ]
             [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch layout (urlFromLayout sv)
@@ -1448,6 +1489,14 @@ viewKeywords model keywordview =
             else
                 Element.none
 
+        numCollumns = 
+            case model.device of
+                Phone ->
+                    1
+
+                Desktop ->
+                    4
+
         lazyf : SearchAction -> Element Msg -> Element Msg
         lazyf result searchbox =
             Element.column [ width fill, spacingXY 0 15 ]
@@ -1461,7 +1510,7 @@ viewKeywords model keywordview =
                         Element.column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
                             [ Element.el [ width shrink, Element.paddingXY 0 5 ] (toggleSorting sorting)
                             , viewCount results
-                            , currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns 4 [ width fill, spacingXY 25 25 ]
+                            , currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns numCollumns [ width fill, spacingXY 25 25 ]
                             , pageNavigation results page
                             ]
 
@@ -1782,7 +1831,7 @@ selectField formState label field =
         ]
 
 
-searchGUI portals keywords =
+searchGUI device portals keywords =
     let
         parseKeyword mk =
             case mk of
@@ -1803,6 +1852,15 @@ searchGUI portals keywords =
         portalsAsOptions : List ( String, String )
         portalsAsOptions =
             ( "", "All portals" ) :: (portals |> List.map (\p -> ( p.name, p.name )))
+
+        formStyle : List (Html.Attribute msg)
+        formStyle =
+            case device of
+                Phone ->
+                    []
+
+                Desktop ->
+                    [ Attr.style "display" "flex" ]
     in
     Form.form
         (\title author keyword1 keyword2 portal ->
@@ -1827,7 +1885,7 @@ searchGUI portals keywords =
                     [ Html.div [ Attr.style "width" "100%" ]
                         [ Html.h1 headerStyle [ Html.text "search:" ]
                         , Html.label []
-                            [ Html.div [ Attr.style "display" "flex" ]
+                            [ Html.div formStyle
                                 [ fieldView info "title" title
                                 , fieldView info "author" author
                                 , keywordField keywords info "keywords" keyword1
@@ -1991,8 +2049,8 @@ dropdownView formState label field =
 --         ]
 
 
-viewSearch : Maybe SearchForm -> List RC.Portal -> List KeywordString -> Bool -> Form.Model -> Element Msg
-viewSearch initialForm portals keywords submitting searchFormState =
+viewSearch : Device -> Maybe SearchForm -> List RC.Portal -> List KeywordString -> Bool -> Form.Model -> Element Msg
+viewSearch device initialForm portals keywords submitting searchFormState =
     case initialForm of
         Just formInput ->
             Element.el
@@ -2004,7 +2062,7 @@ viewSearch initialForm portals keywords submitting searchFormState =
                 ]
             <|
                 Element.html
-                    (searchGUI portals keywords
+                    (searchGUI device portals keywords
                         |> Form.renderHtml
                             { submitting = submitting
                             , state = searchFormState

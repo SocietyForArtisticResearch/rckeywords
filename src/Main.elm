@@ -17,7 +17,7 @@ import Form
 import Form.Field as Field
 import Form.FieldView as FieldView
 import Form.Validation as Validation
-import Html exposing (Html)
+import Html exposing (Html, div)
 import Html.Attributes as Attr
 import Html.Events
 import Json.Decode
@@ -341,12 +341,16 @@ type alias ScreenDimensions =
 type Device
     = Phone
     | Desktop
+    | Tablet
 
 
 classifyDevice : ScreenDimensions -> Device
 classifyDevice { w, h } =
-    if w <= 393 then
+    if w <= 450 then
         Phone
+
+    else if w <= 1110 then
+        Tablet
 
     else
         Desktop
@@ -797,6 +801,9 @@ viewResearchMicro screen device research =
                 Desktop ->
                     ( 200, 200 )
 
+                Tablet ->
+                    ( screen.w - 30, (screen.w - 30) * 3 // 4 )
+
         img : String -> Element msg
         img src =
             Element.link [ width (fillPortion 1) ]
@@ -856,7 +863,8 @@ viewResearchMicro screen device research =
                     ]
                 ]
 
-        Phone ->
+        -- both phone and tablet
+        _ ->
             column
                 [ width fill
                 , Element.clip
@@ -1026,8 +1034,11 @@ view model =
                 Phone ->
                     fill
 
+                Tablet ->
+                    fill
+
                 Desktop ->
-                    px (toFloat model.screenDimensions.w * 0.9 |> floor)
+                    px model.screenDimensions.w
     in
     { title = "Research Catalogue - Screenshot Page"
     , body =
@@ -1141,6 +1152,9 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
                                 Phone ->
                                     1
 
+                                Tablet ->
+                                    1
+
                                 Desktop ->
                                     2
                     in
@@ -1175,6 +1189,9 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
 
                             Desktop ->
                                 Element.alignRight
+
+                            Tablet ->
+                                Element.alignRight
                         ]
                         (viewScaleSwitch scale (ScreenLayout >> urlFromLayout sv))
 
@@ -1189,6 +1206,14 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
                         ]
 
                 Desktop ->
+                    row
+                        [ width fill, spacingXY 15 0 ]
+                        [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
+                        , scaleButton
+                        , Element.el [ Element.alignRight ] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
+                        ]
+
+                Tablet ->
                     row
                         [ width fill, spacingXY 15 0 ]
                         [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
@@ -1235,7 +1260,7 @@ viewKeywordAsButton fontsize kw =
         count =
             RC.getCount kw
     in
-    Element.row
+    Element.paragraph
         [ Element.spacing 5
         , Element.padding 5
         , Element.Border.solid
@@ -1245,8 +1270,8 @@ viewKeywordAsButton fontsize kw =
         , Element.clipX
         , width fill
         ]
-        [ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
-        , Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
+        [ Element.link [ width fill ] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
+        , Element.paragraph [ width fill, Element.alignRight, Font.size fontsize ] [Element.text (count |> String.fromInt)]
         ]
 
 
@@ -1530,6 +1555,9 @@ viewKeywords model keywordview =
                 Phone ->
                     1
 
+                Tablet ->
+                    3
+
                 Desktop ->
                     4
 
@@ -1543,7 +1571,7 @@ viewKeywords model keywordview =
                             currentPage =
                                 pageOfList page results
                         in
-                        column [ Element.width (px (floor (toFloat model.screenDimensions.w * 0.9))), Element.spacing 15 ]
+                        column [ width fill, Element.spacing 15 ]
                             [ Element.el [ width shrink, Element.paddingXY 0 5 ] (toggleSorting sorting)
                             , viewCount results
                             , currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns numCollumns [ width fill, spacingXY 25 25 ]
@@ -1625,6 +1653,9 @@ lazyImageWithErrorHandling groupSize dimensions research =
                 Desktop ->
                     (dimensions.h // (groupSize - 1) |> String.fromInt) ++ "px"
 
+                Tablet ->
+                    width
+
                 Phone ->
                     width
     in
@@ -1676,6 +1707,20 @@ scaleToGroupSize device scale =
                 Large ->
                     1
 
+        Tablet ->
+            case scale of
+                Micro ->
+                    5
+
+                Small ->
+                    4
+
+                Medium ->
+                    2
+
+                Large ->
+                    1
+
         Desktop ->
             case scale of
                 Micro ->
@@ -1717,10 +1762,10 @@ viewScreenshots device screenDimensions sv scale research =
 
         viewGroup : List Research -> Html Msg
         viewGroup group =
-            Html.div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
+            div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
     in
     Element.el [ Element.paddingEach { paddingEachZero | top = 15 }, width fill ]
-        (Element.html (Html.div [] (List.map viewGroup groups)))
+        (Element.html (div [] (List.map viewGroup groups)))
 
 
 paddingEachZero : { top : Int, left : Int, right : Int, bottom : Int }
@@ -1729,11 +1774,11 @@ paddingEachZero =
 
 
 
--- Html.div
+-- div
 --     []
 --     [ Html.h1 [] [ Html.text "Visual" ]
 --     , Html.br [] []
---     , Html.div []
+--     , div []
 --         (List.map viewGroup groups)
 --     ]
 -- this function creates a dictionary of all keywords and the research that have them
@@ -1839,7 +1884,7 @@ keywordField keywords formState label field =
                 |> List.filter isLongEnough
                 |> List.sortBy String.length
     in
-    Html.div []
+    div []
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
             , field |> FieldView.input (Attr.list "keyword-field" :: fieldStyle)
@@ -1871,7 +1916,7 @@ keywordField keywords formState label field =
 
 
 selectField formState label field =
-    Html.div [ Attr.style "width" "100%" ]
+    div [ Attr.style "width" "100%" ]
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
             , FieldView.select dropdownStyle (\p -> ( [], p )) field
@@ -1919,8 +1964,14 @@ searchGUI device portals keywords =
                 Phone ->
                     []
 
+                Tablet ->
+                    []
+
                 Desktop ->
                     [ Attr.style "display" "flex" ]
+
+        rowdiv elements =
+            div [ Attr.style "display" "flex" ] elements
     in
     Form.form
         (\title author keyword1 keyword2 portal ->
@@ -1942,17 +1993,32 @@ searchGUI device portals keywords =
                         portal
             , view =
                 \info ->
-                    [ Html.div [ Attr.style "width" "100%" ]
+                    [ div [ Attr.style "width" "100%" ]
                         [ Html.h1 headerStyle [ Html.text "search:" ]
                         , Html.label []
-                            [ Html.div formStyle
-                                [ fieldView info "title" title
-                                , fieldView info "author" author
-                                , keywordField keywords info "keywords" keyword1
-                                , keywordField keywords info "" keyword2
-                                , selectField info "portal" portal
-                                ]
-                            ]
+                            [(case device of
+                                Tablet ->
+                                    div []
+                                        [ rowdiv
+                                            [ fieldView info "title" title
+                                            , fieldView info "author" author
+                                            ]
+                                        , rowdiv
+                                            [ keywordField keywords info "keywords" keyword1
+                                            , keywordField keywords info "" keyword2
+                                            ]
+                                        , div [] [ selectField info "portal" portal ]
+                                        ]
+
+                                _ ->
+                                    div formStyle
+                                        [ fieldView info "title" title
+                                        , fieldView info "author" author
+                                        , keywordField keywords info "keywords" keyword1
+                                        , keywordField keywords info "" keyword2
+                                        , selectField info "portal" portal
+                                        ]
+                            )]
                         , Html.button submitButtonStyle
                             [ if info.submitting then
                                 Html.text "searching..."
@@ -2035,7 +2101,7 @@ toggleLabelStyle =
 
 
 fieldView formState label field =
-    Html.div []
+    div []
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
             , field |> FieldView.input fieldStyle
@@ -2056,7 +2122,7 @@ fieldView formState label field =
 
 
 dropdownView formState label field =
-    Html.div []
+    div []
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
             , field |> FieldView.input dropdownStyle
@@ -2083,7 +2149,7 @@ dropdownView formState label field =
 --         allPortalStrings =
 --             List.map .name allPortals
 --     in
---     Html.div []
+--     div []
 --         [ Html.label labelStyle
 --             [ Html.text (label ++ " ")
 --             , field |> Form.FieldView.input ([ Attr.list "portal-field", Attr.attribute "autocomplete" "off" ] ++ fieldStyle)

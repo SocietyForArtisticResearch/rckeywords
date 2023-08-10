@@ -1974,7 +1974,7 @@ searchGUI device portals keywords =
                         Ok (Just k)
 
                     else
-                        Err (quote k ++ " not used in RC")
+                        Err (quote k ++ " not used")
 
         portalsAsOptions : List ( String, String )
         portalsAsOptions =

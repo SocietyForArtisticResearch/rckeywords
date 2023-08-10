@@ -5,6 +5,7 @@ import Browser
 import Browser.Dom as Dom
 import Browser.Events as Events
 import Browser.Navigation as Nav
+import Date exposing (Date(..))
 import Dict
 import Element exposing (Element, column, el, fill, fillPortion, height, padding, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
 import Element.Background
@@ -28,6 +29,7 @@ import Queries exposing (SearchQuery(..))
 import Research as RC exposing (Research)
 import Set exposing (Set)
 import String
+import Tailwind.Utilities exposing (break_before_all)
 import Task
 import Time
 import Url exposing (Url)
@@ -637,6 +639,22 @@ handleUrl url model =
                         |> Maybe.andThen List.head
                         |> Maybe.withDefault ""
 
+                after : Maybe Date
+                after =
+                    url.queryParameters
+                        |> Dict.get "after"
+                        |> Maybe.andThen List.head
+                        |> Maybe.andThen String.toInt
+                        |> Maybe.map Date.fromRataDie
+
+                before : Maybe Date
+                before =
+                    url.queryParameters
+                        |> Dict.get "before"
+                        |> Maybe.andThen List.head
+                        |> Maybe.andThen String.toInt
+                        |> Maybe.map Date.fromRataDie
+
                 --                _ = Debug.log "query parameters" (url.queryParameters,portal)
                 cmd : Cmd msg
                 cmd =
@@ -648,6 +666,8 @@ handleUrl url model =
                                     |> Queries.withTitle title
                                     |> Queries.withAuthor author
                                     |> Queries.withPortal portal
+                                    |> Queries.withAfter after
+                                    |> Queries.withBefore before
                                 )
                             )
                         )
@@ -656,7 +676,7 @@ handleUrl url model =
                 | view =
                     SearchView
                         { layout = ListLayout
-                        , form = formWith title author keywords portal
+                        , form = formWith title author keywords portal after before
                         , sorting = sorting
                         , page = Page page
                         }
@@ -714,6 +734,22 @@ handleUrl url model =
                         |> Maybe.andThen List.head
                         |> Maybe.withDefault ""
 
+                after : Maybe Date
+                after =
+                    url.queryParameters
+                        |> Dict.get "after"
+                        |> Maybe.andThen List.head
+                        |> Maybe.andThen String.toInt
+                        |> Maybe.map Date.fromRataDie
+
+                before : Maybe Date
+                before =
+                    url.queryParameters
+                        |> Dict.get "before"
+                        |> Maybe.andThen List.head
+                        |> Maybe.andThen String.toInt
+                        |> Maybe.map Date.fromRataDie
+
                 cmd : Cmd msg
                 cmd =
                     sendQuery
@@ -724,6 +760,8 @@ handleUrl url model =
                                     |> Queries.withAuthor author
                                     |> Queries.withTitle title
                                     |> Queries.withPortal portal
+                                    |> Queries.withAfter after
+                                    |> Queries.withBefore before
                                 )
                             )
                         )
@@ -732,7 +770,7 @@ handleUrl url model =
                 | view =
                     SearchView
                         { layout = ScreenLayout scale
-                        , form = formWith title author keywords portal
+                        , form = formWith title author keywords portal after before
                         , sorting = sorting
                         , page = Page page
                         }
@@ -745,7 +783,7 @@ handleUrl url model =
                 | view =
                     SearchView
                         { layout = ListLayout
-                        , form = formWith "" "" [] ""
+                        , form = emptyForm
                         , sorting = RC.NewestFirst
                         , page = Page 1
                         }
@@ -788,6 +826,11 @@ lightLink =
     , width fill
     , Element.htmlAttribute (Attr.attribute "style" "text-transform: unset")
     ]
+
+
+formatDate : Date -> String
+formatDate date =
+    Date.toIsoString date
 
 
 viewResearchMicro : ScreenDimensions -> Device -> Research -> Element Msg
@@ -850,7 +893,7 @@ viewResearchMicro screen device research =
                 }
 
         date =
-            Element.el lightLink (Element.text research.created)
+            Element.el lightLink (Element.text (research.publication |> Maybe.map formatDate |> Maybe.withDefault "in progress"))
     in
     case device of
         Desktop ->
@@ -1000,6 +1043,7 @@ linkStyle active style =
             , Font.color black
             , Element.mouseOver [ Font.color (Element.rgb 0.5 0.5 0.5) ]
             , Font.size fontSize
+
             -- , Element.htmlAttribute <| Attr.class "link"
             ]
     in
@@ -1411,6 +1455,20 @@ appUrlFromView v =
             appUrlFromSearchViewState sv
 
 
+maybeToList m =
+    case m of
+        Nothing ->
+            []
+
+        Just some ->
+            [ some ]
+
+
+dateToString : Date -> String
+dateToString date =
+    date |> Date.toRataDie |> String.fromInt
+
+
 appUrlFromSearchViewState : SearchViewState -> String
 appUrlFromSearchViewState sv =
     let
@@ -1425,6 +1483,8 @@ appUrlFromSearchViewState sv =
                             , ( "sorting", [ RC.titleSortingToString sv.sorting ] )
                             , ( "page", [ pageAsString sv.page ] )
                             , ( "portal", [ sv.form.portal ] )
+                            , ( "after", maybeToList (sv.form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
+                            , ( "before", maybeToList (sv.form.before |> Maybe.map dateToString) )
                             ]
 
                 ScreenLayout scale ->
@@ -1437,6 +1497,8 @@ appUrlFromSearchViewState sv =
                             , ( "page", [ pageAsString sv.page ] )
                             , ( "scale", [ scaleToString scale ] )
                             , ( "portal", [ sv.form.portal ] )
+                            , ( "after", maybeToList (sv.form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
+                            , ( "before", maybeToList (sv.form.before |> Maybe.map dateToString) )
                             ]
     in
     appurl |> AppUrl.toString |> prefixHash
@@ -1826,6 +1888,8 @@ type alias SearchForm =
     , author : String
     , keywords : List String
     , portal : String
+    , after : Maybe Date
+    , before : Maybe Date
     }
 
 
@@ -1845,20 +1909,24 @@ emptyForm =
     , author = ""
     , keywords = []
     , portal = ""
+    , after = Nothing
+    , before = Nothing
     }
 
 
-formWith : String -> String -> List String -> String -> SearchForm
-formWith title author keywords portal =
+formWith : String -> String -> List String -> String -> Maybe Date -> Maybe Date -> SearchForm
+formWith title author keywords portal after before =
     { title = title
     , author = author
     , keywords = keywords
     , portal = portal
+    , after = after
+    , before = before
     }
 
 
-searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> SearchForm
-searchForm title author keyword1 keyword2 portal =
+searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Date -> Maybe Date -> SearchForm
+searchForm title author keyword1 keyword2 portal after before =
     let
         nothingIsJustEmpty =
             Maybe.withDefault ""
@@ -1868,6 +1936,8 @@ searchForm title author keyword1 keyword2 portal =
         (nothingIsJustEmpty author)
         (List.filterMap identity [ keyword1, keyword2 ])
         (nothingIsJustEmpty portal)
+        after
+        before
 
 
 quote : String -> String
@@ -1980,23 +2050,11 @@ searchGUI device portals keywords =
         portalsAsOptions =
             ( "", "All portals" ) :: (portals |> List.map (\p -> ( p.name, p.name )))
 
-        formStyle : List (Html.Attribute msg)
-        formStyle =
-            case device of
-                Phone ->
-                    []
-
-                Tablet ->
-                    []
-
-                Desktop ->
-                    [ Attr.style "display" "flex" ]
-
         rowdiv elements =
             div [ Attr.style "display" "flex" ] elements
     in
     Form.form
-        (\title author keyword1 keyword2 portal ->
+        (\title author keyword1 keyword2 portal after before ->
             { combine =
                 Validation.succeed searchForm
                     |> Validation.andMap title
@@ -2013,6 +2071,8 @@ searchGUI device portals keywords =
                         )
                     |> Validation.andMap
                         portal
+                    |> Validation.andMap after
+                    |> Validation.andMap before
             , view =
                 \info ->
                     [ div [ Attr.style "width" "100%" ]
@@ -2029,16 +2089,37 @@ searchGUI device portals keywords =
                                             [ keywordField keywords info "keywords" keyword1
                                             , keywordField keywords info "" keyword2
                                             ]
+                                        , rowdiv
+                                            [ fieldView info "after" after
+                                            , fieldView info "before" before
+                                            ]
                                         , div [] [ selectField info "portal" portal ]
                                         ]
 
-                                _ ->
-                                    div formStyle
+                                Desktop ->
+                                    div []
+                                        [ rowdiv
+                                            [ fieldView info "title" title
+                                            , fieldView info "author" author
+                                            , keywordField keywords info "keywords" keyword1
+                                            , keywordField keywords info "" keyword2
+                                            , selectField info "portal" portal
+                                            ]
+                                        , rowdiv
+                                            [ fieldView info "after" after
+                                            , fieldView info "before" before
+                                            ]
+                                        ]
+
+                                Phone ->
+                                    div []
                                         [ fieldView info "title" title
                                         , fieldView info "author" author
                                         , keywordField keywords info "keywords" keyword1
                                         , keywordField keywords info "" keyword2
                                         , selectField info "portal" portal
+                                        , fieldView info "after" after
+                                        , fieldView info "before" before
                                         ]
                             ]
                         , Html.button submitButtonStyle
@@ -2057,6 +2138,8 @@ searchGUI device portals keywords =
         |> Form.field "keyword 1" (Field.text |> Field.search |> Field.withInitialValue getFirstKeyword)
         |> Form.field "keyword 2" (Field.text |> Field.search |> Field.withInitialValue getSecondKeyword)
         |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "Error !!!") |> Field.withInitialValue (\_ -> "All portals"))
+        |> Form.field "after" (Field.date { invalid = \_ -> "invalid date" })
+        |> Form.field "before" (Field.date { invalid = \_ -> "invalid date" })
 
 
 getFirstKeyword : SearchForm -> String
@@ -2113,7 +2196,7 @@ submitButtonStyle =
     , Attr.style "padding" "10px"
     , Attr.style "background-color" "white"
     , Attr.style "margin" "0px 5px"
-    , Attr.style "float" "right"
+    -- , Attr.style "float" "right"
     ]
 
 

@@ -1,8 +1,3 @@
--- TODO, change a date to really a date type
--- Type Date = Dmy Int Int Int
--- also allow sorting on that
-
-
 module Research exposing
     ( Author(..)
     , Compare(..)
@@ -20,7 +15,6 @@ module Research exposing
     , authorAsString
     , authorUrl
     , calcStatus
-    , comparePosix
     , decodeKeyword
     , decodePublicationStatus
     , decoder
@@ -29,6 +23,7 @@ module Research exposing
     , encodeAuthor
     , encodeKeyword
     , findResearchAfter
+    , findResearchBefore
     , findResearchWithAuthor
     , findResearchWithKeywords
     , findResearchWithPortal
@@ -47,6 +42,7 @@ module Research exposing
     , portalTypeToString
     , publicationstatus
     , rcDateToPosix
+    , rcDateToRataDie
     , rcPortalDecoder
     , reverseKeywordDict
     , shuffleWithSeed
@@ -58,6 +54,7 @@ module Research exposing
     , use
     )
 
+import Date exposing (Date)
 import Dict exposing (Dict)
 import Iso8601
 import Json.Decode exposing (Decoder, field, int, maybe, string)
@@ -68,7 +65,7 @@ import List.Extra exposing (uniqueBy)
 import Random
 import Random.List
 import Set exposing (Set)
-import Time exposing (Posix)
+import Time
 
 
 type alias ExpositionID =
@@ -456,13 +453,8 @@ encodeAuthor au =
         ]
 
 
-
--- this is a "local" decoder for communication with the worker.
--- So here we do not have to calculate the publication status etc..
--- This decodes from the RC API
--- Some properties need to be "calculated", like publication status.
-
-
+{-| This is the RC API decoder. Data is retrieved by concatting the json output from the advanced search of the RC.
+-}
 decoder : Decoder Research
 decoder =
     let
@@ -492,7 +484,8 @@ decoder =
             |> JDE.andMap (field "author" author)
             |> JDE.andMap (maybe (field "issue" <| field "id" int))
             |> JDE.andMap (Json.Decode.map statusFromString (field "status" string))
-            |> JDE.andMap (maybe (field "published" string))
+            |> JDE.andMap (maybe (field "published" string) |> Json.Decode.map (Maybe.andThen dateFromRCString))
+            -- maybe there is a field published andthen maybe there is a valid published date ( :-P )
             |> JDE.andMap (maybe (field "thumb" string))
             |> JDE.andMap (maybe (field "abstract" string))
             |> JDE.andMap (field "default-page" string)
@@ -509,10 +502,18 @@ dmyToYmd dmy =
     in
     case parts of
         [ day, month, year ] ->
-            year ++ "/" ++ month ++ "/" ++ day
+            year ++ "-" ++ month ++ "-" ++ day
 
         _ ->
             dmy
+
+
+dateFromRCString : String -> Maybe Date
+dateFromRCString str =
+    str
+        |> dmyToYmd
+        |> Date.fromIsoString
+        |> Result.toMaybe
 
 
 type alias Research =
@@ -523,7 +524,7 @@ type alias Research =
     , author : Author
     , issueId : Maybe Int
     , publicationStatus : PublicationStatus -- should be string?
-    , publication : Maybe String
+    , publication : Maybe Date
     , thumbnail : Maybe String
     , abstract : Maybe String
     , defaultPage : String
@@ -652,37 +653,62 @@ rcDateToPosix rcdate =
             Err "couldn't parse this"
 
 
+rcDateToRataDie : String -> Result String Date
+rcDateToRataDie rcdate =
+    case rcdate |> String.split "/" of
+        [ y, m, d ] ->
+            [ y, m, d ] |> String.join "-" |> Date.fromIsoString
+
+        _ ->
+            Err <| "expected ISO-8601 date, but got instead: " ++ rcdate
+
+
 type Compare
     = Equal
     | Smaller
     | Bigger
 
 
-comparePosix : Posix -> Posix -> Compare
-comparePosix p1 p2 =
-    let
-        ( m1, m2 ) =
-            ( Time.posixToMillis p1, Time.posixToMillis p2 )
-    in
-    if m1 == m2 then
-        Equal
 
-    else if m1 > m2 then
-        Bigger
+-- comparePosix : Posix -> Posix -> Compare
+-- comparePosix p1 p2 =
+--     let
+--         ( m1, m2 ) =
+--             ( Time.posixToMillis p1, Time.posixToMillis p2 )
+--     in
+--     if m1 == m2 then
+--         Equal
+--     else if m1 > m2 then
+--         Bigger
+--     else
+--         Smaller
 
-    else
-        Smaller
 
-
-findResearchAfter : Time.Posix -> List Research -> List Research
-findResearchAfter posix lst =
+findResearchAfter : Date -> List Research -> List Research
+findResearchAfter date lst =
     let
         test research =
-            let
-                researchDate =
-                    research.created |> rcDateToPosix |> Result.toMaybe |> Maybe.withDefault (Time.millisToPosix 0)
-            in
-            List.member (comparePosix researchDate posix) [ Bigger, Equal ]
+            case research.publication of
+                Just researchdate ->
+                    List.member (Date.compare researchdate date) [ GT, EQ ]
+
+                Nothing -> -- if there is no date it is not included in results
+                    False
+    in
+    List.filter test lst
+
+
+findResearchBefore : Date -> List Research -> List Research
+findResearchBefore date lst =
+    let
+        test : Research -> Bool
+        test research =
+            case research.publication of
+                Just researchdate ->
+                    Date.compare researchdate date == LT
+
+                Nothing ->
+                    False
     in
     List.filter test lst
 

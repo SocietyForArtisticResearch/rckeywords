@@ -1,11 +1,12 @@
 module WorkerTypes exposing (..)
 
+import Date exposing (Date)
 import Json.Decode exposing (Decoder)
 import Json.Decode.Extra as JDE
 import Json.Encode exposing (Value)
 import KeywordString exposing (KeywordString)
 import Research as RC exposing (Author, Portal, PublicationStatus(..), Research)
-
+ 
 
 
 {-
@@ -31,7 +32,7 @@ decodeWorkerPortal =
         (Json.Decode.field "id" Json.Decode.int)
         (Json.Decode.field "name" Json.Decode.string)
         (Json.Decode.field "type_" Json.Decode.string |> Json.Decode.map RC.portalTypeFromString)
-
+ 
 
 decodeExposition : Decoder RC.Research
 decodeExposition =
@@ -56,7 +57,7 @@ decodeExposition =
             -> Author
             -> Maybe Int
             -> PublicationStatus
-            -> Maybe String
+            -> Maybe Date
             -> Maybe String
             -> Maybe String
             -> String
@@ -90,7 +91,7 @@ decodeExposition =
                             |> andMap (field "author" RC.author)
                             |> andMap (JDE.optionalField "issueId" int)
                             |> andMap (field "publicationStatus" RC.decodePublicationStatus)
-                            |> andMap (JDE.optionalField "publication" string)
+                            |> andMap (JDE.optionalField "publication" (Json.Decode.int |> Json.Decode.map Date.fromRataDie))
                             |> andMap (JDE.optionalField "thumbnail" string)
                             |> andMap (JDE.optionalField "abstract" string)
                             |> andMap (field "defaultPage" string)
@@ -132,7 +133,7 @@ encodeExposition exp =
             exp.publication
                 |> Maybe.map
                     (\p ->
-                        ( "publication", string p )
+                        ( "publication", int (Date.toRataDie p) )
                     )
 
         thumbnail =

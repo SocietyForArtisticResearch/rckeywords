@@ -260,6 +260,17 @@ printLength label lst =
     lst
 
 
+optionalFilter : (a -> List b -> List b) -> Maybe a -> List b -> List b
+optionalFilter filter value lst =
+    case value of
+        Nothing ->
+            lst
+
+        -- no filter
+        Just v ->
+            lst |> filter v
+
+
 searchResearch : Search -> ReverseKeywordDict -> List Research -> List Research
 searchResearch (Search search) revDict lst =
     -- TODO implement dates
@@ -271,6 +282,8 @@ searchResearch (Search search) revDict lst =
         |> RC.findResearchWithKeywords search.keywords revDict
         -- |> printLength "keywords"
         |> RC.findResearchWithPortal search.portal
+        |> optionalFilter RC.findResearchAfter search.after
+        |> optionalFilter RC.findResearchBefore search.before
 
 
 

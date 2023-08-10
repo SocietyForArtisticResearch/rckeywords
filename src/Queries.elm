@@ -14,13 +14,16 @@ module Queries exposing
     , getKeywords
     , search
     , searchWithKeywords
+    , withAfter
     , withAuthor
+    , withBefore
     , withKeywords
-    , withTitle
     , withPortal
+    , withTitle
     )
 
-import Json.Decode exposing (field, int, list, map, string)
+import Date exposing (Date)
+import Json.Decode exposing (field, int, list, map, maybe, string)
 import Json.Encode as E
 import KeywordString
 import Research as RC
@@ -41,8 +44,8 @@ type Search
         { title : String
         , author : String
         , keywords : Set String
-        , after : Time.Posix
-        , before : Time.Posix
+        , after : Maybe Date
+        , before : Maybe Date
         , portal : String
         }
 
@@ -71,14 +74,30 @@ withPortal portal (Search s) =
         { s | portal = portal }
 
 
+withAfter : Maybe Date -> Search -> Search
+withAfter mdate (Search s) =
+    Search
+        { s
+            | after = mdate
+        }
+
+
+withBefore : Maybe Date -> Search -> Search
+withBefore mdate (Search s) =
+    Search
+        { s
+            | before = mdate
+        }
+
+
 emptySearch : Search
 emptySearch =
     Search
         { title = ""
         , author = ""
         , keywords = Set.empty
-        , after = Time.millisToPosix 0
-        , before = Time.millisToPosix ((2 ^ 31) - 1)
+        , after = Nothing
+        , before = Nothing
         , portal = ""
         }
 
@@ -96,7 +115,7 @@ searchWithKeywords kws (Search s) =
         }
 
 
-search : String -> String -> Set String -> Time.Posix -> Time.Posix -> String -> Search
+search : String -> String -> Set String -> Maybe Date -> Maybe Date -> String -> Search
 search title author keywords after before portal =
     Search
         { title = title
@@ -114,21 +133,39 @@ decodeSearch =
         (field "title" string)
         (field "author" string)
         (field "keywords" (list string) |> map Set.fromList)
-        (field "after" (int |> map Time.millisToPosix))
-        (field "before" (int |> map Time.millisToPosix))
+        (maybe (field "after" int |> map Date.fromRataDie))
+        (maybe (field "before" int |> map Date.fromRataDie))
         (field "portal" string)
+
+
+appendMaybe : Maybe a -> List a -> List a
+appendMaybe x xs =
+    case x of
+        Just some ->
+            some :: xs
+
+        Nothing ->
+            xs
 
 
 encodeSearch : Search -> E.Value
 encodeSearch (Search data) =
+    let
+        mafter =
+            data.after |> Maybe.map (\after -> ( "after", E.int (Date.toRataDie after) ))
+
+        mbefore =
+            data.before |> Maybe.map (\before -> ( "before", E.int (Date.toRataDie before) ))
+    in
     E.object
-        [ ( "title", E.string data.title )
-        , ( "author", E.string data.author )
-        , ( "keywords", E.list E.string (data.keywords |> Set.toList) )
-        , ( "after", E.int (Time.posixToMillis data.after) )
-        , ( "before", E.int (Time.posixToMillis data.before) )
-        , ( "portal", E.string data.portal )
-        ]
+        ([ ( "title", E.string data.title )
+         , ( "author", E.string data.author )
+         , ( "keywords", E.list E.string (data.keywords |> Set.toList) )
+         , ( "portal", E.string data.portal )
+         ]
+            |> appendMaybe mafter
+            |> appendMaybe mbefore
+        )
 
 
 type SearchQuery

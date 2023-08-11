@@ -18,7 +18,15 @@ sh build.sh
 
 This will also copy the latest RC export JSON (internal_research.json). Note that a build will work for 24 hours, because of the timeout on image links. On the deployed version this json file is updated automatically.
 
-For an optimized build, you run
+You can also do:
+```bash 
+sh build-elm.sh
+```
+
+This will only build elm and not copy the data.
+
+
+For the fastest performance, there is an optimized build:
 ```bash
 sh build-opt.sh
 ```
@@ -32,7 +40,7 @@ The main code can be found in src/Main.elm. The important functions for how it l
 
 __Structure:__
 
-src/Research.elm 
+Research.elm 
 
 contains all the RC stuff, keyword types, exposition type decoders encoders.
 
@@ -49,18 +57,30 @@ Note they are not exactly the same thing, so it may be that if some field is mis
 
 __Views:__
 
-The main view of all expositions, dividing it into columns
 ```elm 
-viewList : Model -> Html Msg
+
+type View
+    = KeywordsView KeywordsViewState
+    | SearchView SearchViewState
 ```
 
-The display of a single research item, the thumbnail, title and abstract:
-```elm 
-viewResearch : Research -> Element Msg
-```
+Since we want to support deep-linking, the state of the view should always be reflected in the app url (and the other way around).
+
+
+
+# Todo
+
+- browse just allows you to see the whole RC, but it is not about searching, it is about choosing a certain layout for all research (by keyword, by date, by portal etc..)
+- implement a search interface with the following fields:
+    * table view
+    * *geographic location* ?
+- Add a decoder for User objects from the rc:
+[Example json from RC:](https://www.researchcatalogue.net/portal/search-result?fulltext=&name=&keywords=&country=&type_user=user&resulttype=user&modifiedafter=&modifiedbefore=&format=json&limit=25&page=0)
 
 
 # Changes to RC Front
+
+In an earlier version of this, I tried some adjustments to the front page, which could be useful to actually apply to the real RC:
 
 ```CSS
 #container-main {
@@ -71,24 +91,4 @@ viewResearch : Research -> Element Msg
     width : 100%;
 }
 ```
-
-# Todo
-
-- Bug with search results
-- WHy does back and forward not work?
-
-- browse just allows you to see the whole RC, but it is not about searching, it is about choosing a certain layout for all research (by keyword, by date, by portal etc..)
-- implement a search interface with the following fields:
-    * title, string
-    * keywords, autocomplete interface 
-        make it clever so that if you select one keyword, it only shows other keywords that will result in results
-    * author, name
-    * list view
-    * portal 
-    * *geographic location* ?
-- Add a decoder for User objects from the rc:
-[Example json from RC:](https://www.researchcatalogue.net/portal/search-result?fulltext=&name=&keywords=&country=&type_user=user&resulttype=user&modifiedafter=&modifiedbefore=&format=json&limit=25&page=0)
-- fix alignments etc..
-
-
 

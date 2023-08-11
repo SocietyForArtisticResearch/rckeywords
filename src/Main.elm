@@ -62,6 +62,7 @@ type alias Model =
 
     -- , keywords : Set String
     , searchGUI : Form.Model
+    , formOpen : Bool
     , submitting : Bool
     , allKeywords : List KeywordString
     , allPortals : List RC.Portal
@@ -123,8 +124,7 @@ init { width, height } url key =
     , key = key
     , searchPageSize = 20
     , device = classifyDevice { w = width, h = height }
-
-    -- , keywords = Set.empty
+    , formOpen = True
     , searchGUI = Form.init
     , submitting = False
     , allKeywords = []
@@ -373,7 +373,7 @@ type Msg
     | FormMsg (Form.Msg Msg)
     | SubmitSearch (Form.Validated String SearchForm)
     | WindowResize Int Int
-
+    | ToggleForm
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -500,6 +500,9 @@ update msg model =
               }
             , Cmd.none
             )
+
+        ToggleForm ->
+            ( { model | formOpen = not model.formOpen }, Cmd.none)
 
 
 updateViewWithSearch : SearchForm -> View -> View

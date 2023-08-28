@@ -5,7 +5,7 @@ import Browser
 import Browser.Dom as Dom
 import Browser.Navigation as Nav
 import Dict
-import Element exposing (Element, el, fill, fillPortion, height, maximum, padding, paddingXY, px, rgb255, shrink, spacing, spacingXY, text, width)
+import Element exposing (Element, el, fill, fillPortion, height, html, maximum, padding, paddingXY, px, rgb255, shrink, spacing, spacingXY, text, width)
 import Element.Background
 import Element.Border
 import Element.Font as Font
@@ -16,7 +16,7 @@ import Form
 import Form.Field as Field
 import Form.FieldView as FieldView
 import Form.Validation as Validation
-import Html exposing (Html)
+import Html exposing (Html, br, hr)
 import Html.Attributes as Attr
 import Html.Events
 import Json.Decode
@@ -35,7 +35,6 @@ import Url exposing (Url)
 
 -- TODO:
 -- move sorting to main model, since it also applies to list.
-
 
 port receiveResults : (Json.Decode.Value -> msg) -> Sub msg
 
@@ -761,12 +760,31 @@ viewResearchMicro research =
                     <|
                         image ( w, h ) src
                 }
+
+        -- trim abstarct if > 300 char
+        abstractMax = 300
+
+        isGreaterThan400 : Int -> Bool
+        isGreaterThan400 index =
+            index > abstractMax
+
+        fullStopsInAbstract = String.indexes "." (Maybe.withDefault " "  research.abstract)
+
+        fullStopsAfter400 = List.filter isGreaterThan400 fullStopsInAbstract
+        firstSpaceAfter400 = List.head fullStopsAfter400
+        firstfullStopAfter400 = Maybe.withDefault abstractMax firstSpaceAfter400
+
+        abstract = 
+            if (Maybe.withDefault abstractMax firstSpaceAfter400) > abstractMax then
+                Element.paragraph [Font.size 12] [text (String.left (firstfullStopAfter400 + 1) (Maybe.withDefault " "  research.abstract) ++ " →")]
+            else    
+                Element.paragraph [Font.size 12] [text (Maybe.withDefault " "  research.abstract)]
     in
     case research.thumbnail of
         Just _ ->
             Element.row
                 [ width fill
-                , height (px 200)
+                , height fill
                 , Element.clip
                 ]
                 [ Maybe.map img research.thumbnail |> Maybe.withDefault Element.none
@@ -783,10 +801,25 @@ viewResearchMicro research =
                             Element.paragraph
                                 microLinkStyle
                                 [ Element.text <| RC.authorAsString research.author ]
-                        , url = RC.authorUrl research.author
+                        --, url = RC.authorUrl research.author
+                        , url = "/#/research/search/list?author=" ++ RC.authorAsString research.author
                         }
                     , Element.el lightLink (Element.text research.created)
+                    , html <| hr [] []
+                    , abstract
+                    , html <| hr [] []
+                    ,Element.wrappedRow [ width fill ] <| List.map KeywordString.toLink research.keywords
+                    , html <| hr [] []
+                        --Element.el lightLink (Element.text (String.concat (List.map KeywordString.toString research.keywords)))
                     ]
+                {-, Element.column [ width (fill
+                        |> maximum 300
+                    ), Element.alignTop ] <|
+                    --[
+                        List.map (Element.el lightLink) (List.map Element.text (List.map KeywordString.toString research.keywords))
+                        --Element.el lightLink (Element.text (String.concat (List.map KeywordString.toString research.keywords)))
+                    --]
+                    -}
                 ]
 
         Nothing ->

@@ -188,7 +188,6 @@ authorAsString : Author -> String
 authorAsString (Author a) =
     a.name
 
-
 getAuthorId : Author -> Int
 getAuthorId (Author a) =
     a.id

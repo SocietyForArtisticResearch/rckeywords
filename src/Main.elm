@@ -810,16 +810,7 @@ viewResearchMicro research =
                     , html <| hr [] []
                     ,Element.wrappedRow [ width fill ] <| List.map KeywordString.toLink research.keywords
                     , html <| hr [] []
-                        --Element.el lightLink (Element.text (String.concat (List.map KeywordString.toString research.keywords)))
                     ]
-                {-, Element.column [ width (fill
-                        |> maximum 300
-                    ), Element.alignTop ] <|
-                    --[
-                        List.map (Element.el lightLink) (List.map Element.text (List.map KeywordString.toString research.keywords))
-                        --Element.el lightLink (Element.text (String.concat (List.map KeywordString.toString research.keywords)))
-                    --]
-                    -}
                 ]
 
         Nothing ->

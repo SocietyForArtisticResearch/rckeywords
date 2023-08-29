@@ -776,7 +776,10 @@ viewResearchMicro research =
 
         abstract = 
             if (Maybe.withDefault abstractMax firstSpaceAfter400) > abstractMax then
-                Element.paragraph [Font.size 12] [text (String.left (firstfullStopAfter400 + 1) (Maybe.withDefault " "  research.abstract) ++ " →")]
+                Element.paragraph [Font.size 12] [text (String.left (firstfullStopAfter400 + 1) (Maybe.withDefault " "  research.abstract)), Element.link [ Font.size 12 ] <|
+                        { label = Element.text " →"
+                        , url = "https://www.researchcatalogue.net/profile/show-exposition?exposition=" ++ (String.fromInt (RC.idAsInt research.id))
+                        }]
             else    
                 Element.paragraph [Font.size 12] [text (Maybe.withDefault " "  research.abstract)]
     in

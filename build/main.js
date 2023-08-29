@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1693223570499"
+    "1693298480558"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -19032,6 +19032,9 @@ var $author$project$Research$authorUrl = function (_v0) {
 var $mdgriffith$elm_ui$Element$fillPortion = $mdgriffith$elm_ui$Internal$Model$Fill;
 var $elm$html$Html$hr = _VirtualDom_node('hr');
 var $mdgriffith$elm_ui$Element$html = $mdgriffith$elm_ui$Internal$Model$unstyled;
+var $author$project$Research$idAsInt = function (id) {
+	return id;
+};
 var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
 var $elm$html$Html$node = $elm$virtual_dom$VirtualDom$node;
 var $author$project$Main$image = F2(
@@ -19319,7 +19322,18 @@ var $author$project$Main$viewResearchMicro = function (research) {
 				A2(
 					$elm$core$String$left,
 					firstfullStopAfter400 + 1,
-					A2($elm$core$Maybe$withDefault, ' ', research._abstract)) + ' →')
+					A2($elm$core$Maybe$withDefault, ' ', research._abstract))),
+				A2(
+				$mdgriffith$elm_ui$Element$link,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$Font$size(12)
+					]),
+				{
+					label: $mdgriffith$elm_ui$Element$text(' →'),
+					url: 'https://www.researchcatalogue.net/profile/show-exposition?exposition=' + $elm$core$String$fromInt(
+						$author$project$Research$idAsInt(research.id))
+				})
 			])) : A2(
 		$mdgriffith$elm_ui$Element$paragraph,
 		_List_fromArray(

@@ -38,6 +38,7 @@ module Research exposing
     , getAuthorId
     , getCount
     , getName
+    , idAsInt
     , insert
     , keyword
     , keywordSet
@@ -71,6 +72,9 @@ import Time exposing (Posix)
 type alias ExpositionID =
     Int
 
+idAsInt : ExpositionID -> Int
+idAsInt id =
+    id
 
 type alias Portal =
     { id : Int

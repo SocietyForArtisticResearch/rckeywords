@@ -14,7 +14,7 @@ toString (KeywordString k) =
 
 toLink : KeywordString -> Element msg
 toLink (KeywordString k) =
-    link [ Font.size 13]
+    link [ Font.size 13, Font.color gray]
         { url = "/#/research/search/list?author&keyword=" ++ k
         , label = text ("#" ++ k ++ "  ")
         }
@@ -23,3 +23,8 @@ toLink (KeywordString k) =
 fromString : String -> KeywordString
 fromString str =
     KeywordString (str |> String.toLower |> String.trim)
+
+
+gray : Element.Color
+gray =
+    Element.rgb 0.4 0.4 0.4

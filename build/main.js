@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1693298480558"
+    "1693421722332"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -19030,11 +19030,61 @@ var $author$project$Research$authorUrl = function (_v0) {
 	return 'https://www.researchcatalogue.net/profile/?person=' + $elm$core$String$fromInt(a.id);
 };
 var $mdgriffith$elm_ui$Element$fillPortion = $mdgriffith$elm_ui$Internal$Model$Fill;
+var $author$project$Main$findKwInAbstract = F2(
+	function (kw, _abstract) {
+		var keyword = ' ' + (kw + ' ');
+		var kwStart = $elm$core$List$head(
+			A2($elm$core$String$indexes, keyword, _abstract));
+		if (kwStart.$ === 'Nothing') {
+			return _Utils_Tuple2(0, '');
+		} else {
+			var start = kwStart.a;
+			return _Utils_Tuple2(start, kw);
+		}
+	});
+var $author$project$Main$findKeywordInAbstract = F2(
+	function (kw, _abstract) {
+		var keyword = ' ' + kw;
+		var kwStart = $elm$core$List$head(
+			A2($elm$core$String$indexes, keyword, _abstract));
+		return kwStart;
+	});
+var $author$project$Main$stringToKeyword = function (str) {
+	return A2(
+		$mdgriffith$elm_ui$Element$link,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$Font$size(20)
+			]),
+		{
+			label: $mdgriffith$elm_ui$Element$text(str),
+			url: '/#/research/search/list?author&keyword=' + (str + ' ')
+		});
+};
+var $author$project$Main$highlightKwInAbstract = F2(
+	function (_abstract, key) {
+		var kw = key;
+		var kwlength = $elm$core$String$length(kw);
+		var keyword = A2($author$project$Main$findKeywordInAbstract, kw, _abstract);
+		if (keyword.$ === 'Nothing') {
+			return _List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$text(_abstract)
+				]);
+		} else {
+			var k = keyword.a;
+			var trimRight = A2($elm$core$String$dropLeft, (k + kwlength) + 1, _abstract);
+			var trimLeft = A2($elm$core$String$left, k + 1, _abstract);
+			var strToKw = $author$project$Main$stringToKeyword(kw);
+			return _List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$text(trimLeft),
+					strToKw
+				]);
+		}
+	});
 var $elm$html$Html$hr = _VirtualDom_node('hr');
 var $mdgriffith$elm_ui$Element$html = $mdgriffith$elm_ui$Internal$Model$unstyled;
-var $author$project$Research$idAsInt = function (id) {
-	return id;
-};
 var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
 var $elm$html$Html$node = $elm$virtual_dom$VirtualDom$node;
 var $author$project$Main$image = F2(
@@ -19099,18 +19149,40 @@ var $author$project$Main$microLinkStyle = _List_fromArray(
 		$mdgriffith$elm_ui$Element$htmlAttribute(
 		A2($elm$html$Html$Attributes$attribute, 'style', 'text-transform: unset'))
 	]);
+var $elm$core$List$sort = function (xs) {
+	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
+};
+var $author$project$KeywordString$gray = A3($mdgriffith$elm_ui$Element$rgb, 0.4, 0.4, 0.4);
 var $author$project$KeywordString$toLink = function (_v0) {
 	var k = _v0.a;
 	return A2(
 		$mdgriffith$elm_ui$Element$link,
 		_List_fromArray(
 			[
-				$mdgriffith$elm_ui$Element$Font$size(13)
+				$mdgriffith$elm_ui$Element$Font$size(13),
+				$mdgriffith$elm_ui$Element$Font$color($author$project$KeywordString$gray)
 			]),
 		{
 			label: $mdgriffith$elm_ui$Element$text('#' + (k + '  ')),
 			url: '/#/research/search/list?author&keyword=' + k
 		});
+};
+var $elm$core$List$unzip = function (pairs) {
+	var step = F2(
+		function (_v0, _v1) {
+			var x = _v0.a;
+			var y = _v0.b;
+			var xs = _v1.a;
+			var ys = _v1.b;
+			return _Utils_Tuple2(
+				A2($elm$core$List$cons, x, xs),
+				A2($elm$core$List$cons, y, ys));
+		});
+	return A3(
+		$elm$core$List$foldr,
+		step,
+		_Utils_Tuple2(_List_Nil, _List_Nil),
+		pairs);
 };
 var $mdgriffith$elm_ui$Internal$Model$Padding = F5(
 	function (a, b, c, d, e) {
@@ -19296,242 +19368,243 @@ var $mdgriffith$elm_ui$Element$wrappedRow = F2(
 			}
 		}
 	});
-var $author$project$Main$viewResearchMicro = function (research) {
-	var fullStopsInAbstract = A2(
-		$elm$core$String$indexes,
-		'.',
-		A2($elm$core$Maybe$withDefault, ' ', research._abstract));
-	var abstractMax = 300;
-	var isGreaterThan400 = function (index) {
-		return _Utils_cmp(index, abstractMax) > 0;
-	};
-	var fullStopsAfter400 = A2($elm$core$List$filter, isGreaterThan400, fullStopsInAbstract);
-	var firstSpaceAfter400 = $elm$core$List$head(fullStopsAfter400);
-	var firstfullStopAfter400 = A2($elm$core$Maybe$withDefault, abstractMax, firstSpaceAfter400);
-	var _abstract = (_Utils_cmp(
-		A2($elm$core$Maybe$withDefault, abstractMax, firstSpaceAfter400),
-		abstractMax) > 0) ? A2(
-		$mdgriffith$elm_ui$Element$paragraph,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$Font$size(12)
-			]),
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$text(
-				A2(
-					$elm$core$String$left,
-					firstfullStopAfter400 + 1,
-					A2($elm$core$Maybe$withDefault, ' ', research._abstract))),
-				A2(
+var $author$project$Main$viewResearchMicro = F2(
+	function (allKeywords, research) {
+		var kws = _List_fromArray(
+			['work', 'art', 'Hague']);
+		var fullStopsInAbstract = A2(
+			$elm$core$String$indexes,
+			'.',
+			A2($elm$core$Maybe$withDefault, ' ', research._abstract));
+		var abstractMax = 300;
+		var isGreaterThan400 = function (index) {
+			return _Utils_cmp(index, abstractMax) > 0;
+		};
+		var fullStopsAfter400 = A2($elm$core$List$filter, isGreaterThan400, fullStopsInAbstract);
+		var firstSpaceAfter400 = $elm$core$List$head(fullStopsAfter400);
+		var firstfullStopAfter400 = A2($elm$core$Maybe$withDefault, abstractMax, firstSpaceAfter400);
+		var trimmedAbstract = A2(
+			$elm$core$String$left,
+			firstfullStopAfter400 + 1,
+			A2($elm$core$Maybe$withDefault, ' ', research._abstract));
+		var kInA = A2(
+			$elm$core$List$map,
+			$author$project$Main$findKwInAbstract(trimmedAbstract),
+			kws);
+		var kInASorted = $elm$core$List$sort(kInA);
+		var kInAunzip = $elm$core$List$unzip(kInASorted);
+		var series = A2(
+			$elm$core$List$range,
+			1,
+			$elm$core$List$length(kInA));
+		var kwina = A2(
+			$elm$core$List$map,
+			$author$project$Main$highlightKwInAbstract(trimmedAbstract),
+			kws);
+		var abstractIndexes = kInAunzip.a;
+		var _abstract = (_Utils_cmp(
+			A2($elm$core$Maybe$withDefault, abstractMax, firstSpaceAfter400),
+			abstractMax) > 0) ? A2(
+			$mdgriffith$elm_ui$Element$paragraph,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$Font$size(12)
+				]),
+			$elm$core$List$concat(kwina)) : A2(
+			$mdgriffith$elm_ui$Element$paragraph,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$Font$size(12)
+				]),
+			$elm$core$List$concat(kwina));
+		var abstarctKeywords = kInAunzip.b;
+		var _v0 = _Utils_Tuple2(200, 200);
+		var w = _v0.a;
+		var h = _v0.b;
+		var img = function (src) {
+			return A2(
 				$mdgriffith$elm_ui$Element$link,
 				_List_fromArray(
 					[
-						$mdgriffith$elm_ui$Element$Font$size(12)
+						$mdgriffith$elm_ui$Element$width(
+						$mdgriffith$elm_ui$Element$fillPortion(1))
 					]),
 				{
-					label: $mdgriffith$elm_ui$Element$text(' →'),
-					url: 'https://www.researchcatalogue.net/profile/show-exposition?exposition=' + $elm$core$String$fromInt(
-						$author$project$Research$idAsInt(research.id))
-				})
-			])) : A2(
-		$mdgriffith$elm_ui$Element$paragraph,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$Font$size(12)
-			]),
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$text(
-				A2($elm$core$Maybe$withDefault, ' ', research._abstract))
-			]));
-	var _v0 = _Utils_Tuple2(200, 200);
-	var w = _v0.a;
-	var h = _v0.b;
-	var img = function (src) {
-		return A2(
-			$mdgriffith$elm_ui$Element$link,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width(
-					$mdgriffith$elm_ui$Element$fillPortion(1))
-				]),
-			{
-				label: A2(
-					$mdgriffith$elm_ui$Element$el,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width(
-							$mdgriffith$elm_ui$Element$px(w)),
-							$mdgriffith$elm_ui$Element$height(
-							$mdgriffith$elm_ui$Element$px(h)),
-							A2($mdgriffith$elm_ui$Element$paddingXY, 0, 5)
-						]),
-					A2(
-						$author$project$Main$image,
-						_Utils_Tuple2(w, h),
-						src)),
-				url: research.defaultPage
-			});
-	};
-	var _v1 = research.thumbnail;
-	if (_v1.$ === 'Just') {
-		return A2(
-			$mdgriffith$elm_ui$Element$row,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$clip
-				]),
-			_List_fromArray(
-				[
-					A2(
-					$elm$core$Maybe$withDefault,
-					$mdgriffith$elm_ui$Element$none,
-					A2($elm$core$Maybe$map, img, research.thumbnail)),
-					A2(
-					$mdgriffith$elm_ui$Element$column,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width(
-							$mdgriffith$elm_ui$Element$fillPortion(6)),
-							$mdgriffith$elm_ui$Element$alignTop
-						]),
-					_List_fromArray(
-						[
-							A2(
-							$mdgriffith$elm_ui$Element$link,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-									$mdgriffith$elm_ui$Element$alignLeft
-								]),
-							{
-								label: A2(
-									$mdgriffith$elm_ui$Element$paragraph,
-									$author$project$Main$microLinkStyle,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$text(research.title)
-										])),
-								url: research.defaultPage
-							}),
-							A2(
-							$mdgriffith$elm_ui$Element$link,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
-								]),
-							{
-								label: A2(
-									$mdgriffith$elm_ui$Element$paragraph,
-									$author$project$Main$microLinkStyle,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$text(
-											$author$project$Research$authorAsString(research.author))
-										])),
-								url: '/#/research/search/list?author=' + $author$project$Research$authorAsString(research.author)
-							}),
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							$author$project$Main$lightLink,
-							$mdgriffith$elm_ui$Element$text(research.created)),
-							$mdgriffith$elm_ui$Element$html(
-							A2($elm$html$Html$hr, _List_Nil, _List_Nil)),
-							_abstract,
-							$mdgriffith$elm_ui$Element$html(
-							A2($elm$html$Html$hr, _List_Nil, _List_Nil)),
-							A2(
-							$mdgriffith$elm_ui$Element$wrappedRow,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
-								]),
-							A2($elm$core$List$map, $author$project$KeywordString$toLink, research.keywords)),
-							$mdgriffith$elm_ui$Element$html(
-							A2($elm$html$Html$hr, _List_Nil, _List_Nil))
-						]))
-				]));
-	} else {
-		var urlFromId = function (i) {
-			return function (fileName) {
-				return '/screenshots/' + (fileName + '.jpeg');
-			}(
-				$elm$core$String$fromInt(i));
+					label: A2(
+						$mdgriffith$elm_ui$Element$el,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width(
+								$mdgriffith$elm_ui$Element$px(w)),
+								$mdgriffith$elm_ui$Element$height(
+								$mdgriffith$elm_ui$Element$px(h)),
+								A2($mdgriffith$elm_ui$Element$paddingXY, 0, 5)
+							]),
+						A2(
+							$author$project$Main$image,
+							_Utils_Tuple2(w, h),
+							src)),
+					url: research.defaultPage
+				});
 		};
-		return A2(
-			$mdgriffith$elm_ui$Element$row,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$height(
-					$mdgriffith$elm_ui$Element$px(200)),
-					$mdgriffith$elm_ui$Element$clip
-				]),
-			_List_fromArray(
-				[
-					A2(
-					$elm$core$Maybe$withDefault,
-					$mdgriffith$elm_ui$Element$none,
-					A2(
-						$elm$core$Maybe$map,
-						img,
-						$elm$core$Maybe$Just(
-							urlFromId(research.id)))),
-					A2(
-					$mdgriffith$elm_ui$Element$column,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width(
-							$mdgriffith$elm_ui$Element$fillPortion(6)),
-							$mdgriffith$elm_ui$Element$alignTop
-						]),
-					_List_fromArray(
-						[
-							A2(
-							$mdgriffith$elm_ui$Element$link,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-									$mdgriffith$elm_ui$Element$alignLeft
-								]),
-							{
-								label: A2(
-									$mdgriffith$elm_ui$Element$paragraph,
-									$author$project$Main$microLinkStyle,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$text(research.title)
-										])),
-								url: research.defaultPage
-							}),
-							A2(
-							$mdgriffith$elm_ui$Element$link,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
-								]),
-							{
-								label: A2(
-									$mdgriffith$elm_ui$Element$paragraph,
-									$author$project$Main$microLinkStyle,
-									_List_fromArray(
-										[
-											$mdgriffith$elm_ui$Element$text(
-											$author$project$Research$authorAsString(research.author))
-										])),
-								url: $author$project$Research$authorUrl(research.author)
-							}),
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							$author$project$Main$lightLink,
-							$mdgriffith$elm_ui$Element$text(research.created))
-						]))
-				]));
-	}
-};
+		var _v1 = research.thumbnail;
+		if (_v1.$ === 'Just') {
+			return A2(
+				$mdgriffith$elm_ui$Element$row,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$clip
+					]),
+				_List_fromArray(
+					[
+						A2(
+						$elm$core$Maybe$withDefault,
+						$mdgriffith$elm_ui$Element$none,
+						A2($elm$core$Maybe$map, img, research.thumbnail)),
+						A2(
+						$mdgriffith$elm_ui$Element$column,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width(
+								$mdgriffith$elm_ui$Element$fillPortion(6)),
+								$mdgriffith$elm_ui$Element$alignTop
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$mdgriffith$elm_ui$Element$link,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+										$mdgriffith$elm_ui$Element$alignLeft
+									]),
+								{
+									label: A2(
+										$mdgriffith$elm_ui$Element$paragraph,
+										$author$project$Main$microLinkStyle,
+										_List_fromArray(
+											[
+												$mdgriffith$elm_ui$Element$text(research.title)
+											])),
+									url: research.defaultPage
+								}),
+								A2(
+								$mdgriffith$elm_ui$Element$link,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+									]),
+								{
+									label: A2(
+										$mdgriffith$elm_ui$Element$paragraph,
+										$author$project$Main$microLinkStyle,
+										_List_fromArray(
+											[
+												$mdgriffith$elm_ui$Element$text(
+												$author$project$Research$authorAsString(research.author))
+											])),
+									url: '/#/research/search/list?author=' + $author$project$Research$authorAsString(research.author)
+								}),
+								A2(
+								$mdgriffith$elm_ui$Element$el,
+								$author$project$Main$lightLink,
+								$mdgriffith$elm_ui$Element$text(research.created)),
+								$mdgriffith$elm_ui$Element$html(
+								A2($elm$html$Html$hr, _List_Nil, _List_Nil)),
+								_abstract,
+								$mdgriffith$elm_ui$Element$html(
+								A2($elm$html$Html$hr, _List_Nil, _List_Nil)),
+								A2(
+								$mdgriffith$elm_ui$Element$wrappedRow,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+									]),
+								A2($elm$core$List$map, $author$project$KeywordString$toLink, research.keywords)),
+								$mdgriffith$elm_ui$Element$html(
+								A2($elm$html$Html$hr, _List_Nil, _List_Nil))
+							]))
+					]));
+		} else {
+			var urlFromId = function (i) {
+				return function (fileName) {
+					return '/screenshots/' + (fileName + '.jpeg');
+				}(
+					$elm$core$String$fromInt(i));
+			};
+			return A2(
+				$mdgriffith$elm_ui$Element$row,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$height(
+						$mdgriffith$elm_ui$Element$px(200)),
+						$mdgriffith$elm_ui$Element$clip
+					]),
+				_List_fromArray(
+					[
+						A2(
+						$elm$core$Maybe$withDefault,
+						$mdgriffith$elm_ui$Element$none,
+						A2(
+							$elm$core$Maybe$map,
+							img,
+							$elm$core$Maybe$Just(
+								urlFromId(research.id)))),
+						A2(
+						$mdgriffith$elm_ui$Element$column,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width(
+								$mdgriffith$elm_ui$Element$fillPortion(6)),
+								$mdgriffith$elm_ui$Element$alignTop
+							]),
+						_List_fromArray(
+							[
+								A2(
+								$mdgriffith$elm_ui$Element$link,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+										$mdgriffith$elm_ui$Element$alignLeft
+									]),
+								{
+									label: A2(
+										$mdgriffith$elm_ui$Element$paragraph,
+										$author$project$Main$microLinkStyle,
+										_List_fromArray(
+											[
+												$mdgriffith$elm_ui$Element$text(research.title)
+											])),
+									url: research.defaultPage
+								}),
+								A2(
+								$mdgriffith$elm_ui$Element$link,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+									]),
+								{
+									label: A2(
+										$mdgriffith$elm_ui$Element$paragraph,
+										$author$project$Main$microLinkStyle,
+										_List_fromArray(
+											[
+												$mdgriffith$elm_ui$Element$text(
+												$author$project$Research$authorAsString(research.author))
+											])),
+									url: $author$project$Research$authorUrl(research.author)
+								}),
+								A2(
+								$mdgriffith$elm_ui$Element$el,
+								$author$project$Main$lightLink,
+								$mdgriffith$elm_ui$Element$text(research.created))
+							]))
+					]));
+		}
+	});
 var $elm$html$Html$a = _VirtualDom_node('a');
 var $author$project$Research$getName = function (_v0) {
 	var data = _v0.a;
@@ -21426,7 +21499,10 @@ var $author$project$Main$viewResearchResults = F7(
 					$author$project$Main$makeColumns,
 					2,
 					_List_Nil,
-					A2($elm$core$List$map, $author$project$Main$viewResearchMicro, sorted));
+					A2(
+						$elm$core$List$map,
+						$author$project$Main$viewResearchMicro(allKeywords),
+						sorted));
 			} else {
 				var scale = layout.a;
 				return A4($author$project$Main$viewScreenshots, dimensions, sv, scale, sorted);

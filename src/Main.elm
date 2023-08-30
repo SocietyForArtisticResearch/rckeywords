@@ -1,6 +1,7 @@
 port module Main exposing (Flags, Model, Msg, SearchAction, View, main)
 
 import AppUrl exposing (AppUrl)
+import Array exposing (..)
 import Browser
 import Browser.Dom as Dom
 import Browser.Navigation as Nav
@@ -35,6 +36,7 @@ import Url exposing (Url)
 
 -- TODO:
 -- move sorting to main model, since it also applies to list.
+
 
 port receiveResults : (Json.Decode.Value -> msg) -> Sub msg
 
@@ -588,8 +590,7 @@ handleUrl url model =
                         |> Maybe.andThen List.head
                         |> Maybe.withDefault ""
 
---                _ = Debug.log "query parameters" (url.queryParameters,portal)
-
+                --                _ = Debug.log "query parameters" (url.queryParameters,portal)
                 cmd : Cmd msg
                 cmd =
                     sendQuery
@@ -741,8 +742,8 @@ lightLink =
     ]
 
 
-viewResearchMicro : Research -> Element Msg
-viewResearchMicro research =
+viewResearchMicro : List KeywordString -> Research -> Element Msg
+viewResearchMicro allKeywords research =
     let
         ( w, h ) =
             ( 200, 200 )
@@ -762,26 +763,70 @@ viewResearchMicro research =
                 }
 
         -- trim abstarct if > 300 char
-        abstractMax = 300
+        abstractMax =
+            300
 
         isGreaterThan400 : Int -> Bool
         isGreaterThan400 index =
             index > abstractMax
 
-        fullStopsInAbstract = String.indexes "." (Maybe.withDefault " "  research.abstract)
+        fullStopsInAbstract =
+            String.indexes "." (Maybe.withDefault " " research.abstract)
 
-        fullStopsAfter400 = List.filter isGreaterThan400 fullStopsInAbstract
-        firstSpaceAfter400 = List.head fullStopsAfter400
-        firstfullStopAfter400 = Maybe.withDefault abstractMax firstSpaceAfter400
+        fullStopsAfter400 =
+            List.filter isGreaterThan400 fullStopsInAbstract
 
-        abstract = 
-            if (Maybe.withDefault abstractMax firstSpaceAfter400) > abstractMax then
-                Element.paragraph [Font.size 12] [text (String.left (firstfullStopAfter400 + 1) (Maybe.withDefault " "  research.abstract)), Element.link [ Font.size 12 ] <|
-                        { label = Element.text " →"
-                        , url = "https://www.researchcatalogue.net/profile/show-exposition?exposition=" ++ (String.fromInt (RC.idAsInt research.id))
-                        }]
-            else    
-                Element.paragraph [Font.size 12] [text (Maybe.withDefault " "  research.abstract)]
+        firstSpaceAfter400 =
+            List.head fullStopsAfter400
+
+        firstfullStopAfter400 =
+            Maybe.withDefault abstractMax firstSpaceAfter400
+
+        trimmedAbstract =
+            String.left (firstfullStopAfter400 + 1) (Maybe.withDefault " " research.abstract)
+
+        --kwina = highlightKeywordInAbstract "work" trimmedAbstract
+        kws =
+            [ "work", "art", "Hague" ]
+
+        kwina =
+            kws |> List.map (highlightKwInAbstract trimmedAbstract)
+
+        kInA =
+            kws |> List.map (findKwInAbstract trimmedAbstract)
+
+        kInASorted =
+            List.sort kInA
+
+        kInAunzip =
+            List.unzip kInASorted
+
+        abstractIndexes =
+            Tuple.first kInAunzip
+
+        abstarctKeywords =
+            Tuple.second kInAunzip
+
+        series =
+            List.range 1 (List.length kInA)
+
+        --kwina =
+        --    series |> List.map (makeSnippet abstractIndexes abstarctKeywords trimmedAbstract)
+        abstract =
+            if Maybe.withDefault abstractMax firstSpaceAfter400 > abstractMax then
+                Element.paragraph [ Font.size 12 ] <| List.concat kwina
+                {- Element.paragraph [Font.size 12] [
+                   text trimmedAbstract,
+                   Element.link [ Font.size 12 ] <|
+                       { label = Element.text " →"
+                       , url = "https://www.researchcatalogue.net/profile/show-exposition?exposition=" ++ (String.fromInt (RC.idAsInt research.id))
+                       }]
+                -}
+
+            else
+                Element.paragraph [ Font.size 12 ] <| List.concat kwina
+
+        --Element.paragraph [Font.size 12] [text trimmedAbstract]
     in
     case research.thumbnail of
         Just _ ->
@@ -804,6 +849,7 @@ viewResearchMicro research =
                             Element.paragraph
                                 microLinkStyle
                                 [ Element.text <| RC.authorAsString research.author ]
+
                         --, url = RC.authorUrl research.author
                         , url = "/#/research/search/list?author=" ++ RC.authorAsString research.author
                         }
@@ -811,7 +857,7 @@ viewResearchMicro research =
                     , html <| hr [] []
                     , abstract
                     , html <| hr [] []
-                    ,Element.wrappedRow [ width fill ] <| List.map KeywordString.toLink research.keywords
+                    , Element.wrappedRow [ width fill ] <| List.map KeywordString.toLink research.keywords
                     , html <| hr [] []
                     ]
                 ]
@@ -905,6 +951,11 @@ prefixHash str =
 black : Element.Color
 black =
     Element.rgb 0.0 0.0 0.0
+
+
+darkGray : Element.Color
+darkGray =
+    Element.rgb 0.25 0.25 0.25
 
 
 gray : Element.Color
@@ -1108,7 +1159,7 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
         render =
             case layout of
                 ListLayout ->
-                    makeColumns 2 [] (sorted |> List.map viewResearchMicro)
+                    makeColumns 2 [] (sorted |> List.map (viewResearchMicro allKeywords))
 
                 ScreenLayout scale ->
                     viewScreenshots dimensions sv scale sorted
@@ -1250,6 +1301,202 @@ viewSelectedKeyword fontsize kw =
 
         --Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text "x")
         ]
+
+
+highlightKwInAbstract : String -> String -> List (Element Msg)
+highlightKwInAbstract abstract key =
+    let
+        kw =
+            --KeywordString.toString key
+            key
+
+        keyword =
+            findKeywordInAbstract kw abstract
+
+        kwlength =
+            String.length kw
+    in
+    case keyword of
+        Nothing ->
+            [ text abstract ]
+
+        Just k ->
+            let
+                trimLeft =
+                    String.left (k + 1) abstract
+
+                trimRight =
+                    String.dropLeft (k + kwlength + 1) abstract
+
+                strToKw =
+                    stringToKeyword kw
+            in
+            [ text trimLeft, strToKw ]
+
+
+highlightKeywordInAbstract : String -> String -> Element Msg
+highlightKeywordInAbstract kw abstract =
+    let
+        keyword =
+            findKeywordInAbstract kw abstract
+
+        kwlength =
+            String.length kw
+    in
+    case keyword of
+        Nothing ->
+            Element.paragraph [ Font.size 12 ] [ text abstract ]
+
+        Just k ->
+            let
+                trimLeft =
+                    String.left (k + 1) abstract
+
+                trimRight =
+                    String.dropLeft (k + kwlength + 1) abstract
+
+                strToKw =
+                    stringToKeyword kw
+            in
+            Element.paragraph [ Font.size 12 ]
+                [ text trimLeft
+                , strToKw
+                , text trimRight
+                ]
+
+
+stringToKeyword : String -> Element Msg
+stringToKeyword str =
+    Element.link [ Font.size 20 ] <|
+        { label = Element.text str
+        , url = "/#/research/search/list?author&keyword=" ++ str ++ " "
+        }
+
+
+findKeywordInAbstract : String -> String -> Maybe Int
+findKeywordInAbstract kw abstract =
+    let
+        keyword =
+            " " ++ kw
+
+        kwStart =
+            List.head (String.indexes keyword abstract)
+    in
+    kwStart
+
+
+findKwInAbstract : String -> String -> ( Int, String )
+findKwInAbstract kw abstract =
+    let
+        keyword =
+            " " ++ kw ++ " "
+
+        kwStart =
+            List.head (String.indexes keyword abstract)
+    in
+    case kwStart of
+        Nothing ->
+            ( 0, "" )
+
+        Just start ->
+            ( start, kw )
+
+
+makeSnippet : List Int -> List String -> String -> Int -> List (Element Msg)
+makeSnippet indexes keywords abstract which =
+    let
+        kwsLength =
+            List.length keywords
+
+        idx =
+            Array.fromList indexes
+
+        kws =
+            Array.fromList keywords
+
+        snippetStart =
+            Array.get
+
+        firstk =
+            Maybe.withDefault "-1" (Array.get 0 kws)
+    in
+    if which > kwsLength then
+        if kwsLength == 1 then
+            if firstk == "" then
+                --no kws found
+                [ text abstract ]
+
+            else
+                --single kw found
+                let
+                    k =
+                        Maybe.withDefault -1 (Array.get 0 idx)
+
+                    keyw =
+                        Maybe.withDefault "-1" (Array.get 0 kws)
+
+                    kwlength =
+                        String.length keyw
+
+                    trimLeft =
+                        String.left (k + 1) abstract
+
+                    trimRight =
+                        String.dropLeft (k + kwlength + 1) abstract
+
+                    strToKw =
+                        stringToKeyword keyw
+                in
+                [ text trimLeft, strToKw, text trimRight ]
+
+        else
+            --last keyword
+            let
+                k =
+                    Maybe.withDefault -1 (Array.get which idx)
+
+                keyw =
+                    Maybe.withDefault "-1" (Array.get which kws)
+
+                kwlength =
+                    String.length keyw
+
+                trimRight =
+                    String.dropLeft (k + kwlength + 1) abstract
+            in
+            [ text trimRight ]
+
+    else
+        --any keyword
+        let
+            k =
+                Maybe.withDefault -1 (Array.get which idx)
+
+            keyw =
+                Maybe.withDefault "-1" (Array.get which kws)
+
+            kwlength =
+                String.length keyw
+
+            prevk =
+                Maybe.withDefault -1 (Array.get (which - 1) idx)
+
+            prevkeyw =
+                Maybe.withDefault "-1" (Array.get (which - 1) kws)
+
+            prevkwlength =
+                String.length prevkeyw
+
+            trimRight =
+                String.dropLeft (k + kwlength + 1) abstract
+
+            trimLeft =
+                String.left (prevk + prevkwlength + 1) trimRight
+
+            strToKw =
+                stringToKeyword keyw
+        in
+        [ text trimLeft, strToKw ]
 
 
 {-| on Enter

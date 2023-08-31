@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1693421722332"
+    "1693479980311"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -7520,6 +7520,107 @@ var _Bitwise_shiftRightZfBy = F2(function(offset, a)
 {
 	return a >>> offset;
 });
+
+
+// CREATE
+
+var _Regex_never = /.^/;
+
+var _Regex_fromStringWith = F2(function(options, string)
+{
+	var flags = 'g';
+	if (options.multiline) { flags += 'm'; }
+	if (options.caseInsensitive) { flags += 'i'; }
+
+	try
+	{
+		return $elm$core$Maybe$Just(new RegExp(string, flags));
+	}
+	catch(error)
+	{
+		return $elm$core$Maybe$Nothing;
+	}
+});
+
+
+// USE
+
+var _Regex_contains = F2(function(re, string)
+{
+	return string.match(re) !== null;
+});
+
+
+var _Regex_findAtMost = F3(function(n, re, str)
+{
+	var out = [];
+	var number = 0;
+	var string = str;
+	var lastIndex = re.lastIndex;
+	var prevLastIndex = -1;
+	var result;
+	while (number++ < n && (result = re.exec(string)))
+	{
+		if (prevLastIndex == re.lastIndex) break;
+		var i = result.length - 1;
+		var subs = new Array(i);
+		while (i > 0)
+		{
+			var submatch = result[i];
+			subs[--i] = submatch
+				? $elm$core$Maybe$Just(submatch)
+				: $elm$core$Maybe$Nothing;
+		}
+		out.push(A4($elm$regex$Regex$Match, result[0], result.index, number, _List_fromArray(subs)));
+		prevLastIndex = re.lastIndex;
+	}
+	re.lastIndex = lastIndex;
+	return _List_fromArray(out);
+});
+
+
+var _Regex_replaceAtMost = F4(function(n, re, replacer, string)
+{
+	var count = 0;
+	function jsReplacer(match)
+	{
+		if (count++ >= n)
+		{
+			return match;
+		}
+		var i = arguments.length - 3;
+		var submatches = new Array(i);
+		while (i > 0)
+		{
+			var submatch = arguments[i];
+			submatches[--i] = submatch
+				? $elm$core$Maybe$Just(submatch)
+				: $elm$core$Maybe$Nothing;
+		}
+		return replacer(A4($elm$regex$Regex$Match, match, arguments[arguments.length - 2], count, _List_fromArray(submatches)));
+	}
+	return string.replace(re, jsReplacer);
+});
+
+var _Regex_splitAtMost = F3(function(n, re, str)
+{
+	var string = str;
+	var out = [];
+	var start = re.lastIndex;
+	var restoreLastIndex = re.lastIndex;
+	while (n--)
+	{
+		var result = re.exec(string);
+		if (!result) break;
+		out.push(string.slice(start, result.index));
+		start = re.lastIndex;
+	}
+	out.push(string.slice(start));
+	re.lastIndex = restoreLastIndex;
+	return _List_fromArray(out);
+});
+
+var _Regex_infinity = Infinity;
 var $author$project$Main$LinkClicked = function (a) {
 	return {$: 'LinkClicked', a: a};
 };
@@ -19030,58 +19131,41 @@ var $author$project$Research$authorUrl = function (_v0) {
 	return 'https://www.researchcatalogue.net/profile/?person=' + $elm$core$String$fromInt(a.id);
 };
 var $mdgriffith$elm_ui$Element$fillPortion = $mdgriffith$elm_ui$Internal$Model$Fill;
-var $author$project$Main$findKwInAbstract = F2(
-	function (kw, _abstract) {
-		var keyword = ' ' + (kw + ' ');
-		var kwStart = $elm$core$List$head(
-			A2($elm$core$String$indexes, keyword, _abstract));
-		if (kwStart.$ === 'Nothing') {
-			return _Utils_Tuple2(0, '');
-		} else {
-			var start = kwStart.a;
-			return _Utils_Tuple2(start, kw);
-		}
+var $elm$regex$Regex$Match = F4(
+	function (match, index, number, submatches) {
+		return {index: index, match: match, number: number, submatches: submatches};
 	});
-var $author$project$Main$findKeywordInAbstract = F2(
-	function (kw, _abstract) {
-		var keyword = ' ' + kw;
-		var kwStart = $elm$core$List$head(
-			A2($elm$core$String$indexes, keyword, _abstract));
-		return kwStart;
-	});
-var $author$project$Main$stringToKeyword = function (str) {
+var $elm$regex$Regex$find = _Regex_findAtMost(_Regex_infinity);
+var $elm$regex$Regex$fromStringWith = _Regex_fromStringWith;
+var $elm$regex$Regex$fromString = function (string) {
 	return A2(
-		$mdgriffith$elm_ui$Element$link,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$Font$size(20)
-			]),
-		{
-			label: $mdgriffith$elm_ui$Element$text(str),
-			url: '/#/research/search/list?author&keyword=' + (str + ' ')
-		});
+		$elm$regex$Regex$fromStringWith,
+		{caseInsensitive: false, multiline: false},
+		string);
 };
-var $author$project$Main$highlightKwInAbstract = F2(
-	function (_abstract, key) {
-		var kw = key;
-		var kwlength = $elm$core$String$length(kw);
-		var keyword = A2($author$project$Main$findKeywordInAbstract, kw, _abstract);
-		if (keyword.$ === 'Nothing') {
-			return _List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$text(_abstract)
-				]);
-		} else {
-			var k = keyword.a;
-			var trimRight = A2($elm$core$String$dropLeft, (k + kwlength) + 1, _abstract);
-			var trimLeft = A2($elm$core$String$left, k + 1, _abstract);
-			var strToKw = $author$project$Main$stringToKeyword(kw);
-			return _List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$text(trimLeft),
-					strToKw
-				]);
-		}
+var $elm$regex$Regex$never = _Regex_never;
+var $author$project$KeywordString$toString = function (_v0) {
+	var k = _v0.a;
+	return k;
+};
+var $author$project$Main$findKwInAbstract = F2(
+	function (_abstract, kw) {
+		var keyword = $author$project$KeywordString$toString(kw);
+		var key = ' ' + (keyword + '[!.,? ;:]');
+		var maybeRegex = $elm$regex$Regex$fromString(key);
+		var regex = A2($elm$core$Maybe$withDefault, $elm$regex$Regex$never, maybeRegex);
+		var finds = A2($elm$regex$Regex$find, regex, _abstract);
+		var first = $elm$core$List$head(finds);
+		var extractIndex = function (match) {
+			if (match.$ === 'Nothing') {
+				return 0;
+			} else {
+				var m = match.a;
+				return m.index;
+			}
+		};
+		var kwStart = extractIndex(first);
+		return _Utils_Tuple2(kwStart, keyword);
 	});
 var $elm$html$Html$hr = _VirtualDom_node('hr');
 var $mdgriffith$elm_ui$Element$html = $mdgriffith$elm_ui$Internal$Model$unstyled;
@@ -19110,6 +19194,14 @@ var $author$project$Main$image = F2(
 					]),
 				_List_Nil));
 	});
+var $elm$regex$Regex$contains = _Regex_contains;
+var $author$project$Main$isKwInAbstract = F2(
+	function (_abstract, kws) {
+		var kw = ' ' + ($author$project$KeywordString$toString(kws) + '[!.,? ;:]');
+		var maybeRegex = $elm$regex$Regex$fromString(kw);
+		var regex = A2($elm$core$Maybe$withDefault, $elm$regex$Regex$never, maybeRegex);
+		return A2($elm$regex$Regex$contains, regex, _abstract);
+	});
 var $mdgriffith$elm_ui$Internal$Model$Heading = function (a) {
 	return {$: 'Heading', a: a};
 };
@@ -19132,6 +19224,174 @@ var $author$project$Main$lightLink = _List_fromArray(
 		$mdgriffith$elm_ui$Element$htmlAttribute(
 		A2($elm$html$Html$Attributes$attribute, 'style', 'text-transform: unset'))
 	]);
+var $elm$core$Array$fromListHelp = F3(
+	function (list, nodeList, nodeListSize) {
+		fromListHelp:
+		while (true) {
+			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, list);
+			var jsArray = _v0.a;
+			var remainingItems = _v0.b;
+			if (_Utils_cmp(
+				$elm$core$Elm$JsArray$length(jsArray),
+				$elm$core$Array$branchFactor) < 0) {
+				return A2(
+					$elm$core$Array$builderToArray,
+					true,
+					{nodeList: nodeList, nodeListSize: nodeListSize, tail: jsArray});
+			} else {
+				var $temp$list = remainingItems,
+					$temp$nodeList = A2(
+					$elm$core$List$cons,
+					$elm$core$Array$Leaf(jsArray),
+					nodeList),
+					$temp$nodeListSize = nodeListSize + 1;
+				list = $temp$list;
+				nodeList = $temp$nodeList;
+				nodeListSize = $temp$nodeListSize;
+				continue fromListHelp;
+			}
+		}
+	});
+var $elm$core$Array$fromList = function (list) {
+	if (!list.b) {
+		return $elm$core$Array$empty;
+	} else {
+		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
+	}
+};
+var $elm$core$Array$bitMask = 4294967295 >>> (32 - $elm$core$Array$shiftStep);
+var $elm$core$Elm$JsArray$unsafeGet = _JsArray_unsafeGet;
+var $elm$core$Array$getHelp = F3(
+	function (shift, index, tree) {
+		getHelp:
+		while (true) {
+			var pos = $elm$core$Array$bitMask & (index >>> shift);
+			var _v0 = A2($elm$core$Elm$JsArray$unsafeGet, pos, tree);
+			if (_v0.$ === 'SubTree') {
+				var subTree = _v0.a;
+				var $temp$shift = shift - $elm$core$Array$shiftStep,
+					$temp$index = index,
+					$temp$tree = subTree;
+				shift = $temp$shift;
+				index = $temp$index;
+				tree = $temp$tree;
+				continue getHelp;
+			} else {
+				var values = _v0.a;
+				return A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, values);
+			}
+		}
+	});
+var $elm$core$Array$tailIndex = function (len) {
+	return (len >>> 5) << 5;
+};
+var $elm$core$Array$get = F2(
+	function (index, _v0) {
+		var len = _v0.a;
+		var startShift = _v0.b;
+		var tree = _v0.c;
+		var tail = _v0.d;
+		return ((index < 0) || (_Utils_cmp(index, len) > -1)) ? $elm$core$Maybe$Nothing : ((_Utils_cmp(
+			index,
+			$elm$core$Array$tailIndex(len)) > -1) ? $elm$core$Maybe$Just(
+			A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, tail)) : $elm$core$Maybe$Just(
+			A3($elm$core$Array$getHelp, startShift, index, tree)));
+	});
+var $author$project$Main$stringToKeyword = function (str) {
+	return A2(
+		$mdgriffith$elm_ui$Element$link,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$Font$size(12),
+				$mdgriffith$elm_ui$Element$Font$color($author$project$Main$gray),
+				$mdgriffith$elm_ui$Element$Font$underline
+			]),
+		{
+			label: $mdgriffith$elm_ui$Element$text(str),
+			url: '/#/research/search/list?author&keyword=' + (str + ' ')
+		});
+};
+var $author$project$Main$makeSnippet = F4(
+	function (indexes, keywords, _abstract, which) {
+		var snippetStart = $elm$core$Array$get;
+		var kwsLength = $elm$core$List$length(keywords);
+		var kws = $elm$core$Array$fromList(keywords);
+		var idx = $elm$core$Array$fromList(indexes);
+		var firstk = A2(
+			$elm$core$Maybe$withDefault,
+			'-1',
+			A2($elm$core$Array$get, 0, kws));
+		if (!which) {
+			var prevkeyw = A2(
+				$elm$core$Maybe$withDefault,
+				'',
+				A2($elm$core$Array$get, which - 1, kws));
+			var prevkwlength = $elm$core$String$length(prevkeyw);
+			var prevk = A2(
+				$elm$core$Maybe$withDefault,
+				0,
+				A2($elm$core$Array$get, which - 1, idx));
+			var keyw = A2(
+				$elm$core$Maybe$withDefault,
+				'>>>>>>>>',
+				A2($elm$core$Array$get, which, kws));
+			var kwlength = $elm$core$String$length(keyw);
+			var strToKw = $author$project$Main$stringToKeyword(keyw);
+			var k = A2(
+				$elm$core$Maybe$withDefault,
+				-1,
+				A2($elm$core$Array$get, which, idx));
+			var sliceLeft = A3($elm$core$String$slice, prevk + prevkwlength, k + 1, _abstract);
+			return _List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$text(sliceLeft),
+					strToKw
+				]);
+		} else {
+			if (_Utils_eq(which, kwsLength)) {
+				var keyw = A2(
+					$elm$core$Maybe$withDefault,
+					'-1',
+					A2($elm$core$Array$get, which - 1, kws));
+				var kwlength = $elm$core$String$length(keyw);
+				var k = A2(
+					$elm$core$Maybe$withDefault,
+					-1,
+					A2($elm$core$Array$get, which - 1, idx));
+				var trimRight = A2($elm$core$String$dropLeft, (k + kwlength) + 1, _abstract);
+				return _List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$text(trimRight)
+					]);
+			} else {
+				var prevkeyw = A2(
+					$elm$core$Maybe$withDefault,
+					'',
+					A2($elm$core$Array$get, which - 1, kws));
+				var prevkwlength = $elm$core$String$length(prevkeyw);
+				var prevk = A2(
+					$elm$core$Maybe$withDefault,
+					0,
+					A2($elm$core$Array$get, which - 1, idx));
+				var keyw = A2(
+					$elm$core$Maybe$withDefault,
+					'>>>>>>>>',
+					A2($elm$core$Array$get, which, kws));
+				var kwlength = $elm$core$String$length(keyw);
+				var strToKw = $author$project$Main$stringToKeyword(keyw);
+				var k = A2(
+					$elm$core$Maybe$withDefault,
+					-1,
+					A2($elm$core$Array$get, which, idx));
+				var sliceLeft = A3($elm$core$String$slice, (prevk + prevkwlength) + 1, k + 1, _abstract);
+				return _List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$text(sliceLeft),
+						strToKw
+					]);
+			}
+		}
+	});
 var $mdgriffith$elm_ui$Element$Font$regular = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textNormalWeight);
 var $author$project$Main$microLinkStyle = _List_fromArray(
 	[
@@ -19152,7 +19412,7 @@ var $author$project$Main$microLinkStyle = _List_fromArray(
 var $elm$core$List$sort = function (xs) {
 	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
 };
-var $author$project$KeywordString$gray = A3($mdgriffith$elm_ui$Element$rgb, 0.4, 0.4, 0.4);
+var $author$project$KeywordString$gray = A3($mdgriffith$elm_ui$Element$rgb, 0.3, 0.3, 0.3);
 var $author$project$KeywordString$toLink = function (_v0) {
 	var k = _v0.a;
 	return A2(
@@ -19370,8 +19630,6 @@ var $mdgriffith$elm_ui$Element$wrappedRow = F2(
 	});
 var $author$project$Main$viewResearchMicro = F2(
 	function (allKeywords, research) {
-		var kws = _List_fromArray(
-			['work', 'art', 'Hague']);
 		var fullStopsInAbstract = A2(
 			$elm$core$String$indexes,
 			'.',
@@ -19387,21 +19645,30 @@ var $author$project$Main$viewResearchMicro = F2(
 			$elm$core$String$left,
 			firstfullStopAfter400 + 1,
 			A2($elm$core$Maybe$withDefault, ' ', research._abstract));
+		var kwins = A2(
+			$elm$core$List$filter,
+			$author$project$Main$isKwInAbstract(trimmedAbstract),
+			allKeywords);
 		var kInA = A2(
 			$elm$core$List$map,
 			$author$project$Main$findKwInAbstract(trimmedAbstract),
-			kws);
-		var kInASorted = $elm$core$List$sort(kInA);
+			kwins);
+		var kInASorted = A2(
+			$elm$core$List$drop,
+			1,
+			$elm$core$List$sort(kInA));
 		var kInAunzip = $elm$core$List$unzip(kInASorted);
 		var series = A2(
 			$elm$core$List$range,
-			1,
-			$elm$core$List$length(kInA));
+			0,
+			$elm$core$List$length(kInASorted));
+		var kws = A2($elm$core$List$map, $author$project$KeywordString$toString, kwins);
+		var abstractKeywords = kInAunzip.b;
+		var abstractIndexes = kInAunzip.a;
 		var kwina = A2(
 			$elm$core$List$map,
-			$author$project$Main$highlightKwInAbstract(trimmedAbstract),
-			kws);
-		var abstractIndexes = kInAunzip.a;
+			A3($author$project$Main$makeSnippet, abstractIndexes, abstractKeywords, trimmedAbstract),
+			series);
 		var _abstract = (_Utils_cmp(
 			A2($elm$core$Maybe$withDefault, abstractMax, firstSpaceAfter400),
 			abstractMax) > 0) ? A2(
@@ -19417,7 +19684,6 @@ var $author$project$Main$viewResearchMicro = F2(
 					$mdgriffith$elm_ui$Element$Font$size(12)
 				]),
 			$elm$core$List$concat(kwina));
-		var abstarctKeywords = kInAunzip.b;
 		var _v0 = _Utils_Tuple2(200, 200);
 		var w = _v0.a;
 		var h = _v0.b;
@@ -19513,7 +19779,28 @@ var $author$project$Main$viewResearchMicro = F2(
 								$mdgriffith$elm_ui$Element$text(research.created)),
 								$mdgriffith$elm_ui$Element$html(
 								A2($elm$html$Html$hr, _List_Nil, _List_Nil)),
+								A2(
+								$mdgriffith$elm_ui$Element$paragraph,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$Font$size(12)
+									]),
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$text(trimmedAbstract)
+									])),
+								$mdgriffith$elm_ui$Element$html(
+								A2($elm$html$Html$hr, _List_Nil, _List_Nil)),
 								_abstract,
+								$mdgriffith$elm_ui$Element$html(
+								A2($elm$html$Html$hr, _List_Nil, _List_Nil)),
+								A2(
+								$mdgriffith$elm_ui$Element$wrappedRow,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
+									]),
+								A2($elm$core$List$map, $author$project$KeywordString$toLink, kwins)),
 								$mdgriffith$elm_ui$Element$html(
 								A2($elm$html$Html$hr, _List_Nil, _List_Nil)),
 								A2(
@@ -20925,10 +21212,6 @@ var $elm$html$Html$Attributes$autocomplete = function (bool) {
 var $elm$html$Html$datalist = _VirtualDom_node('datalist');
 var $elm$html$Html$Attributes$list = _VirtualDom_attribute('list');
 var $elm$html$Html$option = _VirtualDom_node('option');
-var $author$project$KeywordString$toString = function (_v0) {
-	var k = _v0.a;
-	return k;
-};
 var $dillonkearns$elm_form$Form$Validation$value = function (_v0) {
 	var _v1 = _v0.c;
 	var maybeParsed = _v1.a;

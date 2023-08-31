@@ -27,4 +27,4 @@ fromString str =
 
 gray : Element.Color
 gray =
-    Element.rgb 0.4 0.4 0.4
+    Element.rgb 0.3 0.3 0.3

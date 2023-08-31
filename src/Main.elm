@@ -799,8 +799,9 @@ viewResearchMicro allKeywords research =
             kwins |> List.map (findKwInAbstract trimmedAbstract)
 
         kInASorted =
-            List.drop 1 (List.sort kInA) --drop the ?
+            List.drop 1 (List.sort kInA)
 
+        --drop the ?
         kInAunzip =
             List.unzip kInASorted
 
@@ -813,8 +814,11 @@ viewResearchMicro allKeywords research =
         series =
             List.range 0 (List.length kInASorted)
 
+        subKeywords =
+            series |> List.map (isSubkeyword abstractKeywords)
+
         kwina =
-            series |> List.map (makeSnippet abstractIndexes abstractKeywords trimmedAbstract)
+            series |> List.map (makeSnippet abstractIndexes subKeywords abstractKeywords trimmedAbstract)
 
         abstract =
             if Maybe.withDefault abstractMax firstSpaceAfter400 > abstractMax then
@@ -859,8 +863,8 @@ viewResearchMicro allKeywords research =
                         }
                     , Element.el lightLink (Element.text research.created)
                     , html <| hr [] []
-                    , Element.paragraph [ Font.size 12 ] [ text trimmedAbstract ]
-                    , html <| hr [] []
+                    --, Element.paragraph [ Font.size 12 ] [ text trimmedAbstract ]
+                    --, html <| hr [] []
                     , abstract
                     , html <| hr [] []
                     , Element.wrappedRow [ width fill ] <| List.map KeywordString.toLink kwins
@@ -1432,24 +1436,54 @@ findKwInAbstract abstract kw =
         regex =
             Maybe.withDefault Regex.never maybeRegex
 
-        finds = Regex.find regex abstract
+        finds =
+            Regex.find regex abstract
 
-        first = List.head finds
-
-        kwStart = extractIndex first
-        {-keyword =
-            " " ++ KeywordString.toString kw ++ " "
+        first =
+            List.head finds
 
         kwStart =
-            List.head (String.indexes keyword abstract)-}
-    in
+            extractIndex first
 
+        {- keyword =
+               " " ++ KeywordString.toString kw ++ " "
+
+           kwStart =
+               List.head (String.indexes keyword abstract)
+        -}
+    in
     ( kwStart, keyword )
 
 
+isSubkeyword : List String -> Int -> Bool
+isSubkeyword keywords index =
+    let
+        kws =
+            Array.fromList keywords
 
-makeSnippet : List Int -> List String -> String -> Int -> List (Element Msg)
-makeSnippet indexes keywords abstract which =
+        kw =
+            Maybe.withDefault "" (Array.get index kws)
+
+        first =
+            Array.slice 0 index kws
+
+        second =
+            Array.slice (index + 1) (Array.length kws) kws
+
+        arr =
+            Array.append first second
+
+        bools =
+            Array.map (String.contains kw) arr
+
+        list =
+            Array.toList bools
+    in
+    List.member True list
+
+
+makeSnippet : List Int -> List Bool -> List String -> String -> Int -> List (Element Msg)
+makeSnippet indexes subkeywords keywords abstract which =
     let
         kwsLength =
             List.length keywords
@@ -1460,8 +1494,11 @@ makeSnippet indexes keywords abstract which =
         kws =
             Array.fromList keywords
 
-        snippetStart =
-            Array.get
+        subs =
+            Array.fromList subkeywords
+
+        isSub =
+            Maybe.withDefault False (Array.get which subs)
 
         firstk =
             Maybe.withDefault "-1" (Array.get 0 kws)
@@ -1493,7 +1530,12 @@ makeSnippet indexes keywords abstract which =
             strToKw =
                 stringToKeyword keyw
         in
-        [ text sliceLeft, strToKw ]
+        if isSub == True then
+            [ text sliceLeft ]
+
+        else
+            [ text sliceLeft, strToKw ]
+
     else if which == kwsLength then
         -- append abstract end
         let
@@ -1538,7 +1580,11 @@ makeSnippet indexes keywords abstract which =
             strToKw =
                 stringToKeyword keyw
         in
-        [ text sliceLeft, strToKw ]
+        if isSub == True then
+            [ text sliceLeft ]
+
+        else
+            [ text sliceLeft, strToKw ]
 
 
 {-| on Enter

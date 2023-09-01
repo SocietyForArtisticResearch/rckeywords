@@ -763,78 +763,37 @@ viewResearchMicro allKeywords research =
                         image ( w, h ) src
                 }
 
-        -- trim abstarct if > 300 char
+        -- slice abstarct if > max
         abstractMax =
             300
 
-        isGreaterThan400 : Int -> Bool
-        isGreaterThan400 index =
-            index > abstractMax
-
-        fullStopsInAbstract =
-            String.indexes "." (Maybe.withDefault " " research.abstract)
-
-        fullStopsAfter400 =
-            List.filter isGreaterThan400 fullStopsInAbstract
-
-        firstSpaceAfter400 =
-            List.head fullStopsAfter400
-
-        firstfullStopAfter400 =
-            Maybe.withDefault abstractMax firstSpaceAfter400
-
-        trimmedAbstract =
-            String.left (firstfullStopAfter400 + 1) (Maybe.withDefault " " research.abstract)
-
-        --kwina = highlightKeywordInAbstract "work" trimmedAbstract
-        kwins =
-            List.filter (isKwInAbstract trimmedAbstract) allKeywords
+        shortAbstract =
+            sliceAbstract research.abstract abstractMax
 
         kws =
-            List.map KeywordString.toString kwins
+            List.filter (isKwInAbstract shortAbstract) allKeywords
 
-        --kwina =
-        --    kws |> List.map (highlightKwInAbstract trimmedAbstract)
-        kInA =
-            kwins |> List.map (findKwInAbstract trimmedAbstract)
-
-        kInASorted =
-            List.drop 1 (List.sort kInA)
-
-        --drop the ?
-        kInAunzip =
-            List.unzip kInASorted
+        foundKws =
+            findKwsInAbstract kws shortAbstract
 
         abstractIndexes =
-            Tuple.first kInAunzip
+            Tuple.first foundKws
 
         abstractKeywords =
-            Tuple.second kInAunzip
+            Tuple.second foundKws
 
         series =
-            List.range 0 (List.length kInASorted)
+            List.range 0 (List.length abstractKeywords)
 
         subKeywords =
-            series |> List.map (isSubkeyword abstractKeywords)
+            List.map (isSubkeyword abstractKeywords) series
 
         kwina =
-            series |> List.map (makeSnippet abstractIndexes subKeywords abstractKeywords trimmedAbstract)
+            List.map (makeSnippet abstractIndexes subKeywords abstractKeywords shortAbstract) series
 
         abstract =
-            if Maybe.withDefault abstractMax firstSpaceAfter400 > abstractMax then
-                Element.paragraph [ Font.size 12 ] <| List.concat kwina
-                {- Element.paragraph [Font.size 12] [
-                   text trimmedAbstract,
-                   Element.link [ Font.size 12 ] <|
-                       { label = Element.text " →"
-                       , url = "https://www.researchcatalogue.net/profile/show-exposition?exposition=" ++ (String.fromInt (RC.idAsInt research.id))
-                       }]
-                -}
+            Element.paragraph [ Font.size 12 ] <| List.concat kwina
 
-            else
-                Element.paragraph [ Font.size 12 ] <| List.concat kwina
-
-        --Element.paragraph [Font.size 12] [text trimmedAbstract]
     in
     case research.thumbnail of
         Just _ ->
@@ -863,11 +822,12 @@ viewResearchMicro allKeywords research =
                         }
                     , Element.el lightLink (Element.text research.created)
                     , html <| hr [] []
-                    --, Element.paragraph [ Font.size 12 ] [ text trimmedAbstract ]
+
+                    --, Element.paragraph [ Font.size 12 ] [ text shortAbstract ]
                     --, html <| hr [] []
                     , abstract
                     , html <| hr [] []
-                    , Element.wrappedRow [ width fill ] <| List.map KeywordString.toLink kwins
+                    , Element.wrappedRow [ width fill ] <| List.map KeywordString.toLink kws
                     , html <| hr [] []
                     , Element.wrappedRow [ width fill ] <| List.map KeywordString.toLink research.keywords
                     , html <| hr [] []
@@ -1315,6 +1275,28 @@ viewSelectedKeyword fontsize kw =
         ]
 
 
+sliceAbstract : Maybe String -> Int -> String
+sliceAbstract abs max =
+    let
+        isGreaterThan : Int -> Int -> Bool
+        isGreaterThan mx value =
+            value > mx
+
+        abstract =
+            Maybe.withDefault "" abs
+
+        fullStopsInAbstract =
+            String.indexes "." abstract
+
+        fullStopsAfterMax =
+            List.filter (isGreaterThan max) fullStopsInAbstract
+
+        firstFullStopAfterMax =
+            Maybe.withDefault max (List.head fullStopsAfterMax)
+    in
+    String.left (firstFullStopAfterMax + 1) abstract
+
+
 isKwInAbstract : String -> KeywordString -> Bool
 isKwInAbstract abstract kws =
     let
@@ -1330,68 +1312,6 @@ isKwInAbstract abstract kws =
     Regex.contains regex abstract
 
 
-highlightKwInAbstract : String -> String -> List (Element Msg)
-highlightKwInAbstract abstract key =
-    let
-        kw =
-            --KeywordString.toString key
-            key
-
-        keyword =
-            findKeywordInAbstract kw abstract
-
-        kwlength =
-            String.length kw
-    in
-    case keyword of
-        Nothing ->
-            [ text abstract ]
-
-        Just k ->
-            let
-                trimLeft =
-                    String.left (k + 1) abstract
-
-                trimRight =
-                    String.dropLeft (k + kwlength + 1) abstract
-
-                strToKw =
-                    stringToKeyword kw
-            in
-            [ text trimLeft, strToKw ]
-
-
-highlightKeywordInAbstract : String -> String -> Element Msg
-highlightKeywordInAbstract kw abstract =
-    let
-        keyword =
-            findKeywordInAbstract kw abstract
-
-        kwlength =
-            String.length kw
-    in
-    case keyword of
-        Nothing ->
-            Element.paragraph [ Font.size 12 ] [ text abstract ]
-
-        Just k ->
-            let
-                trimLeft =
-                    String.left (k + 1) abstract
-
-                trimRight =
-                    String.dropLeft (k + kwlength + 1) abstract
-
-                strToKw =
-                    stringToKeyword kw
-            in
-            Element.paragraph [ Font.size 12 ]
-                [ text trimLeft
-                , strToKw
-                , text trimRight
-                ]
-
-
 stringToKeyword : String -> Element Msg
 stringToKeyword str =
     Element.link [ Font.size 12, Font.color gray, Font.underline ] <|
@@ -1400,16 +1320,16 @@ stringToKeyword str =
         }
 
 
-findKeywordInAbstract : String -> String -> Maybe Int
-findKeywordInAbstract kw abstract =
+findKwsInAbstract : List KeywordString -> String -> ( List Int, List String )
+findKwsInAbstract kws shortAbstract =
     let
-        keyword =
-            " " ++ kw
+        kwsInAbstract =
+            List.map (findKwInAbstract shortAbstract) kws
 
-        kwStart =
-            List.head (String.indexes keyword abstract)
+        kwsSorted =
+            List.drop 1 (List.sort kwsInAbstract)
     in
-    kwStart
+    List.unzip kwsSorted
 
 
 findKwInAbstract : String -> KeywordString -> ( Int, String )
@@ -1444,13 +1364,6 @@ findKwInAbstract abstract kw =
 
         kwStart =
             extractIndex first
-
-        {- keyword =
-               " " ++ KeywordString.toString kw ++ " "
-
-           kwStart =
-               List.head (String.indexes keyword abstract)
-        -}
     in
     ( kwStart, keyword )
 
@@ -1509,8 +1422,10 @@ makeSnippet indexes subkeywords keywords abstract which =
             k =
                 Maybe.withDefault -1 (Array.get which idx)
 
+            -- I think this happens when the abstact is a white space
+            -- this matches somehow the "?" keyword, which is then dropped creating an empty list
             keyw =
-                Maybe.withDefault ">>>>>>>>" (Array.get which kws)
+                Maybe.withDefault "!!! This is an empty list !!!" (Array.get which kws)
 
             kwlength =
                 String.length keyw
@@ -1548,10 +1463,10 @@ makeSnippet indexes subkeywords keywords abstract which =
             kwlength =
                 String.length keyw
 
-            trimRight =
+            sliceRight =
                 String.dropLeft (k + kwlength + 1) abstract
         in
-        [ text trimRight ]
+        [ text sliceRight ]
 
     else
         -- slice abstract snippet + insert kw link

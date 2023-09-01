@@ -604,7 +604,7 @@ ${variant}`;
   var VERSION = "1.1.2";
   var TARGET_NAME = "My target name";
   var INITIAL_ELM_COMPILED_TIMESTAMP = Number(
-    "1693511716095"
+    "1693595703431"
   );
   var ORIGINAL_COMPILATION_MODE = "standard";
   var ORIGINAL_BROWSER_UI_POSITION = "BottomLeft";
@@ -19167,6 +19167,38 @@ var $author$project$Main$findKwInAbstract = F2(
 		var kwStart = extractIndex(first);
 		return _Utils_Tuple2(kwStart, keyword);
 	});
+var $elm$core$List$sort = function (xs) {
+	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
+};
+var $elm$core$List$unzip = function (pairs) {
+	var step = F2(
+		function (_v0, _v1) {
+			var x = _v0.a;
+			var y = _v0.b;
+			var xs = _v1.a;
+			var ys = _v1.b;
+			return _Utils_Tuple2(
+				A2($elm$core$List$cons, x, xs),
+				A2($elm$core$List$cons, y, ys));
+		});
+	return A3(
+		$elm$core$List$foldr,
+		step,
+		_Utils_Tuple2(_List_Nil, _List_Nil),
+		pairs);
+};
+var $author$project$Main$findKwsInAbstract = F2(
+	function (kws, shortAbstract) {
+		var kwsInAbstract = A2(
+			$elm$core$List$map,
+			$author$project$Main$findKwInAbstract(shortAbstract),
+			kws);
+		var kwsSorted = A2(
+			$elm$core$List$drop,
+			1,
+			$elm$core$List$sort(kwsInAbstract));
+		return $elm$core$List$unzip(kwsSorted);
+	});
 var $elm$html$Html$hr = _VirtualDom_node('hr');
 var $mdgriffith$elm_ui$Element$html = $mdgriffith$elm_ui$Internal$Model$unstyled;
 var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
@@ -19750,7 +19782,7 @@ var $author$project$Main$makeSnippet = F5(
 				A2($elm$core$Array$get, which - 1, idx));
 			var keyw = A2(
 				$elm$core$Maybe$withDefault,
-				'>>>>>>>>',
+				'!!! This is an empty list !!!',
 				A2($elm$core$Array$get, which, kws));
 			var kwlength = $elm$core$String$length(keyw);
 			var strToKw = $author$project$Main$stringToKeyword(keyw);
@@ -19778,10 +19810,10 @@ var $author$project$Main$makeSnippet = F5(
 					$elm$core$Maybe$withDefault,
 					-1,
 					A2($elm$core$Array$get, which - 1, idx));
-				var trimRight = A2($elm$core$String$dropLeft, (k + kwlength) + 1, _abstract);
+				var sliceRight = A2($elm$core$String$dropLeft, (k + kwlength) + 1, _abstract);
 				return _List_fromArray(
 					[
-						$mdgriffith$elm_ui$Element$text(trimRight)
+						$mdgriffith$elm_ui$Element$text(sliceRight)
 					]);
 			} else {
 				var prevkeyw = A2(
@@ -19832,9 +19864,24 @@ var $author$project$Main$microLinkStyle = _List_fromArray(
 		$mdgriffith$elm_ui$Element$htmlAttribute(
 		A2($elm$html$Html$Attributes$attribute, 'style', 'text-transform: unset'))
 	]);
-var $elm$core$List$sort = function (xs) {
-	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
-};
+var $author$project$Main$sliceAbstract = F2(
+	function (abs, max) {
+		var isGreaterThan = F2(
+			function (mx, value) {
+				return _Utils_cmp(value, mx) > 0;
+			});
+		var _abstract = A2($elm$core$Maybe$withDefault, '', abs);
+		var fullStopsInAbstract = A2($elm$core$String$indexes, '.', _abstract);
+		var fullStopsAfterMax = A2(
+			$elm$core$List$filter,
+			isGreaterThan(max),
+			fullStopsInAbstract);
+		var firstFullStopAfterMax = A2(
+			$elm$core$Maybe$withDefault,
+			max,
+			$elm$core$List$head(fullStopsAfterMax));
+		return A2($elm$core$String$left, firstFullStopAfterMax + 1, _abstract);
+	});
 var $author$project$KeywordString$gray = A3($mdgriffith$elm_ui$Element$rgb, 0.3, 0.3, 0.3);
 var $author$project$KeywordString$toLink = function (_v0) {
 	var k = _v0.a;
@@ -19849,23 +19896,6 @@ var $author$project$KeywordString$toLink = function (_v0) {
 			label: $mdgriffith$elm_ui$Element$text('#' + (k + '  ')),
 			url: '/#/research/search/list?author&keyword=' + k
 		});
-};
-var $elm$core$List$unzip = function (pairs) {
-	var step = F2(
-		function (_v0, _v1) {
-			var x = _v0.a;
-			var y = _v0.b;
-			var xs = _v1.a;
-			var ys = _v1.b;
-			return _Utils_Tuple2(
-				A2($elm$core$List$cons, x, xs),
-				A2($elm$core$List$cons, y, ys));
-		});
-	return A3(
-		$elm$core$List$foldr,
-		step,
-		_Utils_Tuple2(_List_Nil, _List_Nil),
-		pairs);
 };
 var $mdgriffith$elm_ui$Internal$Model$Padding = F5(
 	function (a, b, c, d, e) {
@@ -20053,58 +20083,28 @@ var $mdgriffith$elm_ui$Element$wrappedRow = F2(
 	});
 var $author$project$Main$viewResearchMicro = F2(
 	function (allKeywords, research) {
-		var fullStopsInAbstract = A2(
-			$elm$core$String$indexes,
-			'.',
-			A2($elm$core$Maybe$withDefault, ' ', research._abstract));
 		var abstractMax = 300;
-		var isGreaterThan400 = function (index) {
-			return _Utils_cmp(index, abstractMax) > 0;
-		};
-		var fullStopsAfter400 = A2($elm$core$List$filter, isGreaterThan400, fullStopsInAbstract);
-		var firstSpaceAfter400 = $elm$core$List$head(fullStopsAfter400);
-		var firstfullStopAfter400 = A2($elm$core$Maybe$withDefault, abstractMax, firstSpaceAfter400);
-		var trimmedAbstract = A2(
-			$elm$core$String$left,
-			firstfullStopAfter400 + 1,
-			A2($elm$core$Maybe$withDefault, ' ', research._abstract));
-		var kwins = A2(
+		var shortAbstract = A2($author$project$Main$sliceAbstract, research._abstract, abstractMax);
+		var kws = A2(
 			$elm$core$List$filter,
-			$author$project$Main$isKwInAbstract(trimmedAbstract),
+			$author$project$Main$isKwInAbstract(shortAbstract),
 			allKeywords);
-		var kInA = A2(
-			$elm$core$List$map,
-			$author$project$Main$findKwInAbstract(trimmedAbstract),
-			kwins);
-		var kInASorted = A2(
-			$elm$core$List$drop,
-			1,
-			$elm$core$List$sort(kInA));
-		var kInAunzip = $elm$core$List$unzip(kInASorted);
+		var foundKws = A2($author$project$Main$findKwsInAbstract, kws, shortAbstract);
+		var abstractKeywords = foundKws.b;
 		var series = A2(
 			$elm$core$List$range,
 			0,
-			$elm$core$List$length(kInASorted));
-		var kws = A2($elm$core$List$map, $author$project$KeywordString$toString, kwins);
-		var abstractKeywords = kInAunzip.b;
+			$elm$core$List$length(abstractKeywords));
 		var subKeywords = A2(
 			$elm$core$List$map,
 			$author$project$Main$isSubkeyword(abstractKeywords),
 			series);
-		var abstractIndexes = kInAunzip.a;
+		var abstractIndexes = foundKws.a;
 		var kwina = A2(
 			$elm$core$List$map,
-			A4($author$project$Main$makeSnippet, abstractIndexes, subKeywords, abstractKeywords, trimmedAbstract),
+			A4($author$project$Main$makeSnippet, abstractIndexes, subKeywords, abstractKeywords, shortAbstract),
 			series);
-		var _abstract = (_Utils_cmp(
-			A2($elm$core$Maybe$withDefault, abstractMax, firstSpaceAfter400),
-			abstractMax) > 0) ? A2(
-			$mdgriffith$elm_ui$Element$paragraph,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$Font$size(12)
-				]),
-			$elm$core$List$concat(kwina)) : A2(
+		var _abstract = A2(
 			$mdgriffith$elm_ui$Element$paragraph,
 			_List_fromArray(
 				[
@@ -20215,7 +20215,7 @@ var $author$project$Main$viewResearchMicro = F2(
 									[
 										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill)
 									]),
-								A2($elm$core$List$map, $author$project$KeywordString$toLink, kwins)),
+								A2($elm$core$List$map, $author$project$KeywordString$toLink, kws)),
 								$mdgriffith$elm_ui$Element$html(
 								A2($elm$html$Html$hr, _List_Nil, _List_Nil)),
 								A2(

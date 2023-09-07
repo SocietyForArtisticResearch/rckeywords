@@ -1,6 +1,7 @@
 port module Main exposing (Flags, Model, Msg, SearchAction, View, main)
 
 import AppUrl exposing (AppUrl)
+import Array
 import Browser
 import Browser.Dom as Dom
 import Browser.Events as Events
@@ -26,6 +27,7 @@ import Json.Encode
 import KeywordString exposing (KeywordString)
 import List
 import Queries exposing (SearchQuery(..))
+import Regex
 import Research as RC exposing (Research)
 import Set exposing (Set)
 import String
@@ -375,6 +377,7 @@ type Msg
     | WindowResize Int Int
     | ToggleForm
 
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -502,7 +505,7 @@ update msg model =
             )
 
         ToggleForm ->
-            ( { model | formOpen = not model.formOpen }, Cmd.none)
+            ( { model | formOpen = not model.formOpen }, Cmd.none )
 
 
 updateViewWithSearch : SearchForm -> View -> View
@@ -836,8 +839,120 @@ formatDate date =
     Date.toIsoString date
 
 
-viewResearchMicro : ScreenDimensions -> Device -> Research -> Element Msg
-viewResearchMicro screen device research =
+isKwInAbstract : String -> KeywordString -> Bool
+isKwInAbstract abstract kws =
+    let
+        kw =
+            " " ++ KeywordString.toString kws ++ "[!.,? ;:]"
+
+        maybeRegex =
+            Regex.fromString kw
+
+        regex =
+            Maybe.withDefault Regex.never maybeRegex
+    in
+    Regex.contains regex abstract
+
+
+sliceAbstract : Maybe String -> Int -> String
+sliceAbstract abs max =
+    let
+        isGreaterThan : Int -> Int -> Bool
+        isGreaterThan mx value =
+            value > mx
+
+        abstract =
+            Maybe.withDefault "" abs
+
+        fullStopsInAbstract =
+            String.indexes "." abstract
+
+        fullStopsAfterMax =
+            List.filter (isGreaterThan max) fullStopsInAbstract
+
+        firstFullStopAfterMax =
+            Maybe.withDefault max (List.head fullStopsAfterMax)
+    in
+    String.left (firstFullStopAfterMax + 1) abstract
+
+
+findKwsInAbstract : List KeywordString -> String -> ( List Int, List String )
+findKwsInAbstract kws shortAbstract =
+    let
+        kwsInAbstract =
+            List.map (findKwInAbstract shortAbstract) kws
+
+        kwsSorted =
+            List.drop 1 (List.sort kwsInAbstract)
+    in
+    List.unzip kwsSorted
+
+
+findKwInAbstract : String -> KeywordString -> ( Int, String )
+findKwInAbstract abstract kw =
+    let
+        extractIndex : Maybe Regex.Match -> Int
+        extractIndex match =
+            case match of
+                Nothing ->
+                    0
+
+                Just m ->
+                    m.index
+
+        keyword =
+            KeywordString.toString kw
+
+        key =
+            " " ++ keyword ++ "[!.,? ;:]"
+
+        maybeRegex =
+            Regex.fromString key
+
+        regex =
+            Maybe.withDefault Regex.never maybeRegex
+
+        finds =
+            Regex.find regex abstract
+
+        first =
+            List.head finds
+
+        kwStart =
+            extractIndex first
+    in
+    ( kwStart, keyword )
+
+
+isSubkeyword : List String -> Int -> Bool
+isSubkeyword keywords index =
+    let
+        kws =
+            Array.fromList keywords
+
+        kw =
+            Maybe.withDefault "" (Array.get index kws)
+
+        first =
+            Array.slice 0 index kws
+
+        second =
+            Array.slice (index + 1) (Array.length kws) kws
+
+        arr =
+            Array.append first second
+
+        bools =
+            Array.map (String.contains kw) arr
+
+        list =
+            Array.toList bools
+    in
+    List.member True list
+
+
+viewResearchMicro : List KeywordString -> ScreenDimensions -> Device -> Research -> Element Msg
+viewResearchMicro allKeywords screen device research =
     let
         ( w, h ) =
             case device of
@@ -853,6 +968,37 @@ viewResearchMicro screen device research =
                             (screen.w - 30) // 4
                     in
                     ( half, half )
+
+        -- slice abstarct if > max
+        abstractMax =
+            300
+
+        shortAbstract =
+            sliceAbstract research.abstract abstractMax
+
+        kws =
+            List.filter (isKwInAbstract shortAbstract) allKeywords
+
+        foundKws =
+            findKwsInAbstract kws shortAbstract
+
+        abstractIndexes =
+            Tuple.first foundKws
+
+        abstractKeywords =
+            Tuple.second foundKws
+
+        series =
+            List.range 0 (List.length abstractKeywords)
+
+        subKeywords =
+            List.map (isSubkeyword abstractKeywords) series
+
+        kwina =
+            List.map (makeSnippet abstractIndexes subKeywords abstractKeywords shortAbstract) series
+
+        abstract =
+            Element.paragraph [ Font.size 12 ] <| List.concat kwina
 
         img : String -> Element msg
         img src =
@@ -933,6 +1079,7 @@ viewResearchMicro screen device research =
                 , title
                 , author
                 , date
+                , abstract
                 ]
 
 
@@ -1227,7 +1374,7 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
                                 Desktop ->
                                     2
                     in
-                    makeColumns numCollumns [] (sorted |> List.map (viewResearchMicro dimensions device))
+                    makeColumns numCollumns [] (sorted |> List.map (viewResearchMicro allKeywords dimensions device))
 
                 ScreenLayout scale ->
                     viewScreenshots device dimensions sv scale sorted
@@ -1344,67 +1491,119 @@ viewKeywordAsButton fontsize kw =
         ]
 
 
+stringToKeyword : String -> Element Msg
+stringToKeyword str =
+    Element.link [ Font.size 12, Font.color gray, Font.underline ] <|
+        { label = Element.text str
+        , url = "/#/research/search/list?author&keyword=" ++ str ++ " "
+        }
 
--- viewKeywordAsClickable : Int -> RC.Keyword -> Element Msg
--- viewKeywordAsClickable fontsize kw =
---     let
---         name : String
---         name =
---             RC.kwName kw |> String.toLower
---         count : Int
---         count =
---             RC.getCount kw
---     in
---     Element.row
---         [ Element.spacing 5
---         , Element.padding 5
---         , Element.Border.solid
---         , Element.Border.color (rgb255 144 144 144)
---         , Element.Border.width 1
---         , Element.Background.color (rgb255 250 250 250)
---         , Element.clipX
---         -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
---         , width fill
---         ]
---         --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
---         [ Element.Input.button [ width fill ]
---             { onPress = Just (AddKeyword name)
---             , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
---             }
---         , Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
---         ]
--- viewSelectedKeyword : Int -> String -> Element Msg
--- viewSelectedKeyword fontsize kw =
---     let
---         name : String
---         name =
---             kw
---         count : Int
---         count =
---             0
---     in
---     Element.row
---         [ Element.spacing 5
---         , Element.padding 5
---         , Element.Border.solid
---         , Element.Border.color (rgb255 144 144 144)
---         , Element.Border.width 1
---         , Element.Background.color (rgb255 250 250 250)
---         , Element.clipX
---         -- Element.Border.shadow { size = 4, offset =  (5,5), blur = 8, color = (rgb 0.7 0.7 0.7) }
---         , width (fill |> maximum 200)
---         ]
---         --[ Element.link [] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
---         [ Element.Input.button [ Element.alignRight, Font.size fontsize ]
---             { onPress = Just (RemoveKeyword name)
---             , label = text "x"
---             }
---         , Element.Input.button [ width fill ]
---             { onPress = Just (RemoveKeyword name)
---             , label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ]
---             }
---         --Element.el [ width (px 25), Element.alignRight, Font.size fontsize ] (Element.text "x")
---         ]
+
+makeSnippet : List Int -> List Bool -> List String -> String -> Int -> List (Element Msg)
+makeSnippet indexes subkeywords keywords abstract which =
+    let
+        kwsLength =
+            List.length keywords
+
+        idx =
+            Array.fromList indexes
+
+        kws =
+            Array.fromList keywords
+
+        subs =
+            Array.fromList subkeywords
+
+        isSub =
+            Maybe.withDefault False (Array.get which subs)
+
+        firstk =
+            Maybe.withDefault "-1" (Array.get 0 kws)
+    in
+    if which == 0 then
+        -- first kw
+        let
+            k =
+                Maybe.withDefault -1 (Array.get which idx)
+
+            -- I think this happens when the abstact is a white space
+            -- this matches somehow the "?" keyword, which is then dropped creating an empty list
+            keyw =
+                Maybe.withDefault "!!! This is an empty list !!!" (Array.get which kws)
+
+            kwlength =
+                String.length keyw
+
+            prevk =
+                Maybe.withDefault 0 (Array.get (which - 1) idx)
+
+            prevkeyw =
+                Maybe.withDefault "" (Array.get (which - 1) kws)
+
+            prevkwlength =
+                String.length prevkeyw
+
+            sliceLeft =
+                String.slice (prevk + prevkwlength) (k + 1) abstract
+
+            strToKw =
+                stringToKeyword keyw
+        in
+        if isSub == True then
+            [ text sliceLeft ]
+
+        else
+            [ text sliceLeft, strToKw ]
+
+    else if which == kwsLength then
+        -- append abstract end
+        let
+            k =
+                Maybe.withDefault -1 (Array.get (which - 1) idx)
+
+            keyw =
+                Maybe.withDefault "-1" (Array.get (which - 1) kws)
+
+            kwlength =
+                String.length keyw
+
+            sliceRight =
+                String.dropLeft (k + kwlength + 1) abstract
+        in
+        [ text sliceRight ]
+
+    else
+        -- slice abstract snippet + insert kw link
+        let
+            k =
+                Maybe.withDefault -1 (Array.get which idx)
+
+            keyw =
+                Maybe.withDefault ">>>>>>>>" (Array.get which kws)
+
+            kwlength =
+                String.length keyw
+
+            prevk =
+                Maybe.withDefault 0 (Array.get (which - 1) idx)
+
+            prevkeyw =
+                Maybe.withDefault "" (Array.get (which - 1) kws)
+
+            prevkwlength =
+                String.length prevkeyw
+
+            sliceLeft =
+                String.slice (prevk + prevkwlength + 1) (k + 1) abstract
+
+            strToKw =
+                stringToKeyword keyw
+        in
+        if isSub == True then
+            [ text sliceLeft ]
+
+        else
+            [ text sliceLeft, strToKw ]
 
 
 {-| on Enter
@@ -2199,6 +2398,7 @@ submitButtonStyle =
     , Attr.style "padding" "10px"
     , Attr.style "background-color" "white"
     , Attr.style "margin" "0px 5px"
+
     -- , Attr.style "float" "right"
     ]
 

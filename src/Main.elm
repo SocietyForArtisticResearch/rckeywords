@@ -960,7 +960,7 @@ viewResearchMicro allKeywords screen device research =
                     ( screen.w - 30, 200 )
 
                 Desktop ->
-                    ( 200, 200 )
+                    ( screen.w // 4 - 30, 200 )
 
                 Tablet ->
                     let
@@ -998,7 +998,7 @@ viewResearchMicro allKeywords screen device research =
             List.map (makeSnippet abstractIndexes subKeywords abstractKeywords shortAbstract) series
 
         abstract =
-            Element.paragraph [ Font.size 12 ] <| List.concat kwina
+            Element.paragraph [ Font.size 12, width ((screen.w // 2) - w - 50  |> px ) ] <| List.concat kwina
 
         img : String -> Element msg
         img src =
@@ -1046,17 +1046,15 @@ viewResearchMicro allKeywords screen device research =
     in
     case device of
         Desktop ->
-            Element.row
+            column
                 [ width fill
-                , height (px 200)
                 , Element.clip
                 ]
                 [ img imageUrl
-                , column [ width (fillPortion 6), Element.alignTop ] <|
-                    [ title
-                    , author
-                    , date
-                    ]
+                , title
+                , author
+                , date
+                , abstract
                 ]
 
         Tablet ->
@@ -1066,6 +1064,7 @@ viewResearchMicro allKeywords screen device research =
                     [ title
                     , author
                     , date
+                    , abstract
                     ]
                 ]
 

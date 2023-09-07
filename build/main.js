@@ -18567,19 +18567,12 @@ var $author$project$Main$viewResearchMicro = F4(
 			$elm$core$List$map,
 			A4($author$project$Main$makeSnippet, abstractIndexes, subKeywords, abstractKeywords, shortAbstract),
 			series);
-		var _abstract = A2(
-			$mdgriffith$elm_ui$Element$paragraph,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$Font$size(12)
-				]),
-			$elm$core$List$concat(kwina));
 		var _v0 = function () {
 			switch (device.$) {
 				case 'Phone':
 					return _Utils_Tuple2(screen.w - 30, 200);
 				case 'Desktop':
-					return _Utils_Tuple2(200, 200);
+					return _Utils_Tuple2(((screen.w / 4) | 0) - 30, 200);
 				default:
 					var half = ((screen.w - 30) / 4) | 0;
 					return _Utils_Tuple2(half, half);
@@ -18587,6 +18580,15 @@ var $author$project$Main$viewResearchMicro = F4(
 		}();
 		var w = _v0.a;
 		var h = _v0.b;
+		var _abstract = A2(
+			$mdgriffith$elm_ui$Element$paragraph,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$Font$size(12),
+					$mdgriffith$elm_ui$Element$width(
+					$mdgriffith$elm_ui$Element$px((((screen.w / 2) | 0) - w) - 50))
+				]),
+			$elm$core$List$concat(kwina));
 		var img = function (src) {
 			return A2(
 				$mdgriffith$elm_ui$Element$link,
@@ -18637,27 +18639,19 @@ var $author$project$Main$viewResearchMicro = F4(
 		switch (device.$) {
 			case 'Desktop':
 				return A2(
-					$mdgriffith$elm_ui$Element$row,
+					$mdgriffith$elm_ui$Element$column,
 					_List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-							$mdgriffith$elm_ui$Element$height(
-							$mdgriffith$elm_ui$Element$px(200)),
 							$mdgriffith$elm_ui$Element$clip
 						]),
 					_List_fromArray(
 						[
 							img(imageUrl),
-							A2(
-							$mdgriffith$elm_ui$Element$column,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width(
-									$mdgriffith$elm_ui$Element$fillPortion(6)),
-									$mdgriffith$elm_ui$Element$alignTop
-								]),
-							_List_fromArray(
-								[title, author, date]))
+							title,
+							author,
+							date,
+							_abstract
 						]));
 			case 'Tablet':
 				return A2(
@@ -18685,7 +18679,7 @@ var $author$project$Main$viewResearchMicro = F4(
 									$mdgriffith$elm_ui$Element$alignTop
 								]),
 							_List_fromArray(
-								[title, author, date]))
+								[title, author, date, _abstract]))
 						]));
 			default:
 				return A2(

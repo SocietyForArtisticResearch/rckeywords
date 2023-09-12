@@ -188,7 +188,7 @@ pageAsString (Page p) =
 
 pageSize : Int
 pageSize =
-    128
+    256
 
 
 
@@ -803,7 +803,7 @@ image ( w, h ) src =
     Element.html <|
         Html.node "lazy-image"
             [ Attr.attribute "src" src
-            , Attr.alt <| "description"
+            , Attr.alt <| ""
             , Attr.attribute "width" (String.fromInt w ++ "px")
             , Attr.attribute "height" (String.fromInt h ++ "px")
             ]
@@ -957,20 +957,20 @@ viewResearchMicro allKeywords screen device research =
         ( w, h ) =
             case device of
                 Phone ->
-                    ( screen.w - 30, 200 )
+                    ( screen.w - 30, screen.w )
 
                 Desktop ->
-                    ( screen.w // 4 - 30, 200 )
+                    ( (screen.w // 3) - 30, screen.w // 4)
 
                 Tablet ->
                     let
                         half =
-                            (screen.w - 30) // 4
+                            (screen.w - 30) // 3
                     in
                     ( half, half )
 
         -- slice abstarct if > max
-        abstractMax =
+        abstractMax = 
             300
 
         shortAbstract =
@@ -998,7 +998,7 @@ viewResearchMicro allKeywords screen device research =
             List.map (makeSnippet abstractIndexes subKeywords abstractKeywords shortAbstract) series
 
         abstract =
-            Element.paragraph [ Font.size 12, width ((screen.w // 2) - w - 50  |> px ) ] <| List.concat kwina
+            Element.paragraph [ Font.size 12, width ((screen.w // 3) - 30  |> px ), padding 5 ] <| List.concat kwina
 
         img : String -> Element msg
         img src =
@@ -1371,7 +1371,7 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
                                     1
 
                                 Desktop ->
-                                    2
+                                    3
                     in
                     makeColumns numCollumns [] (sorted |> List.map (viewResearchMicro allKeywords dimensions device))
 
@@ -1758,7 +1758,7 @@ viewKeywords model keywordview =
                     page |> pageToInt
 
                 showing =
-                    [ "results ", (p - 1) * pageSize |> String.fromInt, "-", min ((p + 1) * pageSize) count |> String.fromInt, " (total: ", count |> String.fromInt, ")" ] |> String.concat
+                    [ "results ", (p - 1) * pageSize |> String.fromInt, "-", min (p * pageSize) count |> String.fromInt, " (total: ", count |> String.fromInt, ")" ] |> String.concat
             in
             el [ Font.size 12 ] (Element.text showing)
 

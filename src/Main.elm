@@ -188,7 +188,7 @@ pageAsString (Page p) =
 
 pageSize : Int
 pageSize =
-    256
+    16
 
 
 

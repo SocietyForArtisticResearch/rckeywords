@@ -29,6 +29,7 @@ import List
 import Queries exposing (SearchQuery(..))
 import Regex
 import Research as RC exposing (Research)
+import EnrichedResearch exposing (ResearchWithKeywords)
 import Set exposing (Set)
 import String
 import Tailwind.Utilities exposing (break_before_all)
@@ -57,7 +58,6 @@ type alias Model =
     , screenDimensions : { w : Int, h : Int }
     , device : Device
     , view : View
-    , numberOfResults : Int
     , key : Nav.Key
     , url : AppUrl
     , searchPageSize : Int
@@ -121,7 +121,6 @@ init { width, height } url key =
     , search = Idle
     , screenDimensions = { w = width, h = height }
     , view = initView
-    , numberOfResults = 8
     , url = initUrl
     , key = key
     , searchPageSize = 20

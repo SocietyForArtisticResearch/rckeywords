@@ -5612,7 +5612,7 @@ var $author$project$EnrichedResearch$encodeResearchWithKeywords = function (exp)
 								'author',
 								$author$project$Research$encodeAuthor(exp.author)),
 								_Utils_Tuple2(
-								'publicationStatus',
+								'status',
 								$author$project$Research$publicationstatus(exp.publicationStatus)),
 								_Utils_Tuple2(
 								'defaultPage',
@@ -6141,7 +6141,6 @@ var $author$project$Research$keywordSet = function (researchlist) {
 		$author$project$Research$emptyKeywordSet,
 		researchlist);
 };
-var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Worker$problemize = F2(
 	function (p, m) {
@@ -6331,11 +6330,9 @@ var $author$project$Worker$update = F2(
 			case 'Loading':
 				if (msg.$ === 'LoadData') {
 					var res = msg.a;
-					var _v2 = A2($elm$core$Debug$log, 'success?', res);
 					if (res.$ === 'Ok') {
 						var data = res.a;
 						var keywordSet = $author$project$EnrichedResearch$keywordSet(data);
-						var _v4 = A2($elm$core$Debug$log, 'data', data);
 						return _Utils_Tuple2(
 							$author$project$Worker$Loaded(
 								{
@@ -6347,7 +6344,6 @@ var $author$project$Worker$update = F2(
 							$elm$core$Platform$Cmd$none);
 					} else {
 						var e = res.a;
-						var _v5 = A2($elm$core$Debug$log, 'error', e);
 						return _Utils_Tuple2(
 							A2(
 								$author$project$Worker$problemize,
@@ -6357,9 +6353,9 @@ var $author$project$Worker$update = F2(
 					}
 				} else {
 					var json = msg.a;
-					var _v6 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
-					if (_v6.$ === 'Ok') {
-						var query = _v6.a;
+					var _v3 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
+					if (_v3.$ === 'Ok') {
+						var query = _v3.a;
 						return _Utils_Tuple2(
 							A2($author$project$Worker$LoadingWithQuery, query, _List_Nil),
 							$elm$core$Platform$Cmd$none);
@@ -6373,9 +6369,9 @@ var $author$project$Worker$update = F2(
 				var lmodel = model.a;
 				if (msg.$ === 'SearchQuery') {
 					var json = msg.a;
-					var _v8 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
-					if (_v8.$ === 'Ok') {
-						var q = _v8.a;
+					var _v5 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
+					if (_v5.$ === 'Ok') {
+						var q = _v5.a;
 						switch (q.$) {
 							case 'FindKeywords':
 								var str = q.a;
@@ -6419,7 +6415,6 @@ var $author$project$Worker$update = F2(
 					}
 				} else {
 					var res = msg.a;
-					var _v10 = A2($elm$core$Debug$log, 'success?', res);
 					if (res.$ === 'Ok') {
 						var data = res.a;
 						return _Utils_Tuple2(
@@ -6446,7 +6441,6 @@ var $author$project$Worker$update = F2(
 				var otherQs = model.b;
 				if (msg.$ === 'LoadData') {
 					var res = msg.a;
-					var _v13 = A2($elm$core$Debug$log, 'success?', res);
 					if (res.$ === 'Ok') {
 						var data = res.a;
 						var reverseKeywordDict = $author$project$Research$reverseKeywordDict(data);
@@ -6504,9 +6498,9 @@ var $author$project$Worker$update = F2(
 					}
 				} else {
 					var json = msg.a;
-					var _v16 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
-					if (_v16.$ === 'Ok') {
-						var query = _v16.a;
+					var _v11 = A2($elm$json$Json$Decode$decodeValue, $author$project$Queries$decodeSearchQuery, json);
+					if (_v11.$ === 'Ok') {
+						var query = _v11.a;
 						return _Utils_Tuple2(
 							A2(
 								$author$project$Worker$LoadingWithQuery,

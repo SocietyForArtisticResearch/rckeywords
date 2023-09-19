@@ -45,7 +45,7 @@ decodeExposition =
                             |> andMap (field "created" string)
                             |> andMap (field "author" RC.author)
                             |> andMap (JDE.optionalField "issueId" int)
-                            |> andMap (field "publicationStatus" RC.decodePublicationStatus)
+                            |> andMap (field "status" RC.decodePublicationStatus)
                             |> andMap (JDE.optionalField "publication" (Json.Decode.int |> Json.Decode.map Date.fromRataDie))
                             |> andMap (JDE.optionalField "thumbnail" string)
                             |> andMap (JDE.optionalField "abstract" string)
@@ -113,7 +113,7 @@ encodeExposition exp =
          , ( "title", string exp.title )
          , ( "keywords", list string (List.map KeywordString.toString exp.keywords) )
          , ( "author", RC.encodeAuthor exp.author )
-         , ( "publicationStatus", RC.publicationstatus exp.publicationStatus )
+         , ( "status", RC.publicationstatus exp.publicationStatus )
          , ( "defaultPage", string exp.defaultPage )
          , ( "portals", list RC.encodePortal exp.portals )
          ]

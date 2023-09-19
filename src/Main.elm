@@ -28,6 +28,7 @@ import Json.Encode
 import KeywordString exposing (KeywordString)
 import List
 import Queries exposing (SearchQuery(..))
+import RCStyles
 import Regex
 import Research as RC exposing (Research)
 import Set exposing (Set)
@@ -187,7 +188,7 @@ pageAsString (Page p) =
 
 pageSize : Int
 pageSize =
-    16
+    64
 
 
 
@@ -811,11 +812,11 @@ image ( w, h ) src =
 
 microLinkStyle : List (Element.Attribute msg)
 microLinkStyle =
-    [ Font.family [ Font.typeface "Open Sans", Font.sansSerif ]
+    [ Font.family [ Font.typeface "Open Sans", RCStyles.globalFont ]
     , Font.size 16
     , Font.regular
     , Element.Region.heading 2
-    , padding 5
+    , padding 0
     , width fill
     , Element.htmlAttribute (Attr.attribute "style" "text-transform: unset")
     ]
@@ -823,7 +824,7 @@ microLinkStyle =
 
 lightLink : List (Element.Attribute msg)
 lightLink =
-    [ Font.family [ Font.typeface "Open Sans", Font.sansSerif ]
+    [ Font.family [ Font.typeface "Open Sans", RCStyles.globalFont ]
     , Font.size 16
     , Font.light
     , Element.Region.heading 2
@@ -950,8 +951,8 @@ isSubkeyword keywords index =
     List.member True list
 
 
-viewResearchMicro : List KeywordString -> ScreenDimensions -> Device -> EnrichedResearch.ResearchWithKeywords -> Element Msg
-viewResearchMicro allKeywords screen device research =
+viewResearchMicro : ScreenDimensions -> Device -> EnrichedResearch.ResearchWithKeywords -> Element Msg
+viewResearchMicro screen device research =
     let
         ( w, h ) =
             case device of
@@ -959,7 +960,7 @@ viewResearchMicro allKeywords screen device research =
                     ( screen.w - 30, screen.w )
 
                 Desktop ->
-                    ( (screen.w // 3) - 30, screen.w // 4 )
+                    ( (screen.w // 4) - 30, screen.w // 5 )
 
                 Tablet ->
                     let
@@ -971,7 +972,7 @@ viewResearchMicro allKeywords screen device research =
         -- abstract =
         --     Element.paragraph [ Font.size 12, width ((screen.w // 3) - 30  |> px ), padding 5 ] <| List.concat kwina
         abstract =
-            EnrichedResearch.renderAbstract research.abstractWithKeywords
+            Element.el [] (EnrichedResearch.renderAbstract research.abstractWithKeywords)
 
         img : String -> Element msg
         img src =
@@ -1001,7 +1002,7 @@ viewResearchMicro allKeywords screen device research =
                 { label =
                     Element.paragraph
                         (width (px w) :: microLinkStyle)
-                        [ Element.text research.title ]
+                        [ Element.text (research.title |> String.replace "&amp;" "&") ]
                 , url = research.defaultPage
                 }
 
@@ -1015,7 +1016,12 @@ viewResearchMicro allKeywords screen device research =
                 }
 
         date =
-            Element.el lightLink (Element.text (research.publication |> Maybe.map formatDate |> Maybe.withDefault "in progress"))
+            Element.el
+                [ Font.size 12
+                , Font.color (Element.rgb 0.3 0.0 0.0)
+                , paddingXY 0 10
+                ]
+                (Element.text (research.publication |> Maybe.map formatDate |> Maybe.withDefault "in progress"))
     in
     case device of
         Desktop ->
@@ -1023,11 +1029,10 @@ viewResearchMicro allKeywords screen device research =
                 [ width fill
                 , Element.clip
                 ]
-                [ img imageUrl
-                , title
-                , author
-                , date
-                , abstract
+                [ title
+                , img imageUrl
+                , Element.el [ Element.alignRight ] author
+                , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
                 ]
 
         Tablet ->
@@ -1047,8 +1052,8 @@ viewResearchMicro allKeywords screen device research =
                 [ width fill
                 , Element.clip
                 ]
-                [ img imageUrl
-                , title
+                [ title
+                , img imageUrl
                 , author
                 , date
                 , abstract
@@ -1116,6 +1121,10 @@ black =
 gray : Element.Color
 gray =
     Element.rgb 0.5 0.5 0.5
+
+
+red =
+    Element.rgb 0.5 0.0 0.0
 
 
 white : Element.Color
@@ -1232,7 +1241,7 @@ view model =
     , body =
         [ Element.layout
             [ width layoutWidth
-            , Font.family [ Font.typeface "Helvetica Neue", Font.sansSerif ]
+            , Font.family [ Font.typeface "Helvetica Neue", RCStyles.globalFont ]
             , Element.paddingEach { top = 40, left = 15, bottom = 25, right = 15 }
             ]
             (column [ width fill ]
@@ -1344,9 +1353,9 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
                                     1
 
                                 Desktop ->
-                                    3
+                                    4
                     in
-                    makeColumns numCollumns [] (sorted |> List.map (viewResearchMicro allKeywords dimensions device))
+                    makeColumns numCollumns [ Element.spacingXY 0 10 ] (sorted |> List.map (viewResearchMicro dimensions device))
 
                 ScreenLayout scale ->
                     viewScreenshots device dimensions sv scale sorted

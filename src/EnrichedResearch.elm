@@ -4,12 +4,14 @@ import Array
 import Date exposing (Date)
 import Element exposing (Element, text)
 import Element.Font as Font
-import Json.Decode exposing (Decoder,field, int, string, maybe)
+import Json.Decode exposing (Decoder, field, int, maybe, string)
+import Json.Decode.Extra as JDE
 import Json.Encode
 import KeywordString exposing (KeywordString)
+import RCStyles
 import Regex
 import Research exposing (Author, ExpositionID, Portal, PublicationStatus, Research, kwName, publicationstatus)
-import Json.Decode.Extra as JDE
+
 
 type alias ResearchWithKeywords =
     { id : ExpositionID
@@ -155,7 +157,7 @@ encodeResearchWithKeywords exp =
          , ( "title", string exp.title )
          , ( "keywords", list string (List.map KeywordString.toString exp.keywords) )
          , ( "author", Research.encodeAuthor exp.author )
-         , ( "publicationStatus", Research.publicationstatus exp.publicationStatus )
+         , ( "status", Research.publicationstatus exp.publicationStatus )
          , ( "defaultPage", string exp.defaultPage )
          , ( "portals", list Research.encodePortal exp.portals )
          , ( "abstractWithKeywords", encodeAbstract exp.abstractWithKeywords )
@@ -165,6 +167,7 @@ encodeResearchWithKeywords exp =
             |> maybeAppend thumbnail
             |> maybeAppend abstract
         )
+
 
 decoder : Decoder ResearchWithKeywords
 decoder =
@@ -202,6 +205,8 @@ decoder =
             |> JDE.andMap (field "portals" (Json.Decode.list Research.rcPortalDecoder))
             |> JDE.andMap (field "abstractWithKeywords" decodeAbstractWithKeywords)
         )
+
+
 
 -- Abstract with parsed keywords
 
@@ -253,8 +258,6 @@ decodeAbstractSpan =
 encodeAbstract : AbstractWithKeywords -> Json.Encode.Value
 encodeAbstract abstract =
     Json.Encode.list encodeAbstractSpan abstract
-
-
 
 
 decodeAbstractWithKeywords : Json.Decode.Decoder AbstractWithKeywords
@@ -519,9 +522,14 @@ gray =
     Element.rgb 0.5 0.5 0.5
 
 
+abstractStyle : List (Element.Attr decorative msg)
+abstractStyle =
+    [ Font.size 12 ]
+
+
 stringToKeyword : String -> Element msg
 stringToKeyword str =
-    Element.link [ Font.size 12, Font.color gray, Font.underline ] <|
+    Element.link (abstractStyle ++ [ Font.underline, Font.color gray ]) <|
         { label = Element.text str
         , url = "/#/research/search/list?author&keyword=" ++ str ++ " "
         }
@@ -529,7 +537,13 @@ stringToKeyword str =
 
 renderAbstract : AbstractWithKeywords -> Element msg
 renderAbstract abstract =
-    Element.paragraph [ Element.width Element.fill ]
+    Element.paragraph
+        ([ RCStyles.mediumFont
+         , Font.family [ RCStyles.globalFont ]
+         , Element.width Element.fill
+         ]
+            ++ abstractStyle
+        )
         (abstract
             |> List.map
                 (\elem ->

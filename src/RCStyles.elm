@@ -1,22 +1,45 @@
-module RCStyles exposing (Style(..), rcButtonStyle, defaultPadding)
+module RCStyles exposing
+    ( Style(..)
+    , defaultPadding
+    , globalFont
+    , mediumFont
+    , rcButtonStyle
+    , statusStyle
+    )
 
+import Element as E
+import Element.Font as Font
 import Html exposing (Attribute)
 import Html.Attributes exposing (style)
-import Element 
 
 
 type Style
     = Style String String
 
 
+globalFont =
+    Font.monospace
+
+
+mediumFont =
+    Font.size 15
+
+
+statusStyle : List (E.Attribute msg)
+statusStyle =
+    [ Font.size 12
+    , E.paddingXY 0 10
+    ]
+
+
 ofStyle : Style -> Attribute msg
 ofStyle (Style prop val) =
     style prop val
 
-defaultPadding : List (Element.Attribute msg)
+
+defaultPadding : List (E.Attribute msg)
 defaultPadding =
-    [ 
-        Element.paddingXY 15 25
+    [ E.paddingXY 15 25
     ]
 
 

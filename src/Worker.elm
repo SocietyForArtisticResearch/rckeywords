@@ -55,18 +55,11 @@ update msg model =
         Loading ->
             case msg of
                 LoadData res ->
-                    let
-                        _ =
-                            Debug.log "success?" res
-                    in
                     case res of
                         Ok data ->
                             let
                                 keywordSet =
                                     EnrichedResearch.keywordSet data
-
-                                _ =
-                                    Debug.log "data" data
                             in
                             ( Loaded
                                 { research = data
@@ -78,10 +71,6 @@ update msg model =
                             )
 
                         Err e ->
-                            let
-                                _ =
-                                    Debug.log "error" e
-                            in
                             ( problemize (LoadError e) model, Cmd.none )
 
                 SearchQuery json ->
@@ -127,10 +116,6 @@ update msg model =
                             ( problemize DecodeError (Loaded lmodel), Cmd.none )
 
                 LoadData res ->
-                    let
-                        _ =
-                            Debug.log "success?" res
-                    in
                     case res of
                         Ok data ->
                             ( Loaded
@@ -147,10 +132,6 @@ update msg model =
         LoadingWithQuery q otherQs ->
             case msg of
                 LoadData res ->
-                    let
-                        _ =
-                            Debug.log "success?" res
-                    in
                     case res of
                         Ok data ->
                             let

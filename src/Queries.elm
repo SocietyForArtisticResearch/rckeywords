@@ -1,28 +1,7 @@
-module Queries exposing
-    ( Search(..)
-    , SearchQuery(..)
-    , SearchResult(..)
-    , decodeKeywordSorting
-    , decodeSearch
-    , decodeSearchQuery
-    , decodeSearchResult
-    , emptySearch
-    , encodeKeywordSorting
-    , encodeSearch
-    , encodeSearchQuery
-    , encodeSearchResult
-    , getKeywords
-    , search
-    , searchWithKeywords
-    , withAfter
-    , withAuthor
-    , withBefore
-    , withKeywords
-    , withPortal
-    , withTitle
-    )
+module Queries exposing (Search(..), SearchQuery(..), SearchResult(..), appendMaybe, decodeKeywordSorting, decodeSearch, decodeSearchQuery, decodeSearchResult, emptySearch, encodeKeywordSorting, encodeSearch, encodeSearchQuery, encodeSearchResult, getKeywords, search, searchWithKeywords, withAfter, withAuthor, withBefore, withKeywords, withPortal, withTitle)
 
 import Date exposing (Date)
+import EnrichedResearch exposing (ResearchWithKeywords)
 import Json.Decode exposing (field, int, list, map, maybe, string)
 import Json.Encode as E
 import KeywordString
@@ -176,7 +155,7 @@ type SearchQuery
 
 
 type SearchResult
-    = Expositions (List RC.Research)
+    = Expositions (List (RC.Research ResearchWithKeywords))
     | Keywords (List RC.Keyword)
     | AllKeywords (List RC.Keyword)
     | AllPortals (List RC.Portal)
@@ -197,7 +176,7 @@ decodeSearchResult =
                     field "keywords" (Json.Decode.list RC.decodeKeyword |> Json.Decode.map AllKeywords)
 
                 "allportals" ->
-                    field "portals" (Json.Decode.list WT.decodeWorkerPortal |> Json.Decode.map AllPortals)
+                    field "portals" (Json.Decode.list RC.decodePortal |> Json.Decode.map AllPortals)
 
                 _ ->
                     Json.Decode.fail "expected expositions or keywords"
@@ -211,7 +190,7 @@ encodeSearchResult result =
         Expositions exps ->
             E.object
                 [ ( "type", E.string "expositions" )
-                , ( "expositions", E.list WT.encodeExposition exps )
+                , ( "expositions", E.list EnrichedResearch.encodeResearchWithKeywords exps )
                 ]
 
         Keywords kws ->
@@ -229,7 +208,7 @@ encodeSearchResult result =
         AllPortals portals ->
             E.object
                 [ ( "type", E.string "allportals" )
-                , ( "portals", E.list WT.encodePortal portals )
+                , ( "portals", E.list RC.encodePortal portals )
                 ]
 
 

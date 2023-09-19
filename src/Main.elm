@@ -15,6 +15,7 @@ import Element.Font as Font
 import Element.Input
 import Element.Lazy
 import Element.Region
+import EnrichedResearch exposing (ResearchWithKeywords)
 import Form
 import Form.Field as Field
 import Form.FieldView as FieldView
@@ -29,7 +30,6 @@ import List
 import Queries exposing (SearchQuery(..))
 import Regex
 import Research as RC exposing (Research)
-import EnrichedResearch exposing (ResearchWithKeywords)
 import Set exposing (Set)
 import String
 import Tailwind.Utilities exposing (break_before_all)
@@ -334,7 +334,7 @@ type SearchAction
     = Idle
     | Searching
     | FoundKeywords (List RC.Keyword)
-    | FoundResearch (List RC.Research)
+    | FoundResearch (List EnrichedResearch.ResearchWithKeywords)
 
 
 type alias ScreenDimensions =
@@ -950,7 +950,7 @@ isSubkeyword keywords index =
     List.member True list
 
 
-viewResearchMicro : List KeywordString -> ScreenDimensions -> Device -> Research -> Element Msg
+viewResearchMicro : List KeywordString -> ScreenDimensions -> Device -> EnrichedResearch.ResearchWithKeywords -> Element Msg
 viewResearchMicro allKeywords screen device research =
     let
         ( w, h ) =
@@ -959,7 +959,7 @@ viewResearchMicro allKeywords screen device research =
                     ( screen.w - 30, screen.w )
 
                 Desktop ->
-                    ( (screen.w // 3) - 30, screen.w // 4)
+                    ( (screen.w // 3) - 30, screen.w // 4 )
 
                 Tablet ->
                     let
@@ -968,36 +968,10 @@ viewResearchMicro allKeywords screen device research =
                     in
                     ( half, half )
 
-        -- slice abstarct if > max
-        abstractMax = 
-            300
-
-        shortAbstract =
-            sliceAbstract research.abstract abstractMax
-
-        kws =
-            List.filter (isKwInAbstract shortAbstract) allKeywords
-
-        foundKws =
-            findKwsInAbstract kws shortAbstract
-
-        abstractIndexes =
-            Tuple.first foundKws
-
-        abstractKeywords =
-            Tuple.second foundKws
-
-        series =
-            List.range 0 (List.length abstractKeywords)
-
-        subKeywords =
-            List.map (isSubkeyword abstractKeywords) series
-
-        kwina =
-            List.map (makeSnippet abstractIndexes subKeywords abstractKeywords shortAbstract) series
-
+        -- abstract =
+        --     Element.paragraph [ Font.size 12, width ((screen.w // 3) - 30  |> px ), padding 5 ] <| List.concat kwina
         abstract =
-            Element.paragraph [ Font.size 12, width ((screen.w // 3) - 30  |> px ), padding 5 ] <| List.concat kwina
+            EnrichedResearch.renderAbstract research.abstractWithKeywords
 
         img : String -> Element msg
         img src =
@@ -1345,14 +1319,14 @@ viewResearchResults :
     -> ScreenDimensions
     -> Device
     -> SearchViewState
-    -> List Research
+    -> List ResearchWithKeywords
     -> Element Msg
 viewResearchResults allPortals allKeywords submitting searchFormState dimensions device sv lst =
     let
         (Page p) =
             sv.page
 
-        sorted : List Research
+        sorted : List ResearchWithKeywords
         sorted =
             lst |> sortResearch sv.sorting |> List.drop ((p - 1) * pageSize) |> List.take pageSize
 
@@ -1917,7 +1891,7 @@ pageOfList (Page i) lst =
 --         True
 
 
-lazyImageWithErrorHandling : Int -> ScreenDimensions -> Research -> Html Msg
+lazyImageWithErrorHandling : Int -> ScreenDimensions -> Research r -> Html Msg
 lazyImageWithErrorHandling groupSize dimensions research =
     let
         device =
@@ -2020,7 +1994,7 @@ scaleToGroupSize device scale =
                     3
 
 
-sortResearch : RC.TitleSorting -> List Research -> List Research
+sortResearch : RC.TitleSorting -> List (Research r) -> List (Research r)
 sortResearch sorting research =
     case sorting of
         RC.OldestFirst ->
@@ -2033,18 +2007,18 @@ sortResearch sorting research =
             research |> List.sortBy (\r -> r.created) |> List.reverse
 
 
-viewScreenshots : Device -> ScreenDimensions -> SearchViewState -> Scale -> List Research -> Element Msg
+viewScreenshots : Device -> ScreenDimensions -> SearchViewState -> Scale -> List (Research r) -> Element Msg
 viewScreenshots device screenDimensions sv scale research =
     let
         groupSize : Int
         groupSize =
             scaleToGroupSize device scale
 
-        groups : List (List Research)
+        groups : List (List (Research r))
         groups =
             research |> splitGroupsOf groupSize
 
-        viewGroup : List Research -> Html Msg
+        viewGroup : List (Research r) -> Html Msg
         viewGroup group =
             div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
     in

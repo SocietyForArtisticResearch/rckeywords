@@ -1,5 +1,6 @@
 port module Worker exposing (main)
 
+import EnrichedResearch exposing (ResearchWithKeywords)
 import Http
 import Json.Decode as D
 import Json.Encode as E
@@ -25,7 +26,7 @@ port returnResults : E.Value -> Cmd msg
 
 
 type Msg
-    = LoadData (Result Http.Error (List Research))
+    = LoadData (Result Http.Error (List ResearchWithKeywords))
     | SearchQuery E.Value
 
 
@@ -35,10 +36,10 @@ type Problem
 
 
 type alias LoadedModel =
-    { research : List Research
+    { research : List ResearchWithKeywords
     , keywords : KeywordSet
     , problems : List Problem
-    , reverseKeywordDict : ReverseKeywordDict
+    , reverseKeywordDict : ReverseKeywordDict ResearchWithKeywords
     }
 
 
@@ -54,11 +55,18 @@ update msg model =
         Loading ->
             case msg of
                 LoadData res ->
+                    let
+                        _ =
+                            Debug.log "success?" res
+                    in
                     case res of
                         Ok data ->
                             let
                                 keywordSet =
-                                    RC.keywordSet data
+                                    EnrichedResearch.keywordSet data
+
+                                _ =
+                                    Debug.log "data" data
                             in
                             ( Loaded
                                 { research = data
@@ -70,6 +78,10 @@ update msg model =
                             )
 
                         Err e ->
+                            let
+                                _ =
+                                    Debug.log "error" e
+                            in
                             ( problemize (LoadError e) model, Cmd.none )
 
                 SearchQuery json ->
@@ -115,6 +127,10 @@ update msg model =
                             ( problemize DecodeError (Loaded lmodel), Cmd.none )
 
                 LoadData res ->
+                    let
+                        _ =
+                            Debug.log "success?" res
+                    in
                     case res of
                         Ok data ->
                             ( Loaded
@@ -131,6 +147,10 @@ update msg model =
         LoadingWithQuery q otherQs ->
             case msg of
                 LoadData res ->
+                    let
+                        _ =
+                            Debug.log "success?" res
+                    in
                     case res of
                         Ok data ->
                             let
@@ -138,7 +158,7 @@ update msg model =
                                 kws =
                                     RC.keywordSet data
 
-                                reverseKeywordDict : ReverseKeywordDict
+                                reverseKeywordDict : ReverseKeywordDict ResearchWithKeywords
                                 reverseKeywordDict =
                                     RC.reverseKeywordDict data
 
@@ -239,8 +259,8 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     ( Loading
     , Http.get
-        { url = "/internal_research.json"
-        , expect = Http.expectJson LoadData (D.list RC.decoder)
+        { url = "/enriched.json"
+        , expect = Http.expectJson LoadData (D.list EnrichedResearch.decoder)
         }
     )
 
@@ -271,7 +291,7 @@ optionalFilter filter value lst =
             lst |> filter v
 
 
-searchResearch : Search -> ReverseKeywordDict -> List Research -> List Research
+searchResearch : Search -> ReverseKeywordDict ResearchWithKeywords -> List ResearchWithKeywords -> List ResearchWithKeywords
 searchResearch (Search search) revDict lst =
     -- TODO implement dates
     lst

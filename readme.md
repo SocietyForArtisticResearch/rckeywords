@@ -70,6 +70,8 @@ Since we want to support deep-linking, the state of the view should always be re
 
 # Todo
 
+- Keyword set and keyword abstract can be precalculated by the server now. Properly decode the enriched exposition list and remove all the local stuff. =]
+
 - browse just allows you to see the whole RC, but it is not about searching, it is about choosing a certain layout for all research (by keyword, by date, by portal etc..)
 - implement a search interface with the following fields:
     * table view

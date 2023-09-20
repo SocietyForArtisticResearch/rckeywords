@@ -8,9 +8,9 @@ import Browser.Events as Events
 import Browser.Navigation as Nav
 import Date exposing (Date(..))
 import Dict
-import Element exposing (Element, column, el, fill, fillPortion, height, padding, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
+import Element exposing (Element, column, el, fill, fillPortion, height, maximum, padding, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
 import Element.Background
-import Element.Border
+import Element.Border as Border
 import Element.Font as Font
 import Element.Input
 import Element.Lazy
@@ -951,6 +951,11 @@ isSubkeyword keywords index =
     List.member True list
 
 
+spacedWord : Element msg -> Element msg
+spacedWord elem =
+    Element.el [ Element.paddingXY 2 0 ] elem
+
+
 viewResearchMicro : ScreenDimensions -> Device -> EnrichedResearch.ResearchWithKeywords -> Element Msg
 viewResearchMicro screen device research =
     let
@@ -960,7 +965,7 @@ viewResearchMicro screen device research =
                     ( screen.w - 30, screen.w )
 
                 Desktop ->
-                    ( (screen.w // 4) - 30, screen.w // 5 )
+                    ( (screen.w // 4) - 50, screen.w // 5 )
 
                 Tablet ->
                     let
@@ -976,11 +981,11 @@ viewResearchMicro screen device research =
 
         img : String -> Element msg
         img src =
-            Element.link [ width (fillPortion 1) ]
+            Element.link [ width fill ]
                 { url = research.defaultPage
                 , label =
                     Element.el
-                        [ width (px w)
+                        [ width (px (w + 30))
                         , height (px h)
                         , Element.paddingXY 0 5
                         ]
@@ -1018,21 +1023,44 @@ viewResearchMicro screen device research =
         date =
             Element.el
                 [ Font.size 12
-                , Font.color (Element.rgb 0.3 0.0 0.0)
-                , paddingXY 0 10
+                , Font.color (Element.rgb 0.1 0.0 0.0)
+                , paddingXY 10 10
+                , Font.italic
                 ]
                 (Element.text (research.publication |> Maybe.map formatDate |> Maybe.withDefault "in progress"))
+
+        keywords =
+            Element.el
+                [ width fill ]
+                (Element.paragraph []
+                    (research.keywords
+                        |> List.take 4
+                        |> List.map (KeywordString.toString >> stringToKeyword >> spacedWord)
+                    )
+                )
     in
     case device of
         Desktop ->
             column
                 [ width fill
-                , Element.clip
+                , Font.size 12
+                , Element.spacingXY 0 10
                 ]
                 [ title
                 , img imageUrl
-                , Element.el [ Element.alignRight ] author
+                , Element.el [] author
+                , keywords
                 , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
+                , Element.el
+                    [ paddingXY 0 10
+                    , width fill
+                    , Border.solid
+                    , Border.color RCStyles.lightGray
+                    , Border.widthEach { bottom = 0, top = 1, left = 0, right = 0 }
+                    ]
+                  <|
+                    Element.html <|
+                        Html.hr [] []
                 ]
 
         Tablet ->
@@ -1167,8 +1195,8 @@ linkStyle active style =
 
         common : List (Element.Attr () msg)
         common =
-            [ Element.Border.color gray
-            , Element.Border.width 1
+            [ Border.color gray
+            , Border.width 1
             , Element.padding padding
             , Element.Background.color white
             , Font.color black
@@ -1179,10 +1207,10 @@ linkStyle active style =
             ]
     in
     if active then
-        List.append [ Font.underline, Element.Border.solid ] common
+        List.append [ Font.underline, Border.solid ] common
 
     else
-        Element.Border.solid :: common
+        Border.solid :: common
 
 
 viewNav : View -> Element Msg
@@ -1350,12 +1378,12 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
                                     1
 
                                 Tablet ->
-                                    1
+                                    2
 
                                 Desktop ->
                                     4
                     in
-                    makeColumns numCollumns [ Element.spacingXY 0 10 ] (sorted |> List.map (viewResearchMicro dimensions device))
+                    makeColumns numCollumns [ width fill, Element.spacingXY 10 10 ] (sorted |> List.map (viewResearchMicro dimensions device))
 
                 ScreenLayout scale ->
                     viewScreenshots device dimensions sv scale sorted
@@ -1460,9 +1488,9 @@ viewKeywordAsButton fontsize kw =
     Element.paragraph
         [ Element.spacing 5
         , Element.padding 5
-        , Element.Border.solid
-        , Element.Border.color (rgb255 144 144 144)
-        , Element.Border.width 1
+        , Border.solid
+        , Border.color (rgb255 144 144 144)
+        , Border.width 1
         , Element.Background.color (rgb255 250 250 250)
         , Element.clipX
         , width fill
@@ -1475,7 +1503,7 @@ viewKeywordAsButton fontsize kw =
 stringToKeyword : String -> Element Msg
 stringToKeyword str =
     Element.link [ Font.size 12, Font.color gray, Font.underline ] <|
-        { label = Element.text str
+        { label = Element.text ("#" ++ str)
         , url = "/#/research/search/list?author&keyword=" ++ str ++ " "
         }
 
@@ -1774,7 +1802,7 @@ viewKeywords model keywordview =
                             KeywordSearch nonEmpty RC.ByUse (Page 1) |> appUrlFromKeywordViewState
             in
             Element.row [ Element.spacingXY 15 0 ]
-                [ Element.Input.search [ Element.Border.rounded 0, width (px 200), height (px 40), onEnter HitEnter ]
+                [ Element.Input.search [ Border.rounded 0, width (px 200), height (px 40), onEnter HitEnter ]
                     { onChange = ChangedQuery
                     , text = model.query
                     , placeholder = Just (Element.Input.placeholder [ Font.size 16 ] (Element.text "search for keyword"))
@@ -1863,13 +1891,38 @@ viewKeywords model keywordview =
         keywordSearch
 
 
+transpose : List (List a) -> List (List a)
+transpose listOfLists =
+    let
+        rowsLength listOfListss =
+            case listOfListss of
+                [] ->
+                    0
+
+                x :: _ ->
+                    List.length x
+    in
+    List.foldr (List.map2 (::)) (List.repeat (rowsLength listOfLists) []) listOfLists
+
+
+
+-- this is just a test to really see what is going on.
+
+
+stupidBox =
+    Element.el [ Element.Background.color red, width fill, height (px 50) ] (Element.text "fish?")
+
+
 makeColumns : Int -> List (Element.Attribute Msg) -> List (Element Msg) -> Element Msg
 makeColumns n attrs lst =
-    Element.column attrs
-        (lst
-            |> makeNumColumns n
-            |> List.map (\rowItems -> Element.row [ width fill, spacing 25 ] rowItems)
-        )
+    let
+        columns =
+            lst
+                |> makeNumColumns n
+                |> transpose
+    in
+    Element.row [ width fill, spacingXY 10 0 ]
+        (columns |> List.map (\rowItems -> Element.column [ Element.alignTop, width fill ] rowItems))
 
 
 pageOfList : Page -> List a -> List a
@@ -2470,9 +2523,9 @@ viewSearch device initialForm portals keywords submitting searchFormState =
         Just formInput ->
             Element.el
                 [ paddingXY 15 15
-                , Element.Border.solid
-                , Element.Border.color black
-                , Element.Border.width 1
+                , Border.solid
+                , Border.color black
+                , Border.width 1
                 , width fill
                 ]
             <|

@@ -2,6 +2,7 @@ module RCStyles exposing
     ( Style(..)
     , defaultPadding
     , globalFont
+    , lightGray
     , mediumFont
     , rcButtonStyle
     , statusStyle
@@ -15,6 +16,10 @@ import Html.Attributes exposing (style)
 
 type Style
     = Style String String
+
+
+lightGray =
+    E.rgb 0.9 0.9 0.9
 
 
 globalFont =

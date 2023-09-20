@@ -15,7 +15,6 @@ import Set
 
 -- to avoid blocking the main thread, we sort and search keywords in this worker.
 -- We also keep the keyword state here (as a kind of semi-backend)
--- TODO also add in the exposition searching
 -- TODO make it possible to search abstract
 
 

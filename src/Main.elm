@@ -962,7 +962,7 @@ viewResearchMicro screen device research =
         ( w, h ) =
             case device of
                 Phone ->
-                    ( screen.w - 30, screen.w )
+                    ( screen.w - 55, screen.w - 55 )
 
                 Desktop ->
                     ( (screen.w // 4) - 50, screen.w // 5 )
@@ -1078,13 +1078,24 @@ viewResearchMicro screen device research =
         Phone ->
             column
                 [ width fill
-                , Element.clip
+                , Font.size 12
+                , Element.spacingXY 0 10
                 ]
                 [ title
                 , img imageUrl
-                , author
-                , date
-                , abstract
+                , Element.el [] author
+                , keywords
+                , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
+                , Element.el
+                    [ paddingXY 0 10
+                    , width fill
+                    , Border.solid
+                    , Border.color RCStyles.lightGray
+                    , Border.widthEach { bottom = 0, top = 1, left = 0, right = 0 }
+                    ]
+                  <|
+                    Element.html <|
+                        Html.hr [] []
                 ]
 
 
@@ -1494,6 +1505,7 @@ viewKeywordAsButton fontsize kw =
         , Element.Background.color (rgb255 250 250 250)
         , Element.clipX
         , width fill
+        , height (px 35)
         ]
         [ Element.link [ width fill ] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
         , Element.el [ width fill, Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
@@ -1802,7 +1814,7 @@ viewKeywords model keywordview =
                             KeywordSearch nonEmpty RC.ByUse (Page 1) |> appUrlFromKeywordViewState
             in
             Element.row [ Element.spacingXY 15 0 ]
-                [ Element.Input.search [ Border.rounded 0, width (px 200), height (px 40), onEnter HitEnter ]
+                [ Element.Input.search [ Border.rounded 0, width (px 200), onEnter HitEnter ]
                     { onChange = ChangedQuery
                     , text = model.query
                     , placeholder = Just (Element.Input.placeholder [ Font.size 16 ] (Element.text "search for keyword"))
@@ -1921,8 +1933,8 @@ makeColumns n attrs lst =
                 |> makeNumColumns n
                 |> transpose
     in
-    Element.row [ width fill, spacingXY 10 0 ]
-        (columns |> List.map (\rowItems -> Element.column [ Element.alignTop, width fill ] rowItems))
+    Element.row attrs
+        (columns |> List.map (\rowItems -> Element.column (Element.alignTop :: attrs) rowItems))
 
 
 pageOfList : Page -> List a -> List a

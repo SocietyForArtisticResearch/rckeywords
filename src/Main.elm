@@ -1,4 +1,4 @@
-port module Main exposing (Flags, Model, Msg, SearchAction, View, main)
+port module Main exposing (Flags, Model, Msg, SearchAction, View, main, makeNumColumns)
 
 import AppUrl exposing (AppUrl)
 import Array
@@ -956,8 +956,8 @@ spacedWord elem =
     Element.el [ Element.paddingXY 2 0 ] elem
 
 
-viewResearchMicro : ScreenDimensions -> Device -> EnrichedResearch.ResearchWithKeywords -> Element Msg
-viewResearchMicro screen device research =
+viewResearchMicro : Int -> ScreenDimensions -> Device -> EnrichedResearch.ResearchWithKeywords -> Element Msg
+viewResearchMicro numCollums screen device research =
     let
         ( w, h ) =
             case device of
@@ -965,14 +965,10 @@ viewResearchMicro screen device research =
                     ( screen.w - 55, screen.w - 55 )
 
                 Desktop ->
-                    ( (screen.w // 4) - 50, screen.w // 5 )
+                    ( (screen.w // numCollums) - 50, screen.w // (numCollums + 1) )
 
                 Tablet ->
-                    let
-                        half =
-                            (screen.w - 30) // 3
-                    in
-                    ( half, half )
+                    ( (screen.w // numCollums) - 50, screen.w // (numCollums + 1) )
 
         -- abstract =
         --     Element.paragraph [ Font.size 12, width ((screen.w // 3) - 30  |> px ), padding 5 ] <| List.concat kwina
@@ -1039,64 +1035,27 @@ viewResearchMicro screen device research =
                     )
                 )
     in
-    case device of
-        Desktop ->
-            column
-                [ width fill
-                , Font.size 12
-                , Element.spacingXY 0 10
-                ]
-                [ title
-                , img imageUrl
-                , Element.el [] author
-                , keywords
-                , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
-                , Element.el
-                    [ paddingXY 0 10
-                    , width fill
-                    , Border.solid
-                    , Border.color RCStyles.lightGray
-                    , Border.widthEach { bottom = 0, top = 1, left = 0, right = 0 }
-                    ]
-                  <|
-                    Element.html <|
-                        Html.hr [] []
-                ]
-
-        Tablet ->
-            Element.row [ width fill ]
-                [ Element.el [ width (fillPortion 1) ] (img imageUrl)
-                , column [ width (fillPortion 3), Element.alignTop ] <|
-                    [ title
-                    , author
-                    , date
-                    , abstract
-                    ]
-                ]
-
-        -- both phone and tablet
-        Phone ->
-            column
-                [ width fill
-                , Font.size 12
-                , Element.spacingXY 0 10
-                ]
-                [ title
-                , img imageUrl
-                , Element.el [] author
-                , keywords
-                , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
-                , Element.el
-                    [ paddingXY 0 10
-                    , width fill
-                    , Border.solid
-                    , Border.color RCStyles.lightGray
-                    , Border.widthEach { bottom = 0, top = 1, left = 0, right = 0 }
-                    ]
-                  <|
-                    Element.html <|
-                        Html.hr [] []
-                ]
+    column
+        [ width fill
+        , Font.size 12
+        , Element.spacingXY 0 10
+        ]
+        [ title
+        , img imageUrl
+        , Element.el [] author
+        , keywords
+        , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
+        , Element.el
+            [ paddingXY 0 10
+            , width fill
+            , Border.solid
+            , Border.color RCStyles.lightGray
+            , Border.widthEach { bottom = 0, top = 1, left = 0, right = 0 }
+            ]
+          <|
+            Element.html <|
+                Html.hr [] []
+        ]
 
 
 isKeywordView : View -> Bool
@@ -1389,12 +1348,14 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
                                     1
 
                                 Tablet ->
-                                    2
+                                    3
 
                                 Desktop ->
                                     4
                     in
-                    makeColumns numCollumns [ width fill, Element.spacingXY 10 10 ] (sorted |> List.map (viewResearchMicro dimensions device))
+                    sorted
+                        |> List.map (viewResearchMicro numCollumns dimensions device)
+                        |> makeColumns numCollumns [ width fill, Element.spacingXY 10 10 ]
 
                 ScreenLayout scale ->
                     viewScreenshots device dimensions sv scale sorted
@@ -1903,9 +1864,12 @@ viewKeywords model keywordview =
         keywordSearch
 
 
-transpose : List (List a) -> List (List a)
-transpose listOfLists =
+transposes : List (List a) -> List (List a)
+transposes listOfLists =
     let
+        _ =
+            Debug.log "length before" (List.map List.length listOfLists)
+
         rowsLength listOfListss =
             case listOfListss of
                 [] ->
@@ -1913,8 +1877,34 @@ transpose listOfLists =
 
                 x :: _ ->
                     List.length x
+
+        res =
+            List.foldr (List.map2 (::)) (List.repeat (rowsLength listOfLists) []) listOfLists
+
+        _ =
+            Debug.log "result" (List.map List.length res)
     in
-    List.foldr (List.map2 (::)) (List.repeat (rowsLength listOfLists) []) listOfLists
+    res
+
+
+transpose : List (List a) -> List (List a)
+transpose ll =
+    case ll of
+        [] ->
+            []
+
+        [] :: xss ->
+            transpose xss
+
+        (x :: xs) :: xss ->
+            let
+                heads =
+                    List.filterMap List.head xss
+
+                tails =
+                    List.filterMap List.tail xss
+            in
+            (x :: heads) :: transpose (xs :: tails)
 
 
 
@@ -1932,6 +1922,9 @@ makeColumns n attrs lst =
             lst
                 |> makeNumColumns n
                 |> transpose
+
+        _ =
+            Debug.log "columns" (List.length columns)
     in
     Element.row attrs
         (columns |> List.map (\rowItems -> Element.column (Element.alignTop :: attrs) rowItems))

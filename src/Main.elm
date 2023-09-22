@@ -350,7 +350,7 @@ type Device
 
 classifyDevice : ScreenDimensions -> Device
 classifyDevice { w, h } =
-    if w <= 450 then
+    if w <= 600 then
         Phone
 
     else if w <= 1110 then
@@ -1864,27 +1864,24 @@ viewKeywords model keywordview =
         keywordSearch
 
 
-transposes : List (List a) -> List (List a)
-transposes listOfLists =
-    let
-        _ =
-            Debug.log "length before" (List.map List.length listOfLists)
 
-        rowsLength listOfListss =
-            case listOfListss of
-                [] ->
-                    0
-
-                x :: _ ->
-                    List.length x
-
-        res =
-            List.foldr (List.map2 (::)) (List.repeat (rowsLength listOfLists) []) listOfLists
-
-        _ =
-            Debug.log "result" (List.map List.length res)
-    in
-    res
+-- transposes : List (List a) -> List (List a)
+-- transposes listOfLists =
+--     let
+--         _ =
+--             Debug.log "length before" (List.map List.length listOfLists)
+--         rowsLength listOfListss =
+--             case listOfListss of
+--                 [] ->
+--                     0
+--                 x :: _ ->
+--                     List.length x
+--         res =
+--             List.foldr (List.map2 (::)) (List.repeat (rowsLength listOfLists) []) listOfLists
+--         _ =
+--             Debug.log "result" (List.map List.length res)
+--     in
+--     res
 
 
 transpose : List (List a) -> List (List a)
@@ -1922,9 +1919,6 @@ makeColumns n attrs lst =
             lst
                 |> makeNumColumns n
                 |> transpose
-
-        _ =
-            Debug.log "columns" (List.length columns)
     in
     Element.row attrs
         (columns |> List.map (\rowItems -> Element.column (Element.alignTop :: attrs) rowItems))

@@ -62,6 +62,7 @@ type alias Model =
     , key : Nav.Key
     , url : AppUrl
     , searchPageSize : Int
+    , time : Int
 
     -- , keywords : Set String
     , searchGUI : Form.Model
@@ -95,6 +96,7 @@ subscriptions _ =
     Sub.batch
         [ Events.onResize WindowResize
         , receiveResults ReceiveResults
+        , Time.every 1000.0 Tick
         ]
 
 
@@ -131,6 +133,7 @@ init { width, height } url key =
     , submitting = False
     , allKeywords = []
     , allPortals = []
+    , time = 0
     }
         |> (\model ->
                 ( model
@@ -376,6 +379,7 @@ type Msg
     | SubmitSearch (Form.Validated String SearchForm)
     | WindowResize Int Int
     | ToggleForm
+    | Tick Time.Posix
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -506,6 +510,9 @@ update msg model =
 
         ToggleForm ->
             ( { model | formOpen = not model.formOpen }, Cmd.none )
+
+        Tick _ ->
+            ( { model | time = model.time + 1 }, Cmd.none )
 
 
 updateViewWithSearch : SearchForm -> View -> View
@@ -1511,7 +1518,7 @@ makeSnippet indexes subkeywords keywords abstract which =
             -- I think this happens when the abstact is a white space
             -- this matches somehow the "?" keyword, which is then dropped creating an empty list
             keyw =
-                Maybe.withDefault "!!! This is an empty list !!!" (Array.get which kws)
+                Maybe.withDefault "" (Array.get which kws)
 
             kwlength =
                 String.length keyw
@@ -1950,6 +1957,11 @@ pageOfList (Page i) lst =
 --         False
 --     else
 --         True
+
+
+urlFromScreenshotAndTime : Array.Array String -> Int -> String
+urlFromScreenshotAndTime screenshots time =
+    time |> modBy (Array.length screenshots) |> (\idx -> Array.get idx screenshots |> Maybe.withDefault "")
 
 
 lazyImageWithErrorHandling : Int -> ScreenDimensions -> Research r -> Html Msg

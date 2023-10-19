@@ -8,7 +8,6 @@ import KeywordString
 import Research as RC
 import Set exposing (Set)
 import Time
-import WorkerTypes as WT
 
 
 
@@ -167,7 +166,7 @@ decodeSearchResult =
         parseResult typ =
             case typ of
                 "expositions" ->
-                    field "expositions" (Json.Decode.list WT.decodeExposition |> Json.Decode.map Expositions)
+                    field "expositions" (Json.Decode.list EnrichedResearch.decoder |> Json.Decode.map Expositions)
 
                 "keywords" ->
                     field "keywords" (Json.Decode.list RC.decodeKeyword |> Json.Decode.map Keywords)

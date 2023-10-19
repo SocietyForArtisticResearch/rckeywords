@@ -2,6 +2,11 @@
 
 This is something to test alternative layouts of RC content.
 
+# TODO
+
+- Make a exposition page
+- 
+
 # Requirements
 
 * [http-server](https://www.npmjs.com/package/http-server)

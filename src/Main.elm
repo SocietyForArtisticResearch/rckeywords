@@ -31,6 +31,7 @@ import Queries exposing (SearchQuery(..))
 import RCStyles
 import Regex
 import Research as RC exposing (Research)
+import Screenshots
 import Set exposing (Set)
 import String
 import Tailwind.Utilities exposing (break_before_all)
@@ -222,6 +223,11 @@ type alias SearchViewState =
 type View
     = KeywordsView KeywordsViewState
     | SearchView SearchViewState
+    | ExpositionView ExpositionViewState
+
+
+type alias ExpositionViewState =
+    { id : RC.ExpositionID }
 
 
 
@@ -528,6 +534,9 @@ updateViewWithSearch srch v =
                     , form = srch
                 }
 
+        ExpositionView s ->
+            ExpositionView s
+
 
 urlWhereFragmentIsPath : Url -> AppUrl.AppUrl
 urlWhereFragmentIsPath url =
@@ -565,6 +574,17 @@ getSortingOfUrl url =
 handleUrl : AppUrl.AppUrl -> Model -> ( Model, Cmd Msg )
 handleUrl url model =
     case url.path of
+        [ "research", "detail" ] ->
+            let
+                exp_id =
+                    url.queryParameters
+                        |> Dict.get "id"
+                        |> Maybe.andThen List.head
+                        |> Maybe.andThen String.toInt
+                        |> Maybe.withDefault 0
+            in
+            ( { model | view = ExpositionView { id = exp_id } }, Cmd.none )
+
         [ "keywords" ] ->
             let
                 sorting : RC.KeywordSorting
@@ -791,6 +811,7 @@ handleUrl url model =
             , cmd
             )
 
+        -- hallo
         _ ->
             ( { model
                 | view =
@@ -1231,6 +1252,24 @@ view model =
                         Idle ->
                             Element.none
 
+                ExpositionView s ->
+                    case model.search of
+                        FoundResearch lst ->
+                            lst
+                                |> List.filter (\r -> r.id == s.id)
+                                |> List.head
+                                |> Maybe.map viewExpositionDetails
+                                |> Maybe.withDefault (Element.text "nothing to see")
+
+                        Idle ->
+                            Element.text "idle"
+
+                        FoundKeywords _ ->
+                            Element.text "still keywords"
+
+                        Searching ->
+                            Element.text "working hard"
+
         layoutWidth =
             case model.device of
                 Phone ->
@@ -1257,6 +1296,31 @@ view model =
 
 
 
+-- url of screenshots
+
+
+screenshotFolder =
+    "screenshots2"
+
+
+viewExpositionDetails : EnrichedResearch.ResearchWithKeywords -> Element Msg
+viewExpositionDetails exposition =
+    let
+        images =
+            exposition.screenshots
+                |> Maybe.map
+                    (Screenshots.getUrls screenshotFolder exposition.id
+                        >> List.map
+                            (\url ->
+                                Element.image [] { src = url, description = "screenshot" }
+                            )
+                    )
+                |> Maybe.withDefault [ Element.text "exp has no .screenshots" ]
+    in
+    row [] images
+
+
+
 -- these are functions to navigate to a different page within a view
 
 
@@ -1271,6 +1335,9 @@ gotoPageView p v =
                 { sv
                     | page = p
                 }
+
+        ExpositionView s ->
+            ExpositionView s
 
 
 getPageOfView : View -> Page
@@ -1645,6 +1712,9 @@ appUrlFromView v =
         SearchView sv ->
             appUrlFromSearchViewState sv
 
+        ExpositionView s ->
+            appUrlFromExpositionView s
+
 
 maybeToList m =
     case m of
@@ -1693,6 +1763,14 @@ appUrlFromSearchViewState sv =
                             ]
     in
     appurl |> AppUrl.toString |> prefixHash
+
+
+appUrlFromExpositionView : ExpositionViewState -> String
+appUrlFromExpositionView s =
+    AppUrl.fromPath [ "research", "detail" ]
+        |> withParameter ( "id", s.id |> String.fromInt )
+        |> AppUrl.toString
+        |> prefixHash
 
 
 appUrlFromKeywordViewState : KeywordsViewState -> String

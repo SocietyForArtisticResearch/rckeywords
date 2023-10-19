@@ -574,7 +574,7 @@ getSortingOfUrl url =
 handleUrl : AppUrl.AppUrl -> Model -> ( Model, Cmd Msg )
 handleUrl url model =
     case url.path of
-        [ "research", "detail" ] ->
+        [ "exposition" ] ->
             let
                 exp_id =
                     url.queryParameters
@@ -1006,7 +1006,7 @@ viewResearchMicro numCollums screen device research =
         img : String -> Element msg
         img src =
             Element.link [ width fill ]
-                { url = research.defaultPage
+                { url = appUrlFromExposition research
                 , label =
                     Element.el
                         [ width (px (w + 30))
@@ -1032,7 +1032,7 @@ viewResearchMicro numCollums screen device research =
                     Element.paragraph
                         (width (px w) :: microLinkStyle)
                         [ Element.text (research.title |> String.replace "&amp;" "&") ]
-                , url = research.defaultPage
+                , url = appUrlFromExposition research
                 }
 
         author =
@@ -1767,10 +1767,15 @@ appUrlFromSearchViewState sv =
 
 appUrlFromExpositionView : ExpositionViewState -> String
 appUrlFromExpositionView s =
-    AppUrl.fromPath [ "research", "detail" ]
+    AppUrl.fromPath [ "exposition" ]
         |> withParameter ( "id", s.id |> String.fromInt )
         |> AppUrl.toString
         |> prefixHash
+
+
+appUrlFromExposition : Research r -> String
+appUrlFromExposition research =
+    ExpositionViewState research.id |> appUrlFromExpositionView
 
 
 appUrlFromKeywordViewState : KeywordsViewState -> String
@@ -2068,7 +2073,7 @@ lazyImageWithErrorHandling groupSize dimensions research =
                 Phone ->
                     width
     in
-    Html.a [ Attr.target "_blank", Attr.href research.defaultPage, Attr.title (RC.getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
+    Html.a [ Attr.target "_blank", Attr.href (appUrlFromExposition research), Attr.title (RC.getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
         [ Html.node "lazy-image"
             [ Attr.attribute "src" (urlFromId research.id)
 

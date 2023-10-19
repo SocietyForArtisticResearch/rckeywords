@@ -7117,7 +7117,7 @@ var $author$project$Main$appUrlFromExpositionView = function (s) {
 					$elm$core$String$fromInt(s.id)),
 				$lydell$elm_app_url$AppUrl$fromPath(
 					_List_fromArray(
-						['research', 'detail'])))));
+						['exposition'])))));
 };
 var $author$project$Research$sortingToString = function (s) {
 	switch (s.$) {
@@ -8878,17 +8878,9 @@ var $author$project$Main$handleUrl = F2(
 		while (true) {
 			if (_v0.b) {
 				if (!_v0.b.b) {
-					if (_v0.a === 'keywords') {
-						var sorting = $author$project$Research$sortingFromString(
-							A2(
-								$elm$core$Maybe$withDefault,
-								'byuse',
-								A2(
-									$elm$core$Maybe$andThen,
-									$elm$core$List$head,
-									A2($elm$core$Dict$get, 'sorting', url.queryParameters))));
-						var page = $author$project$Main$pageFromInt(
-							A2(
+					switch (_v0.a) {
+						case 'exposition':
+							var exp_id = A2(
 								$elm$core$Maybe$withDefault,
 								0,
 								A2(
@@ -8897,70 +8889,132 @@ var $author$project$Main$handleUrl = F2(
 									A2(
 										$elm$core$Maybe$andThen,
 										$elm$core$List$head,
-										A2($elm$core$Dict$get, 'page', url.queryParameters)))));
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									search: $author$project$Main$Searching,
-									view: $author$project$Main$KeywordsView(
-										A2($author$project$Main$KeywordMainView, sorting, page))
-								}),
-							$author$project$Main$sendQuery(
-								$author$project$Queries$encodeSearchQuery(
-									A2($author$project$Queries$FindKeywords, '', sorting))));
-					} else {
-						break _v0$5;
+										A2($elm$core$Dict$get, 'id', url.queryParameters))));
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										view: $author$project$Main$ExpositionView(
+											{id: exp_id})
+									}),
+								$elm$core$Platform$Cmd$none);
+						case 'keywords':
+							var sorting = $author$project$Research$sortingFromString(
+								A2(
+									$elm$core$Maybe$withDefault,
+									'byuse',
+									A2(
+										$elm$core$Maybe$andThen,
+										$elm$core$List$head,
+										A2($elm$core$Dict$get, 'sorting', url.queryParameters))));
+							var page = $author$project$Main$pageFromInt(
+								A2(
+									$elm$core$Maybe$withDefault,
+									0,
+									A2(
+										$elm$core$Maybe$andThen,
+										$elm$core$String$toInt,
+										A2(
+											$elm$core$Maybe$andThen,
+											$elm$core$List$head,
+											A2($elm$core$Dict$get, 'page', url.queryParameters)))));
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										search: $author$project$Main$Searching,
+										view: $author$project$Main$KeywordsView(
+											A2($author$project$Main$KeywordMainView, sorting, page))
+									}),
+								$author$project$Main$sendQuery(
+									$author$project$Queries$encodeSearchQuery(
+										A2($author$project$Queries$FindKeywords, '', sorting))));
+						default:
+							break _v0$5;
 					}
 				} else {
-					if (!_v0.b.b.b) {
-						switch (_v0.a) {
-							case 'research':
-								if (_v0.b.a === 'detail') {
-									var _v1 = _v0.b;
-									var exp_id = A2(
+					if (_v0.b.a === 'search') {
+						if (!_v0.b.b.b) {
+							if (_v0.a === 'keywords') {
+								var _v1 = _v0.b;
+								var sorting = A2(
+									$elm$core$Maybe$withDefault,
+									$author$project$Research$ByUse,
+									A2(
+										$elm$core$Maybe$map,
+										$author$project$Research$sortingFromString,
+										A2(
+											$elm$core$Maybe$andThen,
+											$elm$core$List$head,
+											A2($elm$core$Dict$get, 'sorting', url.queryParameters))));
+								var q = A2(
+									$elm$core$Maybe$withDefault,
+									'',
+									A2(
+										$elm$core$Maybe$andThen,
+										$elm$core$List$head,
+										A2($elm$core$Dict$get, 'q', url.queryParameters)));
+								var page = $author$project$Main$pageFromInt(
+									A2(
 										$elm$core$Maybe$withDefault,
-										0,
+										1,
 										A2(
 											$elm$core$Maybe$andThen,
 											$elm$core$String$toInt,
 											A2(
 												$elm$core$Maybe$andThen,
 												$elm$core$List$head,
-												A2($elm$core$Dict$get, 'id', url.queryParameters))));
-									return _Utils_Tuple2(
-										_Utils_update(
-											model,
-											{
-												view: $author$project$Main$ExpositionView(
-													{id: exp_id})
-											}),
-										$elm$core$Platform$Cmd$none);
-								} else {
-									break _v0$5;
-								}
-							case 'keywords':
-								if (_v0.b.a === 'search') {
-									var _v2 = _v0.b;
-									var sorting = A2(
-										$elm$core$Maybe$withDefault,
-										$author$project$Research$ByUse,
-										A2(
-											$elm$core$Maybe$map,
-											$author$project$Research$sortingFromString,
+												A2($elm$core$Dict$get, 'page', url.queryParameters)))));
+								var cmd = function () {
+									if (q === '') {
+										return $author$project$Main$sendQuery(
+											$author$project$Queries$encodeSearchQuery(
+												A2($author$project$Queries$FindKeywords, '', sorting)));
+									} else {
+										var someQ = q;
+										return $author$project$Main$sendQuery(
+											$author$project$Queries$encodeSearchQuery(
+												A2($author$project$Queries$FindKeywords, someQ, sorting)));
+									}
+								}();
+								return _Utils_Tuple2(
+									_Utils_update(
+										model,
+										{
+											query: q,
+											search: $author$project$Main$Searching,
+											view: $author$project$Main$KeywordsView(
+												A3($author$project$Main$KeywordSearch, q, sorting, page))
+										}),
+									cmd);
+							} else {
+								break _v0$5;
+							}
+						} else {
+							if ((_v0.a === 'research') && (!_v0.b.b.b.b)) {
+								switch (_v0.b.b.a) {
+									case 'list':
+										var _v3 = _v0.b;
+										var _v4 = _v3.b;
+										var title = A2(
+											$elm$core$Maybe$withDefault,
+											'',
 											A2(
 												$elm$core$Maybe$andThen,
 												$elm$core$List$head,
-												A2($elm$core$Dict$get, 'sorting', url.queryParameters))));
-									var q = A2(
-										$elm$core$Maybe$withDefault,
-										'',
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$List$head,
-											A2($elm$core$Dict$get, 'q', url.queryParameters)));
-									var page = $author$project$Main$pageFromInt(
-										A2(
+												A2($elm$core$Dict$get, 'title', url.queryParameters)));
+										var sorting = A2(
+											$elm$core$Maybe$withDefault,
+											$author$project$Research$NewestFirst,
+											$author$project$Main$getSortingOfUrl(url));
+										var portal = A2(
+											$elm$core$Maybe$withDefault,
+											'',
+											A2(
+												$elm$core$Maybe$andThen,
+												$elm$core$List$head,
+												A2($elm$core$Dict$get, 'portal', url.queryParameters)));
+										var page = A2(
 											$elm$core$Maybe$withDefault,
 											1,
 											A2(
@@ -8969,248 +9023,189 @@ var $author$project$Main$handleUrl = F2(
 												A2(
 													$elm$core$Maybe$andThen,
 													$elm$core$List$head,
-													A2($elm$core$Dict$get, 'page', url.queryParameters)))));
-									var cmd = function () {
-										if (q === '') {
-											return $author$project$Main$sendQuery(
-												$author$project$Queries$encodeSearchQuery(
-													A2($author$project$Queries$FindKeywords, '', sorting)));
-										} else {
-											var someQ = q;
-											return $author$project$Main$sendQuery(
-												$author$project$Queries$encodeSearchQuery(
-													A2($author$project$Queries$FindKeywords, someQ, sorting)));
-										}
-									}();
-									return _Utils_Tuple2(
-										_Utils_update(
-											model,
-											{
-												query: q,
-												search: $author$project$Main$Searching,
-												view: $author$project$Main$KeywordsView(
-													A3($author$project$Main$KeywordSearch, q, sorting, page))
-											}),
-										cmd);
-								} else {
-									break _v0$5;
-								}
-							default:
-								break _v0$5;
-						}
-					} else {
-						if (((_v0.a === 'research') && (_v0.b.a === 'search')) && (!_v0.b.b.b.b)) {
-							switch (_v0.b.b.a) {
-								case 'list':
-									var _v4 = _v0.b;
-									var _v5 = _v4.b;
-									var title = A2(
-										$elm$core$Maybe$withDefault,
-										'',
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$List$head,
-											A2($elm$core$Dict$get, 'title', url.queryParameters)));
-									var sorting = A2(
-										$elm$core$Maybe$withDefault,
-										$author$project$Research$NewestFirst,
-										$author$project$Main$getSortingOfUrl(url));
-									var portal = A2(
-										$elm$core$Maybe$withDefault,
-										'',
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$List$head,
-											A2($elm$core$Dict$get, 'portal', url.queryParameters)));
-									var page = A2(
-										$elm$core$Maybe$withDefault,
-										1,
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$String$toInt,
+													A2($elm$core$Dict$get, 'page', url.queryParameters))));
+										var keywords = A2(
+											$elm$core$Maybe$withDefault,
+											_List_Nil,
+											A2($elm$core$Dict$get, 'keyword', url.queryParameters));
+										var before = A2(
+											$elm$core$Maybe$map,
+											$justinmimbs$date$Date$fromRataDie,
 											A2(
 												$elm$core$Maybe$andThen,
-												$elm$core$List$head,
-												A2($elm$core$Dict$get, 'page', url.queryParameters))));
-									var keywords = A2(
-										$elm$core$Maybe$withDefault,
-										_List_Nil,
-										A2($elm$core$Dict$get, 'keyword', url.queryParameters));
-									var before = A2(
-										$elm$core$Maybe$map,
-										$justinmimbs$date$Date$fromRataDie,
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$String$toInt,
-											A2(
-												$elm$core$Maybe$andThen,
-												$elm$core$List$head,
-												A2($elm$core$Dict$get, 'before', url.queryParameters))));
-									var author = A2(
-										$elm$core$Maybe$withDefault,
-										'',
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$List$head,
-											A2($elm$core$Dict$get, 'author', url.queryParameters)));
-									var after = A2(
-										$elm$core$Maybe$map,
-										$justinmimbs$date$Date$fromRataDie,
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$String$toInt,
-											A2(
-												$elm$core$Maybe$andThen,
-												$elm$core$List$head,
-												A2($elm$core$Dict$get, 'after', url.queryParameters))));
-									var cmd = $author$project$Main$sendQuery(
-										$author$project$Queries$encodeSearchQuery(
-											$author$project$Queries$FindResearch(
+												$elm$core$String$toInt,
 												A2(
-													$author$project$Queries$withBefore,
-													before,
-													A2(
-														$author$project$Queries$withAfter,
-														after,
-														A2(
-															$author$project$Queries$withPortal,
-															portal,
-															A2(
-																$author$project$Queries$withAuthor,
-																author,
-																A2(
-																	$author$project$Queries$withTitle,
-																	title,
-																	A2(
-																		$author$project$Queries$searchWithKeywords,
-																		$elm$core$Set$fromList(keywords),
-																		$author$project$Queries$emptySearch)))))))));
-									return _Utils_Tuple2(
-										_Utils_update(
-											model,
-											{
-												view: $author$project$Main$SearchView(
-													{
-														form: A6($author$project$Main$formWith, title, author, keywords, portal, after, before),
-														layout: $author$project$Main$ListLayout,
-														page: $author$project$Main$Page(page),
-														sorting: sorting
-													})
-											}),
-										cmd);
-								case 'screen':
-									var _v6 = _v0.b;
-									var _v7 = _v6.b;
-									var title = A2(
-										$elm$core$Maybe$withDefault,
-										'',
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$List$head,
-											A2($elm$core$Dict$get, 'title', url.queryParameters)));
-									var sorting = A2(
-										$elm$core$Maybe$withDefault,
-										$author$project$Research$NewestFirst,
-										$author$project$Main$getSortingOfUrl(url));
-									var scale = A2(
-										$elm$core$Maybe$withDefault,
-										$author$project$Main$Medium,
-										A2(
-											$elm$core$Maybe$andThen,
-											$author$project$Main$scaleFromString,
+													$elm$core$Maybe$andThen,
+													$elm$core$List$head,
+													A2($elm$core$Dict$get, 'before', url.queryParameters))));
+										var author = A2(
+											$elm$core$Maybe$withDefault,
+											'',
 											A2(
 												$elm$core$Maybe$andThen,
 												$elm$core$List$head,
-												A2($elm$core$Dict$get, 'scale', url.queryParameters))));
-									var portal = A2(
-										$elm$core$Maybe$withDefault,
-										'',
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$List$head,
-											A2($elm$core$Dict$get, 'portal', url.queryParameters)));
-									var page = A2(
-										$elm$core$Maybe$withDefault,
-										1,
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$String$toInt,
+												A2($elm$core$Dict$get, 'author', url.queryParameters)));
+										var after = A2(
+											$elm$core$Maybe$map,
+											$justinmimbs$date$Date$fromRataDie,
 											A2(
 												$elm$core$Maybe$andThen,
-												$elm$core$List$head,
-												A2($elm$core$Dict$get, 'page', url.queryParameters))));
-									var keywords = A2(
-										$elm$core$Maybe$withDefault,
-										_List_Nil,
-										A2($elm$core$Dict$get, 'keyword', url.queryParameters));
-									var before = A2(
-										$elm$core$Maybe$map,
-										$justinmimbs$date$Date$fromRataDie,
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$String$toInt,
-											A2(
-												$elm$core$Maybe$andThen,
-												$elm$core$List$head,
-												A2($elm$core$Dict$get, 'before', url.queryParameters))));
-									var author = A2(
-										$elm$core$Maybe$withDefault,
-										'',
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$List$head,
-											A2($elm$core$Dict$get, 'author', url.queryParameters)));
-									var after = A2(
-										$elm$core$Maybe$map,
-										$justinmimbs$date$Date$fromRataDie,
-										A2(
-											$elm$core$Maybe$andThen,
-											$elm$core$String$toInt,
-											A2(
-												$elm$core$Maybe$andThen,
-												$elm$core$List$head,
-												A2($elm$core$Dict$get, 'after', url.queryParameters))));
-									var cmd = $author$project$Main$sendQuery(
-										$author$project$Queries$encodeSearchQuery(
-											$author$project$Queries$FindResearch(
+												$elm$core$String$toInt,
 												A2(
-													$author$project$Queries$withBefore,
-													before,
+													$elm$core$Maybe$andThen,
+													$elm$core$List$head,
+													A2($elm$core$Dict$get, 'after', url.queryParameters))));
+										var cmd = $author$project$Main$sendQuery(
+											$author$project$Queries$encodeSearchQuery(
+												$author$project$Queries$FindResearch(
 													A2(
-														$author$project$Queries$withAfter,
-														after,
+														$author$project$Queries$withBefore,
+														before,
 														A2(
-															$author$project$Queries$withPortal,
-															portal,
+															$author$project$Queries$withAfter,
+															after,
 															A2(
-																$author$project$Queries$withTitle,
-																title,
+																$author$project$Queries$withPortal,
+																portal,
 																A2(
 																	$author$project$Queries$withAuthor,
 																	author,
 																	A2(
-																		$author$project$Queries$searchWithKeywords,
-																		$elm$core$Set$fromList(keywords),
-																		$author$project$Queries$emptySearch)))))))));
-									return _Utils_Tuple2(
-										_Utils_update(
-											model,
-											{
-												view: $author$project$Main$SearchView(
-													{
-														form: A6($author$project$Main$formWith, title, author, keywords, portal, after, before),
-														layout: $author$project$Main$ScreenLayout(scale),
-														page: $author$project$Main$Page(page),
-														sorting: sorting
-													})
-											}),
-										cmd);
-								default:
-									break _v0$5;
+																		$author$project$Queries$withTitle,
+																		title,
+																		A2(
+																			$author$project$Queries$searchWithKeywords,
+																			$elm$core$Set$fromList(keywords),
+																			$author$project$Queries$emptySearch)))))))));
+										return _Utils_Tuple2(
+											_Utils_update(
+												model,
+												{
+													view: $author$project$Main$SearchView(
+														{
+															form: A6($author$project$Main$formWith, title, author, keywords, portal, after, before),
+															layout: $author$project$Main$ListLayout,
+															page: $author$project$Main$Page(page),
+															sorting: sorting
+														})
+												}),
+											cmd);
+									case 'screen':
+										var _v5 = _v0.b;
+										var _v6 = _v5.b;
+										var title = A2(
+											$elm$core$Maybe$withDefault,
+											'',
+											A2(
+												$elm$core$Maybe$andThen,
+												$elm$core$List$head,
+												A2($elm$core$Dict$get, 'title', url.queryParameters)));
+										var sorting = A2(
+											$elm$core$Maybe$withDefault,
+											$author$project$Research$NewestFirst,
+											$author$project$Main$getSortingOfUrl(url));
+										var scale = A2(
+											$elm$core$Maybe$withDefault,
+											$author$project$Main$Medium,
+											A2(
+												$elm$core$Maybe$andThen,
+												$author$project$Main$scaleFromString,
+												A2(
+													$elm$core$Maybe$andThen,
+													$elm$core$List$head,
+													A2($elm$core$Dict$get, 'scale', url.queryParameters))));
+										var portal = A2(
+											$elm$core$Maybe$withDefault,
+											'',
+											A2(
+												$elm$core$Maybe$andThen,
+												$elm$core$List$head,
+												A2($elm$core$Dict$get, 'portal', url.queryParameters)));
+										var page = A2(
+											$elm$core$Maybe$withDefault,
+											1,
+											A2(
+												$elm$core$Maybe$andThen,
+												$elm$core$String$toInt,
+												A2(
+													$elm$core$Maybe$andThen,
+													$elm$core$List$head,
+													A2($elm$core$Dict$get, 'page', url.queryParameters))));
+										var keywords = A2(
+											$elm$core$Maybe$withDefault,
+											_List_Nil,
+											A2($elm$core$Dict$get, 'keyword', url.queryParameters));
+										var before = A2(
+											$elm$core$Maybe$map,
+											$justinmimbs$date$Date$fromRataDie,
+											A2(
+												$elm$core$Maybe$andThen,
+												$elm$core$String$toInt,
+												A2(
+													$elm$core$Maybe$andThen,
+													$elm$core$List$head,
+													A2($elm$core$Dict$get, 'before', url.queryParameters))));
+										var author = A2(
+											$elm$core$Maybe$withDefault,
+											'',
+											A2(
+												$elm$core$Maybe$andThen,
+												$elm$core$List$head,
+												A2($elm$core$Dict$get, 'author', url.queryParameters)));
+										var after = A2(
+											$elm$core$Maybe$map,
+											$justinmimbs$date$Date$fromRataDie,
+											A2(
+												$elm$core$Maybe$andThen,
+												$elm$core$String$toInt,
+												A2(
+													$elm$core$Maybe$andThen,
+													$elm$core$List$head,
+													A2($elm$core$Dict$get, 'after', url.queryParameters))));
+										var cmd = $author$project$Main$sendQuery(
+											$author$project$Queries$encodeSearchQuery(
+												$author$project$Queries$FindResearch(
+													A2(
+														$author$project$Queries$withBefore,
+														before,
+														A2(
+															$author$project$Queries$withAfter,
+															after,
+															A2(
+																$author$project$Queries$withPortal,
+																portal,
+																A2(
+																	$author$project$Queries$withTitle,
+																	title,
+																	A2(
+																		$author$project$Queries$withAuthor,
+																		author,
+																		A2(
+																			$author$project$Queries$searchWithKeywords,
+																			$elm$core$Set$fromList(keywords),
+																			$author$project$Queries$emptySearch)))))))));
+										return _Utils_Tuple2(
+											_Utils_update(
+												model,
+												{
+													view: $author$project$Main$SearchView(
+														{
+															form: A6($author$project$Main$formWith, title, author, keywords, portal, after, before),
+															layout: $author$project$Main$ScreenLayout(scale),
+															page: $author$project$Main$Page(page),
+															sorting: sorting
+														})
+												}),
+											cmd);
+									default:
+										break _v0$5;
+								}
+							} else {
+								break _v0$5;
 							}
-						} else {
-							break _v0$5;
 						}
+					} else {
+						break _v0$5;
 					}
 				}
 			} else {
@@ -17942,6 +17937,13 @@ var $author$project$Main$viewLayoutSwitch = F2(
 					})
 				]));
 	});
+var $author$project$Main$ExpositionViewState = function (id) {
+	return {id: id};
+};
+var $author$project$Main$appUrlFromExposition = function (research) {
+	return $author$project$Main$appUrlFromExpositionView(
+		$author$project$Main$ExpositionViewState(research.id));
+};
 var $author$project$Research$authorAsString = function (_v0) {
 	var a = _v0.a;
 	return a.name;
@@ -18909,7 +18911,7 @@ var $author$project$Main$viewResearchMicro = F4(
 							$author$project$Main$image,
 							_Utils_Tuple2(w, h),
 							src)),
-					url: research.defaultPage
+					url: $author$project$Main$appUrlFromExposition(research)
 				});
 		};
 		var title = A2(
@@ -18932,7 +18934,7 @@ var $author$project$Main$viewResearchMicro = F4(
 							$mdgriffith$elm_ui$Element$text(
 							A3($elm$core$String$replace, '&amp;', '&', research.title))
 						])),
-				url: research.defaultPage
+				url: $author$project$Main$appUrlFromExposition(research)
 			});
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
@@ -19069,7 +19071,8 @@ var $author$project$Main$lazyImageWithErrorHandling = F3(
 			_List_fromArray(
 				[
 					$elm$html$Html$Attributes$target('_blank'),
-					$elm$html$Html$Attributes$href(research.defaultPage),
+					$elm$html$Html$Attributes$href(
+					$author$project$Main$appUrlFromExposition(research)),
 					$elm$html$Html$Attributes$title(
 					$author$project$Research$getName(research.author) + (' - ' + (research.title + (' - ' + research.created))))
 				]),

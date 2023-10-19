@@ -1,4 +1,4 @@
-port module Main exposing (Flags, Model, Msg, SearchAction, View, main, makeNumColumns)
+port module Main exposing (Flags, Model, Msg, SearchAction, View, main)
 
 import AppUrl exposing (AppUrl)
 import Array
@@ -27,6 +27,7 @@ import Json.Decode
 import Json.Encode
 import KeywordString exposing (KeywordString)
 import List
+import Page exposing (Scale(..), ScreenDimensions, makeNumColumns, transpose)
 import Queries exposing (SearchQuery(..))
 import RCStyles
 import Regex
@@ -239,13 +240,6 @@ type Layout
     | ScreenLayout Scale
 
 
-type Scale
-    = Micro
-    | Small
-    | Medium
-    | Large
-
-
 scaleToString : Scale -> String
 scaleToString scale =
     case scale of
@@ -345,10 +339,6 @@ type SearchAction
     | Searching
     | FoundKeywords (List RC.Keyword)
     | FoundResearch (List EnrichedResearch.ResearchWithKeywords)
-
-
-type alias ScreenDimensions =
-    { w : Int, h : Int }
 
 
 type Device
@@ -1258,7 +1248,7 @@ view model =
                             lst
                                 |> List.filter (\r -> r.id == s.id)
                                 |> List.head
-                                |> Maybe.map viewExpositionDetails
+                                |> Maybe.map (viewExpositionDetails model.screenDimensions Medium)
                                 |> Maybe.withDefault (Element.text "nothing to see")
 
                         Idle ->
@@ -1303,21 +1293,23 @@ screenshotFolder =
     "screenshots2"
 
 
-viewExpositionDetails : EnrichedResearch.ResearchWithKeywords -> Element Msg
-viewExpositionDetails exposition =
+viewExpositionDetails : ScreenDimensions -> Scale -> EnrichedResearch.ResearchWithKeywords -> Element Msg
+viewExpositionDetails dim scale exposition =
     let
-        images =
+        makeImg w url =
+            Element.image [ Element.width (px w) ] { src = url, description = "screenshot" }
+
+        urlLst =
             exposition.screenshots
                 |> Maybe.map
-                    (Screenshots.getUrls screenshotFolder exposition.id
-                        >> List.map
-                            (\url ->
-                                Element.image [] { src = url, description = "screenshot" }
-                            )
-                    )
-                |> Maybe.withDefault [ Element.text "exp has no .screenshots" ]
+                    (Screenshots.getUrls screenshotFolder exposition.id)
     in
-    row [] images
+    case urlLst of
+        Nothing ->
+            Element.text "no screenshots"
+
+        Just urls ->
+            Page.makeMatrix dim scale makeImg urls
 
 
 
@@ -1972,29 +1964,6 @@ viewKeywords model keywordview =
 --             Debug.log "result" (List.map List.length res)
 --     in
 --     res
-
-
-transpose : List (List a) -> List (List a)
-transpose ll =
-    case ll of
-        [] ->
-            []
-
-        [] :: xss ->
-            transpose xss
-
-        (x :: xs) :: xss ->
-            let
-                heads =
-                    List.filterMap List.head xss
-
-                tails =
-                    List.filterMap List.tail xss
-            in
-            (x :: heads) :: transpose (xs :: tails)
-
-
-
 -- this is just a test to really see what is going on.
 
 
@@ -2196,21 +2165,6 @@ paddingEachZero =
 --         (List.map viewGroup groups)
 --     ]
 -- this function creates a dictionary of all keywords and the research that have them
-
-
-makeNumColumns : Int -> List a -> List (List a)
-makeNumColumns num input =
-    let
-        f : Int -> List a -> List (List a) -> List (List a)
-        f n inp acc =
-            case inp of
-                [] ->
-                    acc
-
-                x :: xs ->
-                    List.take num (x :: xs) :: f n (List.drop n (x :: xs)) acc
-    in
-    f num input []
 
 
 type alias SearchForm =

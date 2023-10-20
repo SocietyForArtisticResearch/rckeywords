@@ -1,4 +1,4 @@
-module Page exposing (CellSize(..), Matrix(..), Scale(..), ScreenDimensions, calcCellSize, calcMatrix, calcPageSize, makeMatrix, makeNumColumns, sizeToInt, transpose)
+module Page exposing (CellSize(..), Matrix(..), Scale(..), ScreenDimensions, makeMatrix, makeNumColumns, transpose)
 
 import Element exposing (Element, fill, width)
 
@@ -40,7 +40,7 @@ makeMatrix dim scale makeElementWithHeight lst =
         cellSize =
             calcCellSize scale
 
-        (Matrix n m) =
+        (Matrix n _) =
             calcMatrix dim scale
 
         f =
@@ -56,11 +56,6 @@ makeMatrix dim scale makeElementWithHeight lst =
             lstlst |> List.map (\r -> Element.row [ width fill ] r)
     in
     Element.column [ width fill ] rows
-
-
-calcPageSize : ScreenDimensions -> CellSize -> Int
-calcPageSize dim (CellSize size) =
-    dim.w * dim.h // (size * size) * 3
 
 
 makeNumColumns : Int -> List a -> List (List a)

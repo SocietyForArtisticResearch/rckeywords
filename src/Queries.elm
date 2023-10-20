@@ -1,13 +1,11 @@
-module Queries exposing (Search(..), SearchQuery(..), SearchResult(..), appendMaybe, decodeKeywordSorting, decodeSearch, decodeSearchQuery, decodeSearchResult, emptySearch, encodeKeywordSorting, encodeSearch, encodeSearchQuery, encodeSearchResult, getKeywords, search, searchWithKeywords, withAfter, withAuthor, withBefore, withKeywords, withPortal, withTitle)
+module Queries exposing (Search(..), SearchQuery(..), SearchResult(..), decodeSearchQuery, decodeSearchResult, emptySearch, encodeSearchQuery, encodeSearchResult, getKeywords, searchWithKeywords, withAfter, withAuthor, withBefore, withPortal, withTitle)
 
 import Date exposing (Date)
 import EnrichedResearch exposing (ResearchWithKeywords)
 import Json.Decode exposing (field, int, list, map, maybe, string)
 import Json.Encode as E
-import KeywordString
 import Research as RC
 import Set exposing (Set)
-import Time
 
 
 
@@ -31,11 +29,6 @@ type Search
 withAuthor : String -> Search -> Search
 withAuthor author (Search s) =
     Search { s | author = author }
-
-
-withKeywords : List String -> Search -> Search
-withKeywords keywords (Search s) =
-    Search { s | keywords = Set.fromList keywords }
 
 
 withTitle : String -> Search -> Search

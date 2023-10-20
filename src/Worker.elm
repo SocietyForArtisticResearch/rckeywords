@@ -8,8 +8,7 @@ import Platform
 import Queries exposing (Search(..), SearchQuery(..))
 import Random
 import Random.List exposing (shuffle)
-import Research as RC exposing (Keyword, KeywordSet, KeywordSorting(..), Research, ReverseKeywordDict)
-import Set
+import Research as RC exposing (Keyword, KeywordSet, KeywordSorting(..), ReverseKeywordDict)
 
 
 
@@ -271,11 +270,6 @@ subscriptions _ =
 main : Program () Model Msg
 main =
     Platform.worker { init = init, update = update, subscriptions = subscriptions }
-
-
-printLength : String -> List a -> List a
-printLength label lst =
-    lst
 
 
 optionalFilter : (a -> List b -> List b) -> Maybe a -> List b -> List b

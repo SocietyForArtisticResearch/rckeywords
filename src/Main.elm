@@ -1,14 +1,13 @@
-port module Main exposing (Flags, Model, Msg, SearchAction, View, main)
+port module Main exposing (Device, Flags, Model, Msg, SearchAction, View, main)
 
 import AppUrl exposing (AppUrl)
-import Array
 import Browser
 import Browser.Dom as Dom
 import Browser.Events as Events
 import Browser.Navigation as Nav
-import Date exposing (Date(..))
+import Date exposing (Date)
 import Dict
-import Element exposing (Element, column, el, fill, fillPortion, height, maximum, padding, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
+import Element exposing (Element, column, el, fill, height, padding, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
 import Element.Background
 import Element.Border as Border
 import Element.Font as Font
@@ -30,12 +29,10 @@ import List
 import Page exposing (Scale(..), ScreenDimensions, makeNumColumns, transpose)
 import Queries exposing (SearchQuery(..))
 import RCStyles
-import Regex
 import Research as RC exposing (Research)
 import Screenshots
-import Set exposing (Set)
+import Set
 import String
-import Tailwind.Utilities exposing (break_before_all)
 import Task
 import Time
 import Url exposing (Url)
@@ -101,10 +98,6 @@ subscriptions _ =
         , receiveResults ReceiveResults
         , Time.every 1000.0 Tick
         ]
-
-
-type DateRange
-    = DateRange Time.Posix Time.Posix
 
 
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -376,7 +369,6 @@ type Msg
     | FormMsg (Form.Msg Msg)
     | SubmitSearch (Form.Validated String SearchForm)
     | WindowResize Int Int
-    | ToggleForm
     | Tick Time.Posix
 
 
@@ -430,11 +422,8 @@ update msg model =
                     let
                         updModel =
                             { model | allKeywords = kws |> List.map (RC.kwName >> KeywordString.fromString) }
-
-                        ( m, c ) =
-                            handleUrl updModel.url updModel
                     in
-                    ( m, c )
+                    handleUrl updModel.url updModel
 
                 Ok (Queries.AllPortals portals) ->
                     ( { model | allPortals = portals }, Cmd.none )
@@ -481,9 +470,7 @@ update msg model =
                             updateViewWithSearch srch model.view
                     in
                     ( model
-                    , Cmd.batch
-                        [ Nav.pushUrl model.key (appUrlFromView newView)
-                        ]
+                    , Nav.pushUrl model.key (appUrlFromView newView)
                     )
 
                 Form.Invalid m err ->
@@ -492,7 +479,7 @@ update msg model =
                             InvalidForm
                                 ("invalid form: "
                                     ++ (Maybe.map formToString m |> Maybe.withDefault "")
-                                    ++ Dict.foldl (\k v acc -> k ++ " : " ++ String.join "" v ++ "\n" ++ acc) "" err
+                                    ++ Dict.foldl (\k v acc -> k ++ " : " ++ String.concat v ++ "\n" ++ acc) "" err
                                 )
                     in
                     ( model, problemize formProblem )
@@ -508,9 +495,6 @@ update msg model =
               }
             , Cmd.none
             )
-
-        ToggleForm ->
-            ( { model | formOpen = not model.formOpen }, Cmd.none )
 
         Tick _ ->
             ( { model | time = model.time + 1 }, Cmd.none )
@@ -546,11 +530,6 @@ urlWhereFragmentIsPath url =
                     Just something
     in
     url |> Url.toString |> String.replace "/#" "" |> Url.fromString |> warnMaybe |> Maybe.withDefault url |> AppUrl.fromUrl
-
-
-noCmd : Model -> ( Model, Cmd Msg )
-noCmd model =
-    ( model, Cmd.none )
 
 
 getSortingOfUrl : AppUrl -> Maybe RC.TitleSorting
@@ -845,133 +824,9 @@ microLinkStyle =
     ]
 
 
-lightLink : List (Element.Attribute msg)
-lightLink =
-    [ Font.family [ Font.typeface "Open Sans", RCStyles.globalFont ]
-    , Font.size 16
-    , Font.light
-    , Element.Region.heading 2
-    , padding 5
-    , width fill
-    , Element.htmlAttribute (Attr.attribute "style" "text-transform: unset")
-    ]
-
-
 formatDate : Date -> String
 formatDate date =
     Date.toIsoString date
-
-
-isKwInAbstract : String -> KeywordString -> Bool
-isKwInAbstract abstract kws =
-    let
-        kw =
-            " " ++ KeywordString.toString kws ++ "[!.,? ;:]"
-
-        maybeRegex =
-            Regex.fromString kw
-
-        regex =
-            Maybe.withDefault Regex.never maybeRegex
-    in
-    Regex.contains regex abstract
-
-
-sliceAbstract : Maybe String -> Int -> String
-sliceAbstract abs max =
-    let
-        isGreaterThan : Int -> Int -> Bool
-        isGreaterThan mx value =
-            value > mx
-
-        abstract =
-            Maybe.withDefault "" abs
-
-        fullStopsInAbstract =
-            String.indexes "." abstract
-
-        fullStopsAfterMax =
-            List.filter (isGreaterThan max) fullStopsInAbstract
-
-        firstFullStopAfterMax =
-            Maybe.withDefault max (List.head fullStopsAfterMax)
-    in
-    String.left (firstFullStopAfterMax + 1) abstract
-
-
-findKwsInAbstract : List KeywordString -> String -> ( List Int, List String )
-findKwsInAbstract kws shortAbstract =
-    let
-        kwsInAbstract =
-            List.map (findKwInAbstract shortAbstract) kws
-
-        kwsSorted =
-            List.drop 1 (List.sort kwsInAbstract)
-    in
-    List.unzip kwsSorted
-
-
-findKwInAbstract : String -> KeywordString -> ( Int, String )
-findKwInAbstract abstract kw =
-    let
-        extractIndex : Maybe Regex.Match -> Int
-        extractIndex match =
-            case match of
-                Nothing ->
-                    0
-
-                Just m ->
-                    m.index
-
-        keyword =
-            KeywordString.toString kw
-
-        key =
-            " " ++ keyword ++ "[!.,? ;:]"
-
-        maybeRegex =
-            Regex.fromString key
-
-        regex =
-            Maybe.withDefault Regex.never maybeRegex
-
-        finds =
-            Regex.find regex abstract
-
-        first =
-            List.head finds
-
-        kwStart =
-            extractIndex first
-    in
-    ( kwStart, keyword )
-
-
-isSubkeyword : List String -> Int -> Bool
-isSubkeyword keywords index =
-    let
-        kws =
-            Array.fromList keywords
-
-        kw =
-            Maybe.withDefault "" (Array.get index kws)
-
-        first =
-            Array.slice 0 index kws
-
-        second =
-            Array.slice (index + 1) (Array.length kws) kws
-
-        arr =
-            Array.append first second
-
-        bools =
-            Array.map (String.contains kw) arr
-
-        list =
-            Array.toList bools
-    in
-    List.member True list
 
 
 spacedWord : Element msg -> Element msg
@@ -1142,10 +997,6 @@ black =
 gray : Element.Color
 gray =
     Element.rgb 0.5 0.5 0.5
-
-
-red =
-    Element.rgb 0.5 0.0 0.0
 
 
 white : Element.Color
@@ -1542,113 +1393,6 @@ stringToKeyword str =
         }
 
 
-makeSnippet : List Int -> List Bool -> List String -> String -> Int -> List (Element Msg)
-makeSnippet indexes subkeywords keywords abstract which =
-    let
-        kwsLength =
-            List.length keywords
-
-        idx =
-            Array.fromList indexes
-
-        kws =
-            Array.fromList keywords
-
-        subs =
-            Array.fromList subkeywords
-
-        isSub =
-            Maybe.withDefault False (Array.get which subs)
-
-        firstk =
-            Maybe.withDefault "-1" (Array.get 0 kws)
-    in
-    if which == 0 then
-        -- first kw
-        let
-            k =
-                Maybe.withDefault -1 (Array.get which idx)
-
-            -- I think this happens when the abstact is a white space
-            -- this matches somehow the "?" keyword, which is then dropped creating an empty list
-            keyw =
-                Maybe.withDefault "" (Array.get which kws)
-
-            kwlength =
-                String.length keyw
-
-            prevk =
-                Maybe.withDefault 0 (Array.get (which - 1) idx)
-
-            prevkeyw =
-                Maybe.withDefault "" (Array.get (which - 1) kws)
-
-            prevkwlength =
-                String.length prevkeyw
-
-            sliceLeft =
-                String.slice (prevk + prevkwlength) (k + 1) abstract
-
-            strToKw =
-                stringToKeyword keyw
-        in
-        if isSub == True then
-            [ text sliceLeft ]
-
-        else
-            [ text sliceLeft, strToKw ]
-
-    else if which == kwsLength then
-        -- append abstract end
-        let
-            k =
-                Maybe.withDefault -1 (Array.get (which - 1) idx)
-
-            keyw =
-                Maybe.withDefault "-1" (Array.get (which - 1) kws)
-
-            kwlength =
-                String.length keyw
-
-            sliceRight =
-                String.dropLeft (k + kwlength + 1) abstract
-        in
-        [ text sliceRight ]
-
-    else
-        -- slice abstract snippet + insert kw link
-        let
-            k =
-                Maybe.withDefault -1 (Array.get which idx)
-
-            keyw =
-                Maybe.withDefault ">>>>>>>>" (Array.get which kws)
-
-            kwlength =
-                String.length keyw
-
-            prevk =
-                Maybe.withDefault 0 (Array.get (which - 1) idx)
-
-            prevkeyw =
-                Maybe.withDefault "" (Array.get (which - 1) kws)
-
-            prevkwlength =
-                String.length prevkeyw
-
-            sliceLeft =
-                String.slice (prevk + prevkwlength + 1) (k + 1) abstract
-
-            strToKw =
-                stringToKeyword keyw
-        in
-        if isSub == True then
-            [ text sliceLeft ]
-
-        else
-            [ text sliceLeft, strToKw ]
-
-
 {-| on Enter
 -}
 onEnter : msg -> Element.Attribute msg
@@ -1663,23 +1407,6 @@ onEnter msg =
 
                         else
                             Json.Decode.fail "Not the enter key"
-                    )
-            )
-        )
-
-
-onAnyKey : msg -> Element.Attribute msg
-onAnyKey msg =
-    Element.htmlAttribute
-        (Html.Events.on "keyup"
-            (Json.Decode.field "key" Json.Decode.string
-                |> Json.Decode.andThen
-                    (\key ->
-                        if key == "Enter" then
-                            Json.Decode.fail "Not the enter key"
-
-                        else
-                            Json.Decode.succeed msg
                     )
             )
         )
@@ -1962,10 +1689,6 @@ viewKeywords model keywordview =
 -- this is just a test to really see what is going on.
 
 
-stupidBox =
-    Element.el [ Element.Background.color red, width fill, height (px 50) ] (Element.text "fish?")
-
-
 makeColumns : Int -> List (Element.Attribute Msg) -> List (Element Msg) -> Element Msg
 makeColumns n attrs lst =
     let
@@ -2004,11 +1727,6 @@ pageOfList (Page i) lst =
 --         False
 --     else
 --         True
-
-
-urlFromScreenshotAndTime : Array.Array String -> Int -> String
-urlFromScreenshotAndTime screenshots time =
-    time |> modBy (Array.length screenshots) |> (\idx -> Array.get idx screenshots |> Maybe.withDefault "")
 
 
 lazyImageWithErrorHandling : Int -> ScreenDimensions -> Research r -> Html Msg
@@ -2490,27 +2208,6 @@ fieldView formState label field =
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
             , field |> FieldView.input fieldStyle
-            ]
-        , (if formState.submitAttempted then
-            formState.errors
-                |> Form.errorsForField field
-                |> List.map
-                    (\error ->
-                        Html.li [] [ Html.text error ]
-                    )
-
-           else
-            []
-          )
-            |> Html.ul [ Attr.style "color" "red" ]
-        ]
-
-
-dropdownView formState label field =
-    div []
-        [ Html.label labelStyle
-            [ Html.text (label ++ " ")
-            , field |> FieldView.input dropdownStyle
             ]
         , (if formState.submitAttempted then
             formState.errors

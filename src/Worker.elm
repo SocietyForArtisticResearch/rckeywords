@@ -111,6 +111,14 @@ update msg model =
                                         |> returnResults
                                     )
 
+                                Queries.GetExposition id ->
+                                    ( Loaded lmodel
+                                    , RC.findExpositionWithId id lmodel.research
+                                        |> Queries.Exposition
+                                        |> Queries.encodeSearchResult
+                                        |> returnResults
+                                    )
+
                         Err _ ->
                             ( problemize DecodeError (Loaded lmodel), Cmd.none )
 
@@ -142,6 +150,7 @@ update msg model =
                                 reverseKeywordDict =
                                     RC.reverseKeywordDict data
 
+                                -- TODO, move this function out since it is repeated. Only the "data" doesn't come out of the model
                                 cmdOfQ : SearchQuery -> Cmd msg
                                 cmdOfQ query =
                                     case query of
@@ -165,7 +174,16 @@ update msg model =
                                                 |> returnResults
 
                                         Queries.GetAllPortals ->
-                                            RC.getAllPortals data |> Queries.AllPortals |> Queries.encodeSearchResult |> returnResults
+                                            RC.getAllPortals data
+                                                |> Queries.AllPortals
+                                                |> Queries.encodeSearchResult
+                                                |> returnResults
+
+                                        Queries.GetExposition id ->
+                                            RC.findExpositionWithId id data
+                                                |> Queries.Exposition
+                                                |> Queries.encodeSearchResult
+                                                |> returnResults
                             in
                             ( Loaded
                                 { problems = []

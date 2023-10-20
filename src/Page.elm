@@ -3,6 +3,13 @@ module Page exposing (CellSize(..), Matrix(..), Scale(..), ScreenDimensions, cal
 import Element exposing (Element, fill, width)
 
 
+
+{- future intention:
+    calculate the cellsize and matrix dimensions once, and store it as
+   an opaque type
+-}
+
+
 type alias ScreenDimensions =
     { w : Int, h : Int }
 

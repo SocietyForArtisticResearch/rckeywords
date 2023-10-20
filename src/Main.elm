@@ -72,6 +72,7 @@ type alias Model =
     , submitting : Bool
     , allKeywords : List KeywordString
     , allPortals : List RC.Portal
+    , currentExposition : Result String EnrichedResearch.ResearchWithKeywords
     }
 
 
@@ -136,6 +137,7 @@ init { width, height } url key =
     , allKeywords = []
     , allPortals = []
     , time = 0
+    , currentExposition = Err "initial"
     }
         |> (\model ->
                 ( model
@@ -437,6 +439,9 @@ update msg model =
                 Ok (Queries.AllPortals portals) ->
                     ( { model | allPortals = portals }, Cmd.none )
 
+                Ok (Queries.Exposition expresult) ->
+                    ( { model | currentExposition = expresult }, Cmd.none )
+
                 Err err ->
                     ( model, problemize (ResultProblem err) )
 
@@ -573,7 +578,7 @@ handleUrl url model =
                         |> Maybe.andThen String.toInt
                         |> Maybe.withDefault 0
             in
-            ( { model | view = ExpositionView { id = exp_id } }, Cmd.none )
+            ( { model | view = ExpositionView { id = exp_id } }, sendQuery (Queries.encodeSearchQuery (Queries.GetExposition exp_id)) )
 
         [ "keywords" ] ->
             let
@@ -1243,22 +1248,12 @@ view model =
                             Element.none
 
                 ExpositionView s ->
-                    case model.search of
-                        FoundResearch lst ->
-                            lst
-                                |> List.filter (\r -> r.id == s.id)
-                                |> List.head
-                                |> Maybe.map (viewExpositionDetails model.screenDimensions Medium)
-                                |> Maybe.withDefault (Element.text "nothing to see")
+                    case model.currentExposition of
+                        Err e ->
+                            Element.text (e ++ "exposition with id " ++ String.fromInt s.id)
 
-                        Idle ->
-                            Element.text "idle"
-
-                        FoundKeywords _ ->
-                            Element.text "still keywords"
-
-                        Searching ->
-                            Element.text "working hard"
+                        Ok expo ->
+                            viewExpositionDetails model.screenDimensions Medium expo
 
         layoutWidth =
             case model.device of

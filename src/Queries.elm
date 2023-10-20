@@ -151,6 +151,7 @@ type SearchQuery
     | FindResearch Search
     | GetAllKeywords
     | GetAllPortals
+    | GetExposition RC.ExpositionID
 
 
 type SearchResult
@@ -158,6 +159,7 @@ type SearchResult
     | Keywords (List RC.Keyword)
     | AllKeywords (List RC.Keyword)
     | AllPortals (List RC.Portal)
+    | Exposition (Result String ResearchWithKeywords)
 
 
 decodeSearchResult : Json.Decode.Decoder SearchResult
@@ -176,6 +178,9 @@ decodeSearchResult =
 
                 "allportals" ->
                     field "portals" (Json.Decode.list RC.decodePortal |> Json.Decode.map AllPortals)
+
+                "exposition" ->
+                    field "exposition" EnrichedResearch.decodeExpositionResult |> Json.Decode.map Exposition
 
                 _ ->
                     Json.Decode.fail "expected expositions or keywords"
@@ -208,6 +213,12 @@ encodeSearchResult result =
             E.object
                 [ ( "type", E.string "allportals" )
                 , ( "portals", E.list RC.encodePortal portals )
+                ]
+
+        Exposition exp ->
+            E.object
+                [ ( "type", E.string "exposition" )
+                , ( "exposition", EnrichedResearch.encodeExpositionResult exp )
                 ]
 
 
@@ -265,6 +276,9 @@ decodeSearchQuery =
                     "GetAllPortals" ->
                         Json.Decode.succeed GetAllPortals
 
+                    "GetExposition" ->
+                        field "id" int |> Json.Decode.map (\id -> GetExposition id)
+
                     _ ->
                         Json.Decode.fail "Unknown query type"
             )
@@ -293,3 +307,9 @@ encodeSearchQuery query =
         GetAllPortals ->
             E.object
                 [ ( "type", E.string "GetAllPortals" ) ]
+
+        GetExposition id ->
+            E.object
+                [ ( "type", E.string "GetExposition" )
+                , ( "id", E.int id )
+                ]

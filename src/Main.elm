@@ -28,7 +28,7 @@ import KeywordString exposing (KeywordString)
 import List
 import Page exposing (Scale(..), ScreenDimensions, makeNumColumns, transpose)
 import Queries exposing (SearchQuery(..))
-import RCStyles
+import RCStyles exposing (withStandardPadding)
 import Research as RC exposing (Research)
 import Screenshots
 import Set
@@ -289,6 +289,7 @@ viewScaleSwitch scale urlWithScale =
 viewLayoutSwitch : Layout -> (Layout -> String) -> Element Msg
 viewLayoutSwitch layout makeurl =
     let
+        isScreenLayout : Layout -> Bool
         isScreenLayout l =
             case l of
                 ScreenLayout _ ->
@@ -408,6 +409,7 @@ update msg model =
 
         ReceiveResults json ->
             let
+                result : Result Json.Decode.Error Queries.SearchResult
                 result =
                     Json.Decode.decodeValue Queries.decodeSearchResult json
             in
@@ -420,6 +422,7 @@ update msg model =
 
                 Ok (Queries.AllKeywords kws) ->
                     let
+                        updModel : Model
                         updModel =
                             { model | allKeywords = kws |> List.map (RC.kwName >> KeywordString.fromString) }
                     in
@@ -466,6 +469,7 @@ update msg model =
             case validated of
                 Form.Valid srch ->
                     let
+                        newView : View
                         newView =
                             updateViewWithSearch srch model.view
                     in
@@ -475,6 +479,7 @@ update msg model =
 
                 Form.Invalid m err ->
                     let
+                        formProblem : Problem
                         formProblem =
                             InvalidForm
                                 ("invalid form: "
@@ -486,6 +491,7 @@ update msg model =
 
         WindowResize width height ->
             let
+                screendim : Page.ScreenDimensions
                 screendim =
                     { w = width, h = height }
             in
@@ -550,6 +556,7 @@ handleUrl url model =
     case url.path of
         [ "exposition" ] ->
             let
+                exp_id : RC.ExpositionID
                 exp_id =
                     url.queryParameters
                         |> Dict.get "id"
@@ -565,6 +572,7 @@ handleUrl url model =
                 sorting =
                     url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.withDefault "byuse" |> RC.sortingFromString
 
+                page : Page
                 page =
                     url.queryParameters |> Dict.get "page" |> Maybe.andThen List.head |> Maybe.andThen String.toInt |> Maybe.withDefault 0 |> pageFromInt
             in
@@ -578,15 +586,19 @@ handleUrl url model =
         [ "keywords", "search" ] ->
             -- keywords/search?
             let
+                q : String
                 q =
                     url.queryParameters |> Dict.get "q" |> Maybe.andThen List.head |> Maybe.withDefault ""
 
+                sorting : RC.KeywordSorting
                 sorting =
                     url.queryParameters |> Dict.get "sorting" |> Maybe.andThen List.head |> Maybe.map RC.sortingFromString |> Maybe.withDefault RC.ByUse
 
+                page : Page
                 page =
                     url.queryParameters |> Dict.get "page" |> Maybe.andThen List.head |> Maybe.andThen String.toInt |> Maybe.withDefault 1 |> pageFromInt
 
+                cmd : Cmd msg
                 cmd =
                     case q of
                         "" ->
@@ -874,7 +886,11 @@ viewResearchMicro numCollums screen device research =
                     thumb
 
                 Nothing ->
-                    research.id |> String.fromInt |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
+                    research.screenshots
+                        |> Maybe.map
+                            (Screenshots.getUrls "screenshots2" research.id)
+                        |> Maybe.andThen List.head
+                        |> Maybe.withDefault "/"
 
         title =
             Element.link [ width fill, Element.alignLeft ] <|
@@ -914,7 +930,7 @@ viewResearchMicro numCollums screen device research =
                 )
     in
     column
-        [ width fill
+        [ width (Element.maximum w fill)
         , Font.size 12
         , Element.spacingXY 0 10
         ]
@@ -1155,7 +1171,7 @@ viewExpositionDetails dim scale exposition =
             Element.text "no screenshots"
 
         Just urls ->
-            Page.makeMatrix dim scale makeImg urls
+            Element.el (RCStyles.withStandardPadding [ width fill ]) (Page.makeMatrix dim scale makeImg urls)
 
 
 
@@ -1330,9 +1346,9 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
                         , Element.el [ Element.alignRight ] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
                         ]
     in
-    column [ anchor "top", spacingXY 0 5, width fill ] <|
-        [ Element.el [ paddingXY 0 15, width fill ]
-            (viewSearch device (Just sv.form) allPortals allKeywords submitting searchFormState)
+    column
+        (RCStyles.withStandardPadding [ anchor "top", spacingXY 0 5, width fill ])
+        [ viewSearch device (Just sv.form) allPortals allKeywords submitting searchFormState
         , buttons
         , expositions
         , pageNav numberOfPages (SearchView sv) dimensions sorted (Page p)

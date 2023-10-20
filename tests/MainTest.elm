@@ -3,7 +3,7 @@ module MainTest exposing (suite)
 import Date
 import Expect
 import Research
-import Test exposing (..)
+import Test exposing (Test, describe, test)
 import Time
 
 

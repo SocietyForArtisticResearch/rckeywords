@@ -2,6 +2,7 @@ module RCStyles exposing
     ( Style(..)
     , globalFont
     , lightGray
+    , withStandardPadding
     )
 
 import Element as E
@@ -18,3 +19,7 @@ lightGray =
 
 globalFont =
     Font.monospace
+
+
+withStandardPadding otherAttrs =
+    E.paddingXY 0 15 :: otherAttrs

@@ -1,9 +1,10 @@
 module Page exposing (CellSize(..), Matrix(..), Scale(..), ScreenDimensions, makeMatrix, makeNumColumns, transpose)
 
-import Element exposing (Element, fill, width)
+import Element exposing (Element, alignLeft, fill, width)
 
 
 
+-- This handles galleries of images.
 {- future intention:
     calculate the cellsize and matrix dimensions once, and store it as
    an opaque type
@@ -53,9 +54,9 @@ makeMatrix dim scale makeElementWithHeight lst =
                 |> transpose
 
         rows =
-            lstlst |> List.map (\r -> Element.row [ width fill ] r)
+            lstlst |> List.map (\r -> Element.column [ width Element.shrink ] r)
     in
-    Element.column [ width fill ] rows
+    Element.row [ width fill ] rows
 
 
 makeNumColumns : Int -> List a -> List (List a)

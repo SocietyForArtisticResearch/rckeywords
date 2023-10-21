@@ -933,6 +933,7 @@ viewResearchMicro numCollums screen device research =
         [ width (Element.maximum w fill)
         , Font.size 12
         , Element.spacingXY 0 10
+        , paddingXY 10 0
         ]
         [ title
         , img imageUrl

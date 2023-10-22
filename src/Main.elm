@@ -96,7 +96,7 @@ subscriptions _ =
     Sub.batch
         [ Events.onResize WindowResize
         , receiveResults ReceiveResults
-        , Time.every 1000.0 Tick
+        , Time.every 60000.0 Tick -- not needed now
         ]
 
 
@@ -1157,22 +1157,96 @@ screenshotFolder =
 
 
 viewExpositionDetails : ScreenDimensions -> Scale -> EnrichedResearch.ResearchWithKeywords -> Element Msg
-viewExpositionDetails dim scale exposition =
+viewExpositionDetails dim scale research =
     let
-        makeImg w url =
-            Element.image [ Element.width (px w) ] { src = url, description = "screenshot" }
+        w =
+            400
+
+        makeImg imgw data =
+            Element.link []
+                { url = data.weave
+                , label =
+                    Element.image [ Element.width (px imgw) ] { src = data.screenshot, description = "screenshot" }
+                }
 
         urlLst =
-            exposition.screenshots
+            research.screenshots
                 |> Maybe.map
-                    (Screenshots.getUrls screenshotFolder exposition.id)
+                    (Screenshots.getWeaveAndScreenshot screenshotFolder research.id)
     in
     case urlLst of
         Nothing ->
             Element.text "no screenshots"
 
         Just urls ->
-            Element.el (RCStyles.withStandardPadding [ width fill ]) (Page.makeMatrix dim scale makeImg urls)
+            let
+                abstract =
+                    Element.el [] (EnrichedResearch.renderAbstract research.abstractWithKeywords)
+
+                title =
+                    Element.link [ width fill, Element.alignLeft ] <|
+                        { label =
+                            Element.paragraph
+                                (width (px w) :: microLinkStyle)
+                                [ Element.text (research.title |> String.replace "&amp;" "&") ]
+                        , url = appUrlFromExposition research
+                        }
+
+                date =
+                    Element.el
+                        [ Font.size 12
+                        , Font.color (Element.rgb 0.1 0.0 0.0)
+                        , paddingXY 10 10
+                        , Font.italic
+                        ]
+                        (Element.text (research.publication |> Maybe.map formatDate |> Maybe.withDefault "in progress"))
+
+                keywords =
+                    Element.el
+                        [ width fill ]
+                        (Element.paragraph []
+                            (research.keywords
+                                |> List.take 4
+                                |> List.map (KeywordString.toString >> stringToKeyword >> spacedWord)
+                            )
+                        )
+
+                author =
+                    Element.link [ width fill ] <|
+                        { label =
+                            Element.paragraph
+                                microLinkStyle
+                                [ Element.text <| RC.authorAsString research.author ]
+                        , url = RC.authorUrl research.author
+                        }
+
+                metainfo =
+                    column
+                        [ width (Element.maximum w fill)
+                        , Font.size 12
+                        , Element.spacingXY 0 10
+                        , paddingXY 10 0
+                        ]
+                        [ title
+                        , Element.el [] author
+                        , keywords
+                        , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
+                        , Element.el
+                            [ paddingXY 0 10
+                            , width fill
+                            , Border.solid
+                            , Border.color RCStyles.lightGray
+                            , Border.widthEach { bottom = 0, top = 1, left = 0, right = 0 }
+                            ]
+                          <|
+                            Element.html <|
+                                Html.hr [] []
+                        ]
+            in
+            Element.column (RCStyles.withStandardPadding [ width fill ])
+                [ metainfo
+                , Page.makeMatrix dim scale makeImg urls
+                ]
 
 
 
@@ -1351,7 +1425,7 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
         (RCStyles.withStandardPadding [ anchor "top", spacingXY 0 5, width fill ])
         [ viewSearch device (Just sv.form) allPortals allKeywords submitting searchFormState
         , buttons
-        , expositions
+        , Element.el [ paddingXY 15 0, width fill, Element.centerX ] expositions
         , pageNav numberOfPages (SearchView sv) dimensions sorted (Page p)
         ]
 

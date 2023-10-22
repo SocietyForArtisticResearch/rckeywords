@@ -22,4 +22,4 @@ globalFont =
 
 
 withStandardPadding otherAttrs =
-    E.paddingXY 15 15 :: otherAttrs
+    E.paddingXY 0 15 :: otherAttrs

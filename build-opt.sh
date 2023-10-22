@@ -1,7 +1,6 @@
 #!/bin/sh
 
-rm internal_research.json
-wget keywords.sarconference2016.net/internal_research.json
+
 elm-optimize-level-2 --optimize-speed src/Main.elm --output=build/main.js
 elm-optimize-level-2 --optimize-speed src/Worker.elm --output=build/elm-worker.js
 

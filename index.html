@@ -22,10 +22,8 @@
         #elm {
             width: 100%;
         }
-        
-        html {
-           
-        }
+
+        html {}
 
         .cover {
             /* --lazy-image-fit: cover; */
@@ -38,19 +36,12 @@
             height: 100%;
             --lazy-image-fade-duration: 0.3s;
             --lazy-image-fade-easing: ease;
-            --lazy-image-fit: cover;
-            font-size:8px;
-        } 
+            font-size: 8px;
+        }
 
         a:focus {
             border: solid 1px blue;
         }
-
-        
-
-
-
-  
     </style>
 </head>
 
@@ -110,7 +101,7 @@
             let element = document.getElementById("elm");
 
             let w = window.innerWidth;
-            let h = window.innerHeight;            
+            let h = window.innerHeight;
             const worker = new Worker('build/worker.js')
             var app = Elm.Main.init({ node: document.getElementById("elm"), flags: { width: w, height: h } });
             if (document.getElementById("elm")) {
@@ -118,24 +109,24 @@
             }
 
             // listen for keyword queries form the main app:
-            app.ports.sendQuery.subscribe(function(query) {
+            app.ports.sendQuery.subscribe(function (query) {
                 // console.log("query", query);
                 worker.postMessage(query);
             });
 
-            app.ports.problem.subscribe(function(problem) {
+            app.ports.problem.subscribe(function (problem) {
                 console.log("there is a problem: ", problem);
             });
-            
+
             // send the result from the worker to the main app:
-            worker.onmessage = function(event) {
+            worker.onmessage = function (event) {
                 // console.log("results", event.data);
                 app.ports.receiveResults.send(event.data);
             };
 
-            
 
-    
+
+
         </script>
 
         <!-- <div id="footer">

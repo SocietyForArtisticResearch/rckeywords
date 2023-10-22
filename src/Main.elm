@@ -836,6 +836,18 @@ microLinkStyle =
     ]
 
 
+authorLinkStyle : List (Element.Attribute msg)
+authorLinkStyle =
+    [ Font.family [ Font.typeface "Open Sans", RCStyles.globalFont ]
+    , Font.size 13
+    , Font.regular
+    , Element.Region.heading 2
+    , padding 0
+    , width fill
+    , Element.htmlAttribute (Attr.attribute "style" "text-transform: unset")
+    ]
+
+
 formatDate : Date -> String
 formatDate date =
     Date.toIsoString date
@@ -871,7 +883,7 @@ viewResearchMicro numCollums screen device research =
                 { url = appUrlFromExposition research
                 , label =
                     Element.el
-                        [ width (px (w + 30))
+                        [ width (px (w - 20))
                         , height (px h)
                         , Element.paddingXY 0 5
                         ]
@@ -893,7 +905,7 @@ viewResearchMicro numCollums screen device research =
                         |> Maybe.withDefault "/"
 
         title =
-            Element.link [ width fill, Element.alignLeft ] <|
+            Element.link [ width fill, Element.alignLeft, Font.italic ] <|
                 { label =
                     Element.paragraph
                         (width (px w) :: microLinkStyle)
@@ -905,7 +917,7 @@ viewResearchMicro numCollums screen device research =
             Element.link [ width fill ] <|
                 { label =
                     Element.paragraph
-                        microLinkStyle
+                        authorLinkStyle
                         [ Element.text <| RC.authorAsString research.author ]
                 , url = RC.authorUrl research.author
                 }
@@ -917,7 +929,7 @@ viewResearchMicro numCollums screen device research =
                 , paddingXY 10 10
                 , Font.italic
                 ]
-                (Element.text (research.publication |> Maybe.map formatDate |> Maybe.withDefault "in progress"))
+                (Element.text (research.publication |> Maybe.map formatDate |> Maybe.withDefault ""))
 
         keywords =
             Element.el
@@ -932,24 +944,21 @@ viewResearchMicro numCollums screen device research =
     column
         [ width (Element.maximum w fill)
         , Font.size 12
-        , Element.spacingXY 0 10
+        , Element.spacingXY 0 5
         , paddingXY 10 0
         ]
-        [ title
-        , img imageUrl
-        , Element.el [] author
+        [ img imageUrl
+        , title
+        , author
         , keywords
         , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
         , Element.el
-            [ paddingXY 0 10
+            [ Element.paddingEach { top = 10, bottom = 0, left = 0, right = 0 }
             , width fill
-            , Border.solid
-            , Border.color RCStyles.lightGray
-            , Border.widthEach { bottom = 0, top = 1, left = 0, right = 0 }
             ]
           <|
             Element.html <|
-                Html.hr [] []
+                Html.hr [ Attr.style "width" "100%" ] []
         ]
 
 
@@ -1180,9 +1189,11 @@ viewExpositionDetails dim scale research =
 
         Just urls ->
             let
+                abstract : Element msg
                 abstract =
                     Element.el [] (EnrichedResearch.renderAbstract research.abstractWithKeywords)
 
+                title : Element msg
                 title =
                     Element.link [ width fill, Element.alignLeft ] <|
                         { label =
@@ -1192,6 +1203,7 @@ viewExpositionDetails dim scale research =
                         , url = appUrlFromExposition research
                         }
 
+                date : Element msg
                 date =
                     Element.el
                         [ Font.size 12
@@ -1201,6 +1213,7 @@ viewExpositionDetails dim scale research =
                         ]
                         (Element.text (research.publication |> Maybe.map formatDate |> Maybe.withDefault "in progress"))
 
+                keywords : Element Msg
                 keywords =
                     Element.el
                         [ width fill ]
@@ -1211,6 +1224,7 @@ viewExpositionDetails dim scale research =
                             )
                         )
 
+                author : Element msg
                 author =
                     Element.link [ width fill ] <|
                         { label =
@@ -1220,6 +1234,7 @@ viewExpositionDetails dim scale research =
                         , url = RC.authorUrl research.author
                         }
 
+                metainfo : Element Msg
                 metainfo =
                     column
                         [ width (Element.maximum w fill)

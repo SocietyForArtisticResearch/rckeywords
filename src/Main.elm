@@ -815,7 +815,7 @@ handleUrl url model =
 image : ( Int, Int ) -> String -> Element msg
 image ( w, h ) src =
     Element.html <|
-        Html.node "lazy-image"
+        Html.node "img"
             [ Attr.attribute "src" src
             , Attr.alt <| ""
             , Attr.attribute "width" (String.fromInt w ++ "px")
@@ -1835,7 +1835,7 @@ pageOfList (Page i) lst =
 --         True
 
 
-lazyImageWithErrorHandling : Int -> ScreenDimensions -> Research r -> Html Msg
+lazyImageWithErrorHandling : Int -> ScreenDimensions -> EnrichedResearch.ResearchWithKeywords -> Html Msg
 lazyImageWithErrorHandling groupSize dimensions research =
     let
         device =
@@ -1843,7 +1843,15 @@ lazyImageWithErrorHandling groupSize dimensions research =
 
         urlFromId : Int -> String
         urlFromId i =
-            String.fromInt i |> (\fileName -> "/screenshots/" ++ fileName ++ ".jpeg")
+            String.fromInt i |> (\fileName -> "screenshots/" ++ fileName ++ ".jpeg")
+
+        urlFromScreenshots : Maybe Screenshots.Exposition -> String
+        urlFromScreenshots screenshots =
+            screenshots
+                |> Maybe.map
+                    (Screenshots.getUrls screenshotFolder research.id)
+                |> Maybe.andThen List.head
+                |> Maybe.withDefault "noshot"
 
         width : String
         width =
@@ -1862,8 +1870,8 @@ lazyImageWithErrorHandling groupSize dimensions research =
                     width
     in
     Html.a [ Attr.target "_blank", Attr.href (appUrlFromExposition research), Attr.title (RC.getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
-        [ Html.node "lazy-image"
-            [ Attr.attribute "src" (urlFromId research.id)
+        [ Html.node "img"
+            [ Attr.attribute "src" (urlFromScreenshots research.screenshots)
 
             -- , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt research.id
             , Attr.style "width" width
@@ -1951,18 +1959,18 @@ sortResearch sorting research =
             research |> List.sortBy (\r -> r.created) |> List.reverse
 
 
-viewScreenshots : Device -> ScreenDimensions -> SearchViewState -> Scale -> List (Research r) -> Element Msg
+viewScreenshots : Device -> ScreenDimensions -> SearchViewState -> Scale -> List EnrichedResearch.ResearchWithKeywords -> Element Msg
 viewScreenshots device screenDimensions sv scale research =
     let
         groupSize : Int
         groupSize =
             scaleToGroupSize device scale
 
-        groups : List (List (Research r))
+        groups : List (List ResearchWithKeywords)
         groups =
             research |> splitGroupsOf groupSize
 
-        viewGroup : List (Research r) -> Html Msg
+        viewGroup : List ResearchWithKeywords -> Html Msg
         viewGroup group =
             div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
     in

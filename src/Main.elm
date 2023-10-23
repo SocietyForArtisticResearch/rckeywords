@@ -817,6 +817,7 @@ image ( w, h ) src =
     Element.html <|
         Html.node "img"
             [ Attr.attribute "src" src
+            , Attr.attribute "load" "lazy"
             , Attr.alt <| ""
             , Attr.attribute "width" (String.fromInt w ++ "px")
             , Attr.attribute "height" (String.fromInt h ++ "px")
@@ -1872,6 +1873,7 @@ lazyImageWithErrorHandling groupSize dimensions research =
     Html.a [ Attr.target "_blank", Attr.href (appUrlFromExposition research), Attr.title (RC.getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
         [ Html.node "img"
             [ Attr.attribute "src" (urlFromScreenshots research.screenshots)
+            , Attr.attribute "load" "lazy"
 
             -- , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt research.id
             , Attr.style "width" width

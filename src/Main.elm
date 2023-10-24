@@ -820,6 +820,7 @@ image ( w, h ) src =
         Html.img
             [ Attr.attribute "src" src
             , Attr.attribute "load" "lazy"
+            , Attr.attribute "object-fit" "cover"
             , Attr.alt <| ""
             , Attr.attribute "width" (String.fromInt w ++ "px")
             , Attr.attribute "height" (String.fromInt h ++ "px")
@@ -1205,7 +1206,7 @@ viewExpositionDetails dim scale research =
                             Element.paragraph
                                 (width (px w) :: microLinkStyle)
                                 [ Element.text (research.title |> String.replace "&amp;" "&") ]
-                        , url = appUrlFromExposition research
+                        , url = research.defaultPage
                         }
 
                 date : Element msg
@@ -1884,6 +1885,7 @@ lazyImageWithErrorHandling groupSize dimensions research =
         [ Html.img
             [ Attr.attribute "src" (urlFromScreenshots research.screenshots)
             , Attr.attribute "load" "lazy"
+            , Attr.attribute "object-fit" "cover"
 
             -- , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt research.id
             , Attr.style "width" width

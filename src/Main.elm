@@ -12,6 +12,7 @@ import Element.Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input
+import Element.Keyed
 import Element.Lazy
 import Element.Region
 import EnrichedResearch exposing (ResearchWithKeywords)
@@ -22,6 +23,7 @@ import Form.Validation as Validation
 import Html exposing (Html, div)
 import Html.Attributes as Attr
 import Html.Events
+import Html.Keyed
 import Json.Decode
 import Json.Encode
 import KeywordString exposing (KeywordString)
@@ -815,7 +817,7 @@ handleUrl url model =
 image : ( Int, Int ) -> String -> Element msg
 image ( w, h ) src =
     Element.html <|
-        Html.node "img"
+        Html.img
             [ Attr.attribute "src" src
             , Attr.attribute "load" "lazy"
             , Attr.alt <| ""
@@ -859,7 +861,7 @@ spacedWord elem =
     Element.el [ Element.paddingXY 2 0 ] elem
 
 
-viewResearchMicro : Int -> ScreenDimensions -> Device -> EnrichedResearch.ResearchWithKeywords -> Element Msg
+viewResearchMicro : Int -> ScreenDimensions -> Device -> EnrichedResearch.ResearchWithKeywords -> ( String, Element Msg )
 viewResearchMicro numCollums screen device research =
     let
         ( w, h ) =
@@ -942,7 +944,8 @@ viewResearchMicro numCollums screen device research =
                     )
                 )
     in
-    column
+    ( research.id |> String.fromInt
+    , column
         [ width (Element.maximum w fill)
         , Font.size 12
         , Element.spacingXY 0 5
@@ -961,6 +964,7 @@ viewResearchMicro numCollums screen device research =
             Element.html <|
                 Html.hr [ Attr.style "width" "100%" ] []
         ]
+    )
 
 
 isKeywordView : View -> Bool
@@ -1465,7 +1469,7 @@ toggleTitleSorting sorting sortingToUrl =
         ]
 
 
-viewKeywordAsButton : Int -> RC.Keyword -> Element Msg
+viewKeywordAsButton : Int -> RC.Keyword -> ( String, Element Msg )
 viewKeywordAsButton fontsize kw =
     let
         name : String
@@ -1475,21 +1479,26 @@ viewKeywordAsButton fontsize kw =
         count : Int
         count =
             RC.getCount kw
+
+        body =
+            Element.paragraph
+                [ Element.spacing 5
+                , Element.padding 5
+                , Border.solid
+                , Border.color (rgb255 144 144 144)
+                , Border.width 1
+                , Element.Background.color (rgb255 250 250 250)
+                , Element.clipX
+                , width fill
+                , height (px 35)
+                ]
+                [ Element.link [ width fill ] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
+                , Element.el [ width fill, Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
+                ]
     in
-    Element.paragraph
-        [ Element.spacing 5
-        , Element.padding 5
-        , Border.solid
-        , Border.color (rgb255 144 144 144)
-        , Border.width 1
-        , Element.Background.color (rgb255 250 250 250)
-        , Element.clipX
-        , width fill
-        , height (px 35)
-        ]
-        [ Element.link [ width fill ] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
-        , Element.el [ width fill, Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
-        ]
+    ( RC.kwName kw
+    , body
+    )
 
 
 stringToKeyword : String -> Element Msg
@@ -1796,7 +1805,7 @@ viewKeywords model keywordview =
 -- this is just a test to really see what is going on.
 
 
-makeColumns : Int -> List (Element.Attribute Msg) -> List (Element Msg) -> Element Msg
+makeColumns : Int -> List (Element.Attribute Msg) -> List ( String, Element Msg ) -> Element Msg
 makeColumns n attrs lst =
     let
         columns =
@@ -1805,7 +1814,7 @@ makeColumns n attrs lst =
                 |> transpose
     in
     Element.row attrs
-        (columns |> List.map (\rowItems -> Element.column (Element.alignTop :: attrs) rowItems))
+        (columns |> List.map (\rowItems -> Element.Keyed.column (Element.alignTop :: attrs) rowItems))
 
 
 pageOfList : Page -> List a -> List a
@@ -1836,7 +1845,7 @@ pageOfList (Page i) lst =
 --         True
 
 
-lazyImageWithErrorHandling : Int -> ScreenDimensions -> EnrichedResearch.ResearchWithKeywords -> Html Msg
+lazyImageWithErrorHandling : Int -> ScreenDimensions -> EnrichedResearch.ResearchWithKeywords -> ( String, Html Msg )
 lazyImageWithErrorHandling groupSize dimensions research =
     let
         device =
@@ -1870,8 +1879,9 @@ lazyImageWithErrorHandling groupSize dimensions research =
                 Phone ->
                     width
     in
-    Html.a [ Attr.target "_blank", Attr.href (appUrlFromExposition research), Attr.title (RC.getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
-        [ Html.node "img"
+    ( research.id |> String.fromInt
+    , Html.a [ Attr.target "_blank", Attr.href (appUrlFromExposition research), Attr.title (RC.getName research.author ++ " - " ++ research.title ++ " - " ++ research.created) ]
+        [ Html.img
             [ Attr.attribute "src" (urlFromScreenshots research.screenshots)
             , Attr.attribute "load" "lazy"
 
@@ -1881,6 +1891,7 @@ lazyImageWithErrorHandling groupSize dimensions research =
             ]
             []
         ]
+    )
 
 
 splitGroupsOf : Int -> List a -> List (List a)
@@ -1974,7 +1985,7 @@ viewScreenshots device screenDimensions sv scale research =
 
         viewGroup : List ResearchWithKeywords -> Html Msg
         viewGroup group =
-            div [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
+            Html.Keyed.node "div" [ Attr.style "display" "flex" ] (List.map (\exp -> lazyImageWithErrorHandling groupSize screenDimensions exp) group)
     in
     Element.el [ Element.paddingEach { paddingEachZero | top = 15 }, width fill ]
         (Element.html (div [] (List.map viewGroup groups)))

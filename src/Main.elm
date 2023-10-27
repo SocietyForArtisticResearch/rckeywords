@@ -820,7 +820,7 @@ image ( w, h ) src =
         Html.img
             [ Attr.attribute "src" src
             , Attr.attribute "load" "lazy"
-            , Attr.attribute "object-fit" "cover"
+            , Attr.style "object-fit" "contain"
             , Attr.alt <| ""
             , Attr.attribute "width" (String.fromInt w ++ "px")
             , Attr.attribute "height" (String.fromInt h ++ "px")
@@ -897,6 +897,10 @@ viewResearchMicro numCollums screen device research =
 
         imageUrl : String
         imageUrl =
+            -- let
+            --     _ =
+            --         Debug.log "thumb" research.thumbnail
+            -- in
             case research.thumbnail of
                 Just thumb ->
                     thumb
@@ -1136,7 +1140,7 @@ view model =
                             Element.text (e ++ "exposition with id " ++ String.fromInt s.id)
 
                         Ok expo ->
-                            viewExpositionDetails model.screenDimensions Medium expo
+                            viewResearchDetail model.screenDimensions Medium expo
 
         layoutWidth =
             case model.device of
@@ -1171,12 +1175,13 @@ screenshotFolder =
     "screenshots2"
 
 
-viewExpositionDetails : ScreenDimensions -> Scale -> EnrichedResearch.ResearchWithKeywords -> Element Msg
-viewExpositionDetails dim scale research =
+viewResearchDetail : ScreenDimensions -> Scale -> EnrichedResearch.ResearchWithKeywords -> Element Msg
+viewResearchDetail dim scale research =
     let
         w =
             400
 
+        makeImg : Int -> Screenshots.WeaveScreenshot -> Element msg
         makeImg imgw data =
             Element.link []
                 { url = data.weave
@@ -1184,6 +1189,7 @@ viewExpositionDetails dim scale research =
                     Element.image [ Element.width (px imgw) ] { src = data.screenshot, description = "screenshot" }
                 }
 
+        urlLst : Maybe (List Screenshots.WeaveScreenshot)
         urlLst =
             research.screenshots
                 |> Maybe.map
@@ -1240,6 +1246,10 @@ viewExpositionDetails dim scale research =
                         , url = RC.authorUrl research.author
                         }
 
+                jsonBlurp : Element Msg
+                jsonBlurp =
+                    research |> EnrichedResearch.encodeResearchWithKeywords |> Json.Encode.encode 4 |> Element.text
+
                 metainfo : Element Msg
                 metainfo =
                     column
@@ -1267,6 +1277,7 @@ viewExpositionDetails dim scale research =
             Element.column (RCStyles.withStandardPadding [ width fill ])
                 [ metainfo
                 , Page.makeMatrix dim scale makeImg urls
+                , jsonBlurp
                 ]
 
 
@@ -1885,7 +1896,7 @@ lazyImageWithErrorHandling groupSize dimensions research =
         [ Html.img
             [ Attr.attribute "src" (urlFromScreenshots research.screenshots)
             , Attr.attribute "load" "lazy"
-            , Attr.attribute "object-fit" "cover"
+            , Attr.style "object-fit" "contain"
 
             -- , Attr.alt <| "this is a screenshot of exposition: " ++ String.fromInt research.id
             , Attr.style "width" width

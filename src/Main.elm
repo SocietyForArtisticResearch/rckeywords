@@ -1248,7 +1248,7 @@ viewResearchDetail dim scale research =
 
                 jsonBlurp : Element Msg
                 jsonBlurp =
-                    research |> EnrichedResearch.encodeResearchWithKeywords |> Json.Encode.encode 4 |> Element.text
+                    research |> EnrichedResearch.encodeResearchWithKeywords |> Json.Encode.encode 4 |> Element.text |> el [ Font.size 8 ]
 
                 metainfo : Element Msg
                 metainfo =
@@ -1277,7 +1277,8 @@ viewResearchDetail dim scale research =
             Element.column (RCStyles.withStandardPadding [ width fill ])
                 [ metainfo
                 , Page.makeMatrix dim scale makeImg urls
-                , jsonBlurp
+
+                --jsonBlurp
                 ]
 
 

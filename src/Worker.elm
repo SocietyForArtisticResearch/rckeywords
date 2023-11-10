@@ -2,7 +2,7 @@ port module Worker exposing (main)
 
 import EnrichedResearch exposing (ResearchWithKeywords)
 import Http
-import Json.Decode as D
+import Json.Decode as D exposing (errorToString)
 import Json.Encode as E
 import Platform
 import Queries exposing (Search(..), SearchQuery(..))
@@ -21,6 +21,9 @@ port searchQuery : (D.Value -> msg) -> Sub msg
 
 
 port returnResults : E.Value -> Cmd msg
+
+
+port debug : String -> Cmd msg
 
 
 type Msg
@@ -69,15 +72,15 @@ update msg model =
                             )
 
                         Err e ->
-                            ( problemize (LoadError e) model, Cmd.none )
+                            ( problemize (LoadError e) model, debug (errorToString e) )
 
                 SearchQuery json ->
                     case D.decodeValue Queries.decodeSearchQuery json of
                         Ok query ->
                             ( LoadingWithQuery query [], Cmd.none )
 
-                        Err _ ->
-                            ( problemize DecodeError model, Cmd.none )
+                        Err e ->
+                            ( problemize DecodeError model, debug (D.errorToString e) )
 
         -- Easiest place for seeing how a search is processed:
         Loaded lmodel ->
@@ -118,8 +121,8 @@ update msg model =
                                         |> returnResults
                                     )
 
-                        Err _ ->
-                            ( problemize DecodeError (Loaded lmodel), Cmd.none )
+                        Err e ->
+                            ( problemize DecodeError (Loaded lmodel), debug (D.errorToString e) )
 
                 LoadData res ->
                     case res of
@@ -133,7 +136,7 @@ update msg model =
                             )
 
                         Err e ->
-                            ( problemize (LoadError e) (Loaded lmodel), Cmd.none )
+                            ( problemize (LoadError e) (Loaded lmodel), debug (errorToString e) )
 
         LoadingWithQuery q otherQs ->
             case msg of
@@ -194,15 +197,15 @@ update msg model =
                             )
 
                         Err e ->
-                            ( problemize (LoadError e) (Loaded { research = [], keywords = RC.emptyKeywordSet, problems = [], reverseKeywordDict = RC.reverseKeywordDict [] }), Cmd.none )
+                            ( problemize (LoadError e) (Loaded { research = [], keywords = RC.emptyKeywordSet, problems = [], reverseKeywordDict = RC.reverseKeywordDict [] }), debug (errorToString e) )
 
                 SearchQuery json ->
                     case D.decodeValue Queries.decodeSearchQuery json of
                         Ok query ->
                             ( LoadingWithQuery q (query :: otherQs), Cmd.none )
 
-                        Err _ ->
-                            ( problemize DecodeError model, Cmd.none )
+                        Err e ->
+                            ( problemize DecodeError model, debug (D.errorToString e) )
 
 
 shuffleWithSeed : Int -> List a -> List a
@@ -301,3 +304,28 @@ searchResearch (Search search) revDict lst =
 
 --|> printLength "portal"
 -- |> printLength "keywords"
+
+
+errorToString : Http.Error -> String
+errorToString error =
+    case error of
+        Http.BadUrl url ->
+            "The URL " ++ url ++ " was invalid"
+
+        Http.Timeout ->
+            "Unable to reach the server, try again"
+
+        Http.NetworkError ->
+            "Unable to reach the server, check your network connection"
+
+        Http.BadStatus 500 ->
+            "The server had a problem, try again later"
+
+        Http.BadStatus 400 ->
+            "Verify your information and try again"
+
+        Http.BadStatus _ ->
+            "Unknown error"
+
+        Http.BadBody errorMessage ->
+            errorMessage

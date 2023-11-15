@@ -160,10 +160,6 @@ resetViewport =
     Task.perform (\_ -> NoOp) (Dom.setViewport 0 0)
 
 
-
--- | Portal
-
-
 type Problem
     = ResultProblem Json.Decode.Error
     | InvalidForm String
@@ -212,12 +208,10 @@ type alias SearchViewState =
     }
 
 
-
--- This should always contain all the state of the view.
--- If it is in this type, it should also get encoded in the URL.
--- handleUrl will parse a url into this view type. They should be "watertight"
-
-
+{-| This should always contain all the state of the view.
+If it is in this type, it should also get encoded in the URL.
+handleUrl will parse a url into this view type. They should be "watertight"
+-}
 type View
     = KeywordsView KeywordsViewState
     | SearchView SearchViewState
@@ -621,117 +615,18 @@ handleUrl url model =
 
         [ "research", "search", "list" ] ->
             let
-                sorting : RC.TitleSorting
-                sorting =
-                    getSortingOfUrl url |> Maybe.withDefault RC.NewestFirst
-
-                keywords : List String
-                keywords =
-                    url.queryParameters
-                        |> Dict.get "keyword"
-                        |> Maybe.withDefault []
-
-                page : Int
-                page =
-                    url.queryParameters
-                        |> Dict.get "page"
-                        |> Maybe.andThen List.head
-                        |> Maybe.andThen String.toInt
-                        |> Maybe.withDefault 1
-
-                title : String
-                title =
-                    url.queryParameters
-                        |> Dict.get "title"
-                        |> Maybe.andThen List.head
-                        |> Maybe.withDefault ""
-
-                author : String
-                author =
-                    url.queryParameters
-                        |> Dict.get "author"
-                        |> Maybe.andThen List.head
-                        |> Maybe.withDefault ""
-
-                portal : String
-                portal =
-                    url.queryParameters
-                        |> Dict.get "portal"
-                        |> Maybe.andThen List.head
-                        |> Maybe.withDefault ""
-
-                after : Maybe Date
-                after =
-                    url.queryParameters
-                        |> Dict.get "after"
-                        |> Maybe.andThen List.head
-                        |> Maybe.andThen String.toInt
-                        |> Maybe.map Date.fromRataDie
-
-                before : Maybe Date
-                before =
-                    url.queryParameters
-                        |> Dict.get "before"
-                        |> Maybe.andThen List.head
-                        |> Maybe.andThen String.toInt
-                        |> Maybe.map Date.fromRataDie
-
-                --                _ = Debug.log "query parameters" (url.queryParameters,portal)
-                cmd : Cmd msg
-                cmd =
-                    sendQuery
-                        (Queries.encodeSearchQuery
-                            (FindResearch
-                                (Queries.emptySearch
-                                    |> Queries.searchWithKeywords (Set.fromList keywords)
-                                    |> Queries.withTitle title
-                                    |> Queries.withAuthor author
-                                    |> Queries.withPortal portal
-                                    |> Queries.withAfter after
-                                    |> Queries.withBefore before
-                                )
-                            )
-                        )
+                ( cmd, searchViewState ) =
+                    searchViewFromUrl url ListLayout
             in
             ( { model
                 | view =
-                    SearchView
-                        { layout = ListLayout
-                        , form = formWith title author keywords portal after before
-                        , sorting = sorting
-                        , page = Page page
-                        }
+                    SearchView searchViewState
               }
             , cmd
             )
 
         [ "research", "search", "screen" ] ->
             let
-                sorting : RC.TitleSorting
-                sorting =
-                    getSortingOfUrl url
-                        |> Maybe.withDefault RC.NewestFirst
-
-                keywords : List String
-                keywords =
-                    url.queryParameters
-                        |> Dict.get "keyword"
-                        |> Maybe.withDefault []
-
-                title : String
-                title =
-                    url.queryParameters
-                        |> Dict.get "title"
-                        |> Maybe.andThen List.head
-                        |> Maybe.withDefault ""
-
-                author : String
-                author =
-                    url.queryParameters
-                        |> Dict.get "author"
-                        |> Maybe.andThen List.head
-                        |> Maybe.withDefault ""
-
                 scale : Scale
                 scale =
                     url.queryParameters
@@ -740,61 +635,11 @@ handleUrl url model =
                         |> Maybe.andThen scaleFromString
                         |> Maybe.withDefault Medium
 
-                page : Int
-                page =
-                    url.queryParameters
-                        |> Dict.get "page"
-                        |> Maybe.andThen List.head
-                        |> Maybe.andThen String.toInt
-                        |> Maybe.withDefault 1
-
-                portal : String
-                portal =
-                    url.queryParameters
-                        |> Dict.get "portal"
-                        |> Maybe.andThen List.head
-                        |> Maybe.withDefault ""
-
-                after : Maybe Date
-                after =
-                    url.queryParameters
-                        |> Dict.get "after"
-                        |> Maybe.andThen List.head
-                        |> Maybe.andThen String.toInt
-                        |> Maybe.map Date.fromRataDie
-
-                before : Maybe Date
-                before =
-                    url.queryParameters
-                        |> Dict.get "before"
-                        |> Maybe.andThen List.head
-                        |> Maybe.andThen String.toInt
-                        |> Maybe.map Date.fromRataDie
-
-                cmd : Cmd msg
-                cmd =
-                    sendQuery
-                        (Queries.encodeSearchQuery
-                            (FindResearch
-                                (Queries.emptySearch
-                                    |> Queries.searchWithKeywords (Set.fromList keywords)
-                                    |> Queries.withAuthor author
-                                    |> Queries.withTitle title
-                                    |> Queries.withPortal portal
-                                    |> Queries.withAfter after
-                                    |> Queries.withBefore before
-                                )
-                            )
-                        )
+                ( cmd, searchViewState ) =
+                    searchViewFromUrl url (ScreenLayout scale)
             in
             ( { model
-                | view =
-                    SearchView
-                        { layout = ScreenLayout scale
-                        , form = formWith title author keywords portal after before
-                        , sorting = sorting
-                        , page = Page page
-                        }
+                | view = SearchView searchViewState
               }
             , cmd
             )
@@ -812,6 +657,99 @@ handleUrl url model =
               }
             , Nav.pushUrl model.key "/#/research/search/list"
             )
+
+
+searchViewFromUrl : AppUrl -> Layout -> ( Cmd Msg, SearchViewState )
+searchViewFromUrl url layout =
+    let
+        sorting : RC.TitleSorting
+        sorting =
+            getSortingOfUrl url |> Maybe.withDefault RC.NewestFirst
+
+        keywords : List String
+        keywords =
+            url.queryParameters
+                |> Dict.get "keyword"
+                |> Maybe.withDefault []
+
+        page : Int
+        page =
+            url.queryParameters
+                |> Dict.get "page"
+                |> Maybe.andThen List.head
+                |> Maybe.andThen String.toInt
+                |> Maybe.withDefault 1
+
+        title : String
+        title =
+            url.queryParameters
+                |> Dict.get "title"
+                |> Maybe.andThen List.head
+                |> Maybe.withDefault ""
+
+        author : String
+        author =
+            url.queryParameters
+                |> Dict.get "author"
+                |> Maybe.andThen List.head
+                |> Maybe.withDefault ""
+
+        portal : String
+        portal =
+            url.queryParameters
+                |> Dict.get "portal"
+                |> Maybe.andThen List.head
+                |> Maybe.withDefault ""
+
+        after : Maybe Date
+        after =
+            url.queryParameters
+                |> Dict.get "after"
+                |> Maybe.andThen List.head
+                |> Maybe.andThen String.toInt
+                |> Maybe.map Date.fromRataDie
+
+        before : Maybe Date
+        before =
+            url.queryParameters
+                |> Dict.get "before"
+                |> Maybe.andThen List.head
+                |> Maybe.andThen String.toInt
+                |> Maybe.map Date.fromRataDie
+
+        abstract : String
+        abstract =
+            url.queryParameters
+                |> Dict.get "abstract"
+                |> Maybe.andThen List.head
+                |> Maybe.withDefault ""
+
+        --                _ = Debug.log "query parameters" (url.queryParameters,portal)
+        cmd : Cmd msg
+        cmd =
+            sendQuery
+                (Queries.encodeSearchQuery
+                    (FindResearch
+                        (Queries.emptySearch
+                            |> Queries.searchWithKeywords (Set.fromList keywords)
+                            |> Queries.withTitle title
+                            |> Queries.withAuthor author
+                            |> Queries.withAbstract abstract
+                            |> Queries.withPortal portal
+                            |> Queries.withAfter after
+                            |> Queries.withBefore before
+                            |> Queries.withAbstract abstract
+                        )
+                    )
+                )
+    in
+    ( cmd
+    , { layout = layout
+      , form = formWith title author keywords abstract portal after before
+      , sorting = sorting
+      , page = Page page
+      }
+    )
 
 
 image : ( Int, Int ) -> String -> Element msg
@@ -1585,6 +1523,7 @@ appUrlFromSearchViewState sv =
                             , ( "title", [ sv.form.title ] )
                             , ( "author", [ sv.form.author ] )
                             , ( "sorting", [ RC.titleSortingToString sv.sorting ] )
+                            , ( "abstract", [ sv.form.abstract ] )
                             , ( "page", [ pageAsString sv.page ] )
                             , ( "portal", [ sv.form.portal ] )
                             , ( "after", maybeToList (sv.form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
@@ -1598,6 +1537,7 @@ appUrlFromSearchViewState sv =
                             , ( "title", [ sv.form.title ] )
                             , ( "author", [ sv.form.author ] )
                             , ( "sorting", [ RC.titleSortingToString sv.sorting ] )
+                            , ( "abstract", [ sv.form.abstract ] )
                             , ( "page", [ pageAsString sv.page ] )
                             , ( "scale", [ scaleToString scale ] )
                             , ( "portal", [ sv.form.portal ] )
@@ -2025,6 +1965,7 @@ type alias SearchForm =
     { title : String
     , author : String
     , keywords : List String
+    , abstract : String
     , portal : String
     , after : Maybe Date
     , before : Maybe Date
@@ -2049,22 +1990,24 @@ emptyForm =
     , portal = ""
     , after = Nothing
     , before = Nothing
+    , abstract = ""
     }
 
 
-formWith : String -> String -> List String -> String -> Maybe Date -> Maybe Date -> SearchForm
-formWith title author keywords portal after before =
+formWith : String -> String -> List String -> String -> String -> Maybe Date -> Maybe Date -> SearchForm
+formWith title author keywords abstract portal after before =
     { title = title
     , author = author
     , keywords = keywords
+    , abstract = abstract
     , portal = portal
     , after = after
     , before = before
     }
 
 
-searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Date -> Maybe Date -> SearchForm
-searchForm title author keyword1 keyword2 portal after before =
+searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Date -> Maybe Date -> SearchForm
+searchForm title author keyword1 keyword2 abstract portal after before =
     let
         nothingIsJustEmpty =
             Maybe.withDefault ""
@@ -2073,6 +2016,7 @@ searchForm title author keyword1 keyword2 portal after before =
         (nothingIsJustEmpty title)
         (nothingIsJustEmpty author)
         (List.filterMap identity [ keyword1, keyword2 ])
+        (nothingIsJustEmpty abstract)
         (nothingIsJustEmpty portal)
         after
         before
@@ -2192,7 +2136,7 @@ searchGUI device portals keywords =
             div [ Attr.style "display" "flex" ] elements
     in
     Form.form
-        (\title author keyword1 keyword2 portal after before ->
+        (\title author keyword1 keyword2 abstract portal after before ->
             { combine =
                 Validation.succeed searchForm
                     |> Validation.andMap title
@@ -2207,6 +2151,7 @@ searchGUI device portals keywords =
                             |> Validation.map parseKeyword
                             |> Validation.fromResult
                         )
+                    |> Validation.andMap abstract
                     |> Validation.andMap
                         portal
                     |> Validation.andMap after
@@ -2226,6 +2171,7 @@ searchGUI device portals keywords =
                                         , rowdiv
                                             [ keywordField keywords info "keywords" keyword1
                                             , keywordField keywords info "" keyword2
+                                            , fieldView info "abstract" abstract
                                             ]
                                         , rowdiv
                                             [ fieldView info "after" after
@@ -2241,6 +2187,7 @@ searchGUI device portals keywords =
                                             , fieldView info "author" author
                                             , keywordField keywords info "keywords" keyword1
                                             , keywordField keywords info "" keyword2
+                                            , fieldView info "abstract" abstract
                                             , selectField info "portal" portal
                                             ]
                                         , rowdiv
@@ -2255,6 +2202,7 @@ searchGUI device portals keywords =
                                         , fieldView info "author" author
                                         , keywordField keywords info "keywords" keyword1
                                         , keywordField keywords info "" keyword2
+                                        , fieldView info "abstact" abstract
                                         , selectField info "portal" portal
                                         , fieldView info "after" after
                                         , fieldView info "before" before
@@ -2275,6 +2223,7 @@ searchGUI device portals keywords =
         |> Form.field "author" (Field.text |> Field.search |> Field.withInitialValue .author)
         |> Form.field "keyword 1" (Field.text |> Field.search |> Field.withInitialValue getFirstKeyword)
         |> Form.field "keyword 2" (Field.text |> Field.search |> Field.withInitialValue getSecondKeyword)
+        |> Form.field "abstract" (Field.text |> Field.search |> Field.withInitialValue .abstract)
         |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "Error !!!") |> Field.withInitialValue (\_ -> "All portals"))
         |> Form.field "after" (Field.date { invalid = \_ -> "invalid date" })
         |> Form.field "before" (Field.date { invalid = \_ -> "invalid date" })

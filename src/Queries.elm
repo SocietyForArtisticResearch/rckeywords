@@ -1,4 +1,21 @@
-module Queries exposing (Search(..), SearchQuery(..), SearchResult(..), decodeSearchQuery, decodeSearchResult, emptySearch, encodeSearchQuery, encodeSearchResult, getKeywords, searchWithKeywords, withAfter, withAuthor, withBefore, withPortal, withTitle)
+module Queries exposing
+    ( Search(..)
+    , SearchQuery(..)
+    , SearchResult(..)
+    , decodeSearchQuery
+    , decodeSearchResult
+    , emptySearch
+    , encodeSearchQuery
+    , encodeSearchResult
+    , getKeywords
+    , searchWithKeywords
+    , withAbstract
+    , withAfter
+    , withAuthor
+    , withBefore
+    , withPortal
+    , withTitle
+    )
 
 import Date exposing (Date)
 import EnrichedResearch exposing (ResearchWithKeywords)
@@ -20,6 +37,7 @@ type Search
         { title : String
         , author : String
         , keywords : Set String
+        , abstract : String
         , after : Maybe Date
         , before : Maybe Date
         , portal : String
@@ -37,6 +55,11 @@ withTitle title (Search s) =
         { s
             | title = title
         }
+
+
+withAbstract abstract (Search s) =
+    Search
+        { s | abstract = abstract }
 
 
 withPortal : String -> Search -> Search
@@ -67,6 +90,7 @@ emptySearch =
         { title = ""
         , author = ""
         , keywords = Set.empty
+        , abstract = ""
         , after = Nothing
         , before = Nothing
         , portal = ""
@@ -86,12 +110,13 @@ searchWithKeywords kws (Search s) =
         }
 
 
-search : String -> String -> Set String -> Maybe Date -> Maybe Date -> String -> Search
-search title author keywords after before portal =
+search : String -> String -> Set String -> String -> Maybe Date -> Maybe Date -> String -> Search
+search title author keywords abstract after before portal =
     Search
         { title = title
         , author = author
         , keywords = keywords
+        , abstract = abstract
         , after = after
         , before = before
         , portal = portal
@@ -100,10 +125,11 @@ search title author keywords after before portal =
 
 decodeSearch : Json.Decode.Decoder Search
 decodeSearch =
-    Json.Decode.map6 search
+    Json.Decode.map7 search
         (field "title" string)
         (field "author" string)
         (field "keywords" (list string) |> map Set.fromList)
+        (field "abstract" string)
         (maybe (field "after" int |> map Date.fromRataDie))
         (maybe (field "before" int |> map Date.fromRataDie))
         (field "portal" string)
@@ -132,6 +158,7 @@ encodeSearch (Search data) =
         ([ ( "title", E.string data.title )
          , ( "author", E.string data.author )
          , ( "keywords", E.list E.string (data.keywords |> Set.toList) )
+         , ( "abstract", E.string data.abstract )
          , ( "portal", E.string data.portal )
          ]
             |> appendMaybe mafter

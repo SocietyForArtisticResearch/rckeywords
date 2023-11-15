@@ -288,7 +288,6 @@ optionalFilter filter value lst =
 
 searchResearch : Search -> ReverseKeywordDict ResearchWithKeywords -> List ResearchWithKeywords -> List ResearchWithKeywords
 searchResearch (Search search) revDict lst =
-    -- TODO implement dates
     lst
         |> RC.findResearchWithTitle search.title
         -- |> printLength "title"
@@ -297,6 +296,7 @@ searchResearch (Search search) revDict lst =
         |> RC.findResearchWithKeywords search.keywords revDict
         -- |> printLength "keywords"
         |> RC.findResearchWithPortal search.portal
+        |> RC.findResearchWithAbstract search.abstract
         |> optionalFilter RC.findResearchAfter search.after
         |> optionalFilter RC.findResearchBefore search.before
 

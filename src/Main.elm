@@ -1169,7 +1169,6 @@ viewResearchDetail dim scale research =
                         [ width fill ]
                         (Element.paragraph []
                             (research.keywords
-                                |> List.take 4
                                 |> List.map (KeywordString.toString >> stringToKeyword >> spacedWord)
                             )
                         )
@@ -1184,9 +1183,33 @@ viewResearchDetail dim scale research =
                         , url = RC.authorUrl research.author
                         }
 
-                jsonBlurp : Element Msg
-                jsonBlurp =
-                    research |> EnrichedResearch.encodeResearchWithKeywords |> Json.Encode.encode 4 |> Element.text |> el [ Font.size 8 ]
+                pageAndId : String -> String
+                pageAndId link =
+                    link
+                        |> String.split "/"
+                        |> List.reverse
+                        |> List.take 2
+                        |> (\res ->
+                                case res of
+                                    [ pageid, researchid ] ->
+                                        -- note that we get them in reverse order
+                                        researchid ++ "/" ++ pageid
+
+                                    _ ->
+                                        "0/0"
+                           )
+
+                parsedLink : Element Msg
+                parsedLink =
+                    Element.newTabLink
+                        [ paddingXY 5 10
+                        , Font.color (Element.rgb 0.0 0.0 1.0)
+                        , Font.size 16
+                        , Font.family [ RCStyles.globalFont ]
+                        ]
+                        { url = "https://keywords.sarconference2016.net/flaskapp/rcget/" ++ pageAndId research.defaultPage
+                        , label = Element.text "generate json from content"
+                        }
 
                 metainfo : Element Msg
                 metainfo =
@@ -1215,8 +1238,7 @@ viewResearchDetail dim scale research =
             Element.column (RCStyles.withStandardPadding [ width fill ])
                 [ metainfo
                 , Page.makeMatrix dim scale makeImg urls
-
-                --jsonBlurp
+                , parsedLink
                 ]
 
 
@@ -1258,8 +1280,8 @@ nextPageView v =
     gotoPageView (getPageOfView v |> (\(Page p) -> p + 1 |> pageFromInt)) v
 
 
-pageNav : Int -> View -> ScreenDimensions -> List a -> Page -> Element Msg
-pageNav total v screen lst (Page p) =
+pageNav : Int -> View -> ScreenDimensions -> Page -> Element Msg
+pageNav total v screen (Page p) =
     let
         pageLink n =
             Element.link (linkStyle (n == p) SmallLink)
@@ -1307,9 +1329,28 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
         (Page p) =
             sv.page
 
-        sorted : List ResearchWithKeywords
-        sorted =
-            lst |> sortResearch sv.sorting |> List.drop ((p - 1) * pageSize) |> List.take pageSize
+        pageSizeFromScale : Scale -> Int
+        pageSizeFromScale scale =
+            case scale of
+                Micro ->
+                    512
+
+                Small ->
+                    128
+
+                Medium ->
+                    64
+
+                Large ->
+                    32
+
+        sorted : Scale -> List ResearchWithKeywords
+        sorted scale =
+            let
+                ps =
+                    pageSizeFromScale scale
+            in
+            lst |> sortResearch sv.sorting |> List.drop ((p - 1) * ps) |> List.take ps
 
         expositions : Element Msg
         expositions =
@@ -1327,12 +1368,12 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
                                 Desktop ->
                                     4
                     in
-                    sorted
+                    sorted Medium
                         |> List.map (viewResearchMicro numCollumns dimensions device)
                         |> makeColumns numCollumns [ width fill, Element.spacingXY 10 10 ]
 
                 ScreenLayout scale ->
-                    viewScreenshots device dimensions sv scale sorted
+                    viewScreenshots device dimensions sv scale (sorted scale)
 
         urlFromLayout : SearchViewState -> Layout -> String
         urlFromLayout st newlayout =
@@ -1344,7 +1385,12 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
 
         numberOfPages : Int
         numberOfPages =
-            lst |> List.length |> (\n -> n // pageSize)
+            case sv.layout of
+                ScreenLayout scale ->
+                    lst |> List.length |> (\n -> n // pageSizeFromScale scale)
+
+                ListLayout ->
+                    lst |> List.length |> (\n -> n // 64)
 
         scaleButton : Element Msg
         scaleButton =
@@ -1397,7 +1443,7 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
         [ viewSearch device (Just sv.form) allPortals allKeywords submitting searchFormState
         , buttons
         , Element.el [ paddingXY 15 0, width fill, Element.centerX ] expositions
-        , pageNav numberOfPages (SearchView sv) dimensions sorted (Page p)
+        , pageNav numberOfPages (SearchView sv) dimensions (Page p)
         ]
 
 

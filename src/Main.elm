@@ -1121,7 +1121,7 @@ viewResearchDetail dim scale research =
 
         makeImg : Int -> Screenshots.WeaveScreenshot -> Element msg
         makeImg imgw data =
-            Element.link []
+            Element.newTabLink []
                 { url = data.weave
                 , label =
                     Element.image [ Element.width (px imgw) ] { src = data.screenshot, description = "screenshot" }
@@ -1145,7 +1145,7 @@ viewResearchDetail dim scale research =
 
                 title : Element msg
                 title =
-                    Element.link [ width fill, Element.alignLeft ] <|
+                    Element.newTabLink [ width fill, Element.alignLeft ] <|
                         { label =
                             Element.paragraph
                                 (width (px w) :: microLinkStyle)
@@ -1175,7 +1175,7 @@ viewResearchDetail dim scale research =
 
                 author : Element msg
                 author =
-                    Element.link [ width fill ] <|
+                    Element.newTabLink [ width fill ] <|
                         { label =
                             Element.paragraph
                                 microLinkStyle
@@ -1333,7 +1333,7 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
         pageSizeFromScale scale =
             case scale of
                 Micro ->
-                    512
+                    192
 
                 Small ->
                     128
@@ -1630,6 +1630,11 @@ appUrlFromKeywordViewState kwview =
     AppUrl.toString url |> prefixHash
 
 
+keywordPageSize : number
+keywordPageSize =
+    2048
+
+
 viewKeywords : Model -> KeywordsViewState -> Element Msg
 viewKeywords model keywordview =
     let
@@ -1660,7 +1665,7 @@ viewKeywords model keywordview =
                     page |> pageToInt
 
                 showing =
-                    [ "results ", (p - 1) * pageSize |> String.fromInt, "-", min (p * pageSize) count |> String.fromInt, " (total: ", count |> String.fromInt, ")" ] |> String.concat
+                    [ "results ", (p - 1) * keywordPageSize |> String.fromInt, "-", min (p * keywordPageSize) count |> String.fromInt, " (total: ", count |> String.fromInt, ")" ] |> String.concat
             in
             el [ Font.size 12 ] (Element.text showing)
 
@@ -1710,7 +1715,7 @@ viewKeywords model keywordview =
         pageNavigation lst (Page p) =
             let
                 total =
-                    lst |> List.length |> (\n -> n // pageSize)
+                    lst |> List.length |> (\n -> n // keywordPageSize)
 
                 pageLink n =
                     Element.link (linkStyle (n == p) SmallLink)
@@ -1721,7 +1726,7 @@ viewKeywords model keywordview =
             if total >= p then
                 let
                     pageLinks =
-                        List.range 0 total |> List.map pageLink
+                        List.range 1 total |> List.map pageLink
 
                     nextLink =
                         Element.el []
@@ -1756,7 +1761,7 @@ viewKeywords model keywordview =
                     FoundKeywords results ->
                         let
                             currentPage =
-                                pageOfList page results
+                                pageOfList keywordPageSize page results
                         in
                         column [ width fill, Element.spacing 15 ]
                             [ Element.el [ width shrink, Element.paddingXY 0 5 ] (toggleSorting sorting)
@@ -1816,16 +1821,16 @@ makeColumns n attrs lst =
         (columns |> List.map (\rowItems -> Element.Keyed.column (Element.alignTop :: attrs) rowItems))
 
 
-pageOfList : Page -> List a -> List a
-pageOfList (Page i) lst =
+pageOfList : Int -> Page -> List a -> List a
+pageOfList psize (Page i) lst =
     let
         start : Int
         start =
-            (i - 1) * pageSize
+            (i - 1) * psize
     in
     lst
         |> List.drop start
-        |> List.take pageSize
+        |> List.take psize
 
 
 

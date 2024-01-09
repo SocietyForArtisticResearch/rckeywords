@@ -281,7 +281,6 @@ optionalFilter filter value lst =
         Nothing ->
             lst
 
-        -- no filter
         Just v ->
             lst |> filter v
 

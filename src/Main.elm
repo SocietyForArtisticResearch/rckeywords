@@ -7,7 +7,7 @@ import Browser.Events as Events
 import Browser.Navigation as Nav
 import Date exposing (Date)
 import Dict
-import Element exposing (Element, column, el, fill, height, padding, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
+import Element exposing (Element, column, el, fill, height, padding, paddingEach, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
 import Element.Background
 import Element.Border as Border
 import Element.Font as Font
@@ -752,16 +752,14 @@ searchViewFromUrl url layout =
     )
 
 
-image : ( Int, Int ) -> String -> Element msg
-image ( w, h ) src =
+image : String -> Element msg
+image src =
     Element.html <|
         Html.img
             [ Attr.attribute "src" src
             , Attr.attribute "load" "lazy"
-            , Attr.style "object-fit" "contain"
+            , Attr.style "object-fit" "cover"
             , Attr.alt <| ""
-            , Attr.attribute "width" (String.fromInt w ++ "px")
-            , Attr.attribute "height" (String.fromInt h ++ "px")
             ]
             []
 
@@ -825,12 +823,11 @@ viewResearchMicro numCollums screen device research =
                 { url = appUrlFromExposition research
                 , label =
                     Element.el
-                        [ width (px (w - 20))
-                        , height (px h)
+                        [ width fill
                         , Element.paddingXY 0 5
                         ]
                     <|
-                        image ( w, h ) src
+                        image src
                 }
 
         imageUrl : String
@@ -886,26 +883,37 @@ viewResearchMicro numCollums screen device research =
                         |> List.map (KeywordString.toString >> stringToKeyword >> spacedWord)
                     )
                 )
+
+        metabox =
+            Element.column
+                [ width fill
+                , padding 10
+                , Element.spacingXY 0 5
+                ]
+                [ title
+                , author
+                , keywords
+                , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
+                , Element.el
+                    [ Element.paddingEach { top = 10, bottom = 0, left = 0, right = 0 }
+                    , width fill
+                    ]
+                  <|
+                    Element.html <|
+                        Html.hr [ Attr.style "width" "100%" ] []
+                ]
     in
     ( research.id |> String.fromInt
     , column
         [ width (Element.maximum w fill)
         , Font.size 12
-        , Element.spacingXY 0 5
-        , paddingXY 10 0
+
+        -- , Border.solid
+        -- , Border.width 1
+        -- , Border.color (Element.rgb 255 0 0)
         ]
         [ img imageUrl
-        , title
-        , author
-        , keywords
-        , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
-        , Element.el
-            [ Element.paddingEach { top = 10, bottom = 0, left = 0, right = 0 }
-            , width fill
-            ]
-          <|
-            Element.html <|
-                Html.hr [ Attr.style "width" "100%" ] []
+        , metabox
         ]
     )
 

@@ -331,6 +331,7 @@ type SearchAction
     | Searching
     | FoundKeywords (List RC.Keyword)
     | FoundResearch (List EnrichedResearch.ResearchWithKeywords)
+    | FoundRankedResearch (Queries.RankedResult EnrichedResearch.ResearchWithKeywords)
 
 
 type Device
@@ -416,6 +417,9 @@ update msg model =
                 Ok (Queries.Expositions exps) ->
                     ( { model | search = FoundResearch exps }, Cmd.none )
 
+                Ok (Queries.RankedExpositions rexps) ->
+                    ( { model | search = FoundRankedResearch rexps } |> sortViewByRank, Cmd.none )
+
                 Ok (Queries.AllKeywords kws) ->
                     let
                         updModel : Model
@@ -500,6 +504,26 @@ update msg model =
 
         Tick _ ->
             ( { model | time = model.time + 1 }, Cmd.none )
+
+
+sortViewByRank : Model -> Model
+sortViewByRank model =
+    case model.view of
+        SearchView state ->
+            case state.form.title of
+                "" ->
+                    case state.sorting of
+                        RC.Rank ->
+                            { model | view = SearchView { state | sorting = RC.NewestFirst } }
+
+                        _ ->
+                            model
+
+                _ ->
+                    { model | view = SearchView { state | sorting = RC.Rank } }
+
+        _ ->
+            model
 
 
 updateViewWithSearch : SearchForm -> View -> View
@@ -867,12 +891,9 @@ viewResearchMicro numCollums screen device research =
 
         date =
             Element.el
-                [ Font.size 12
-                , Font.color (Element.rgb 0.1 0.0 0.0)
-                , paddingXY 10 10
-                , Font.italic
+                [ Font.family [ Font.monospace ]
                 ]
-                (Element.text (research.publication |> Maybe.map formatDate |> Maybe.withDefault ""))
+                (Element.text <| "(" ++ (research.publication |> Maybe.map formatDate |> Maybe.withDefault "") ++ ")")
 
         keywords =
             Element.el
@@ -891,9 +912,9 @@ viewResearchMicro numCollums screen device research =
                 , Element.spacingXY 0 5
                 ]
                 [ title
-                , author
+                , row [ spacingXY 5 0 ] [ author, date ]
                 , keywords
-                , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
+                , Element.el [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] abstract
                 , Element.el
                     [ Element.paddingEach { top = 10, bottom = 0, left = 0, right = 0 }
                     , width fill
@@ -1070,6 +1091,9 @@ view model =
                     case model.search of
                         FoundResearch lst ->
                             viewResearchResults model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions model.device sv lst
+
+                        FoundRankedResearch ranked ->
+                            viewRankedResults model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions model.device sv ranked
 
                         FoundKeywords _ ->
                             Element.none
@@ -1322,6 +1346,139 @@ anchor anchorId =
     Element.htmlAttribute (Attr.id anchorId)
 
 
+viewRankedResults :
+    List RC.Portal
+    -> List KeywordString
+    -> Bool
+    -> Form.Model
+    -> ScreenDimensions
+    -> Device
+    -> SearchViewState
+    -> Queries.RankedResult ResearchWithKeywords
+    -> Element Msg
+viewRankedResults allPortals allKeywords submitting searchFormState dimensions device sv lst =
+    let
+        (Page p) =
+            sv.page
+
+        pageSizeFromScale : Scale -> Int
+        pageSizeFromScale scale =
+            case scale of
+                Micro ->
+                    192
+
+                Small ->
+                    128
+
+                Medium ->
+                    64
+
+                Large ->
+                    32
+
+        sorted : Scale -> List ResearchWithKeywords
+        sorted scale =
+            let
+                ps =
+                    pageSizeFromScale scale
+            in
+            lst |> sortResearch sv.sorting |> List.drop ((p - 1) * ps) |> List.take ps
+
+        expositions : Element Msg
+        expositions =
+            case sv.layout of
+                ListLayout ->
+                    let
+                        numCollumns =
+                            case device of
+                                Phone ->
+                                    1
+
+                                Tablet ->
+                                    3
+
+                                Desktop ->
+                                    4
+                    in
+                    sorted Medium
+                        |> List.map (viewResearchMicro numCollumns dimensions device)
+                        |> makeColumns numCollumns [ width fill, Element.spacingXY 10 10 ]
+
+                ScreenLayout scale ->
+                    viewScreenshots device dimensions sv scale (sorted scale)
+
+        urlFromLayout : SearchViewState -> Layout -> String
+        urlFromLayout st newlayout =
+            SearchView { st | layout = newlayout } |> appUrlFromView
+
+        urlFromSorting : SearchViewState -> RC.TitleSorting -> String
+        urlFromSorting st s =
+            SearchView { st | sorting = s } |> appUrlFromView
+
+        numberOfPages : Int
+        numberOfPages =
+            case sv.layout of
+                ScreenLayout scale ->
+                    lst |> Queries.length |> (\n -> n // pageSizeFromScale scale)
+
+                ListLayout ->
+                    lst |> Queries.length |> (\n -> n // 64)
+
+        scaleButton : Element Msg
+        scaleButton =
+            case sv.layout of
+                ListLayout ->
+                    Element.none
+
+                ScreenLayout scale ->
+                    Element.el
+                        [ case device of
+                            Phone ->
+                                Element.alignLeft
+
+                            Desktop ->
+                                Element.alignRight
+
+                            Tablet ->
+                                Element.alignRight
+                        ]
+                        (viewScaleSwitch scale (ScreenLayout >> urlFromLayout sv))
+
+        buttons : Element Msg
+        buttons =
+            case device of
+                Phone ->
+                    column [ width fill, spacingXY 0 5 ]
+                        [ Element.el [] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
+                        , scaleButton
+                        , Element.el [] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
+                        ]
+
+                Desktop ->
+                    row
+                        [ width fill, spacingXY 15 0 ]
+                        [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
+                        , scaleButton
+                        , Element.el [ Element.alignRight ] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
+                        ]
+
+                Tablet ->
+                    row
+                        [ width fill, spacingXY 15 0 ]
+                        [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
+                        , scaleButton
+                        , Element.el [ Element.alignRight ] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
+                        ]
+    in
+    column
+        (RCStyles.withStandardPadding [ anchor "top", spacingXY 0 5, width fill ])
+        [ viewSearch device (Just sv.form) allPortals allKeywords submitting searchFormState
+        , buttons
+        , Element.el [ paddingXY 15 0, width fill, Element.centerX ] expositions
+        , pageNav numberOfPages (SearchView sv) dimensions (Page p)
+        ]
+
+
 viewResearchResults :
     List RC.Portal
     -> List KeywordString
@@ -1358,7 +1515,7 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
                 ps =
                     pageSizeFromScale scale
             in
-            lst |> sortResearch sv.sorting |> List.drop ((p - 1) * ps) |> List.take ps
+            lst |> Queries.unrank |> sortResearch sv.sorting |> List.drop ((p - 1) * ps) |> List.take ps
 
         expositions : Element Msg
         expositions =
@@ -1471,6 +1628,7 @@ toggleTitleSorting sorting sortingToUrl =
         , Element.link (linkStyle (sorting == RC.Random) SmallLink) { url = sortingToUrl RC.Random, label = Element.text "random" }
         , Element.link (linkStyle (sorting == RC.NewestFirst) SmallLink) { url = sortingToUrl RC.NewestFirst, label = Element.text "newest first" }
         , Element.link (linkStyle (sorting == RC.OldestFirst) SmallLink) { url = sortingToUrl RC.OldestFirst, label = Element.text "oldest first" }
+        , Element.link (linkStyle (sorting == RC.Rank) SmallLink) { url = sortingToUrl RC.Rank, label = Element.text "rank" }
         ]
 
 
@@ -1788,6 +1946,9 @@ viewKeywords model keywordview =
 
                     FoundResearch _ ->
                         Element.text "found something else"
+
+                    FoundRankedResearch _ ->
+                        Element.text "found something else"
                 ]
     in
     Element.Lazy.lazy2
@@ -1972,17 +2133,20 @@ scaleToGroupSize device scale =
                     3
 
 
-sortResearch : RC.TitleSorting -> List (Research r) -> List (Research r)
+sortResearch : RC.TitleSorting -> Queries.RankedResult (Research r) -> List (Research r)
 sortResearch sorting research =
     case sorting of
         RC.OldestFirst ->
-            research |> List.sortBy (\r -> r.created)
+            research |> Queries.toList |> List.sortBy (\r -> r.created)
 
         RC.Random ->
-            research |> RC.shuffleWithSeed 42
+            research |> Queries.toList |> RC.shuffleWithSeed 42
 
         RC.NewestFirst ->
-            research |> List.sortBy (\r -> r.created) |> List.reverse
+            research |> Queries.toList |> List.sortBy (\r -> r.created) |> List.reverse
+
+        RC.Rank ->
+            research |> Queries.sortByRank
 
 
 viewScreenshots : Device -> ScreenDimensions -> SearchViewState -> Scale -> List EnrichedResearch.ResearchWithKeywords -> Element Msg

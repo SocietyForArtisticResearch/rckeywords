@@ -96,7 +96,7 @@ update msg model =
                                 Queries.FindResearch search ->
                                     ( Loaded lmodel
                                     , searchResearch search lmodel.reverseKeywordDict lmodel.research
-                                        |> Queries.Expositions
+                                        |> Queries.RankedExpositions
                                         -- SO this  is just packaging it into the rigth type for tranposrt
                                         |> Queries.encodeSearchResult
                                         |> returnResults
@@ -115,7 +115,7 @@ update msg model =
 
                                 Queries.GetExposition id ->
                                     ( Loaded lmodel
-                                    , RC.findExpositionWithId id lmodel.research
+                                    , Queries.findExpositionWithId id lmodel.research
                                         |> Queries.Exposition
                                         |> Queries.encodeSearchResult
                                         |> returnResults
@@ -164,8 +164,8 @@ update msg model =
                                                 keywords =
                                                     search |> Queries.getKeywords
                                             in
-                                            RC.findResearchWithKeywords keywords reverseKeywordDict data
-                                                |> Queries.Expositions
+                                            Queries.findResearchWithKeywords keywords reverseKeywordDict (Queries.Unranked data)
+                                                |> Queries.RankedExpositions
                                                 |> Queries.encodeSearchResult
                                                 |> returnResults
 
@@ -182,7 +182,7 @@ update msg model =
                                                 |> returnResults
 
                                         Queries.GetExposition id ->
-                                            RC.findExpositionWithId id data
+                                            Queries.findExpositionWithId id data
                                                 |> Queries.Exposition
                                                 |> Queries.encodeSearchResult
                                                 |> returnResults
@@ -275,7 +275,7 @@ main =
     Platform.worker { init = init, update = update, subscriptions = subscriptions }
 
 
-optionalFilter : (a -> List b -> List b) -> Maybe a -> List b -> List b
+optionalFilter : (a -> b -> b) -> Maybe a -> b -> b
 optionalFilter filter value lst =
     case value of
         Nothing ->
@@ -285,19 +285,19 @@ optionalFilter filter value lst =
             lst |> filter v
 
 
-searchResearch : Search -> ReverseKeywordDict ResearchWithKeywords -> List ResearchWithKeywords -> List ResearchWithKeywords
+searchResearch : Search -> ReverseKeywordDict ResearchWithKeywords -> List ResearchWithKeywords -> Queries.RankedResult ResearchWithKeywords
 searchResearch (Search search) revDict lst =
     lst
-        |> RC.findResearchWithTitle search.title
+        |> Queries.findResearchWithTitle search.title
         -- |> printLength "title"
-        |> RC.findResearchWithAuthor search.author
+        |> Queries.findResearchWithAuthor search.author
         -- |> printLength "author"
-        |> RC.findResearchWithKeywords search.keywords revDict
+        |> Queries.findResearchWithKeywords search.keywords revDict
         -- |> printLength "keywords"
-        |> RC.findResearchWithPortal search.portal
-        |> RC.findResearchWithAbstract search.abstract
-        |> optionalFilter RC.findResearchAfter search.after
-        |> optionalFilter RC.findResearchBefore search.before
+        |> Queries.findResearchWithPortal search.portal
+        |> Queries.findResearchWithAbstract search.abstract
+        |> optionalFilter Queries.findResearchAfter search.after
+        |> optionalFilter Queries.findResearchBefore search.before
 
 
 

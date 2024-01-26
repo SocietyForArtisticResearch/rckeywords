@@ -1164,114 +1164,116 @@ viewResearchDetail dim scale research =
             research.screenshots
                 |> Maybe.map
                     (Screenshots.getWeaveAndScreenshot screenshotFolder research.id)
-    in
-    case urlLst of
-        Nothing ->
-            Element.text "no screenshots"
 
-        Just urls ->
-            let
-                abstract : Element msg
-                abstract =
-                    Element.el [] (EnrichedResearch.renderAbstract research.abstractWithKeywords)
+        abstract : Element msg
+        abstract =
+            Element.el [] (EnrichedResearch.renderAbstract research.abstractWithKeywords)
 
-                title : Element msg
-                title =
-                    Element.newTabLink [ width fill, Element.alignLeft ] <|
-                        { label =
-                            Element.paragraph
-                                (width (px w) :: microLinkStyle)
-                                [ Element.text (research.title |> String.replace "&amp;" "&") ]
-                        , url = research.defaultPage
-                        }
+        title : Element msg
+        title =
+            Element.newTabLink [ width fill, Element.alignLeft ] <|
+                { label =
+                    Element.paragraph
+                        (width (px w) :: microLinkStyle)
+                        [ Element.text (research.title |> String.replace "&amp;" "&") ]
+                , url = research.defaultPage
+                }
 
-                date : Element msg
-                date =
-                    Element.el
-                        [ Font.size 12
-                        , Font.color (Element.rgb 0.1 0.0 0.0)
-                        , paddingXY 10 10
-                        , Font.italic
-                        ]
-                        (Element.text (research.publication |> Maybe.map formatDate |> Maybe.withDefault "in progress"))
-
-                keywords : Element Msg
-                keywords =
-                    Element.el
-                        [ width fill ]
-                        (Element.paragraph []
-                            (research.keywords
-                                |> List.map (KeywordString.toString >> stringToKeyword >> spacedWord)
-                            )
-                        )
-
-                author : Element msg
-                author =
-                    Element.newTabLink [ width fill ] <|
-                        { label =
-                            Element.paragraph
-                                microLinkStyle
-                                [ Element.text <| RC.authorAsString research.author ]
-                        , url = RC.authorUrl research.author
-                        }
-
-                pageAndId : String -> String
-                pageAndId link =
-                    link
-                        |> String.split "/"
-                        |> List.reverse
-                        |> List.take 2
-                        |> (\res ->
-                                case res of
-                                    [ pageid, researchid ] ->
-                                        -- note that we get them in reverse order
-                                        researchid ++ "/" ++ pageid
-
-                                    _ ->
-                                        "0/0"
-                           )
-
-                parsedLink : Element Msg
-                parsedLink =
-                    Element.newTabLink
-                        [ paddingXY 5 10
-                        , Font.color (Element.rgb 0.0 0.0 1.0)
-                        , Font.size 16
-                        , Font.family [ RCStyles.globalFont ]
-                        ]
-                        { url = "https://keywords.sarconference2016.net/flaskapp/rcget/" ++ pageAndId research.defaultPage
-                        , label = Element.text "generate json from content"
-                        }
-
-                metainfo : Element Msg
-                metainfo =
-                    column
-                        [ width (Element.maximum w fill)
-                        , Font.size 12
-                        , Element.spacingXY 0 10
-                        , paddingXY 10 0
-                        ]
-                        [ title
-                        , Element.el [] author
-                        , keywords
-                        , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
-                        , Element.el
-                            [ paddingXY 0 10
-                            , width fill
-                            , Border.solid
-                            , Border.color RCStyles.lightGray
-                            , Border.widthEach { bottom = 0, top = 1, left = 0, right = 0 }
-                            ]
-                          <|
-                            Element.html <|
-                                Html.hr [] []
-                        ]
-            in
-            Element.column (RCStyles.withStandardPadding [ width fill ])
-                [ metainfo
-                , Page.makeMatrix dim scale makeImg urls
-                , parsedLink
+        date : Element msg
+        date =
+            Element.el
+                [ Font.size 12
+                , Font.color (Element.rgb 0.1 0.0 0.0)
+                , paddingXY 10 10
+                , Font.italic
                 ]
+                (Element.text (research.publication |> Maybe.map formatDate |> Maybe.withDefault "in progress"))
+
+        keywords : Element Msg
+        keywords =
+            Element.el
+                [ width fill ]
+                (Element.paragraph []
+                    (research.keywords
+                        |> List.map (KeywordString.toString >> stringToKeyword >> spacedWord)
+                    )
+                )
+
+        author : Element msg
+        author =
+            Element.newTabLink [ width fill ] <|
+                { label =
+                    Element.paragraph
+                        microLinkStyle
+                        [ Element.text <| RC.authorAsString research.author ]
+                , url = RC.authorUrl research.author
+                }
+
+        pageAndId : String -> String
+        pageAndId link =
+            link
+                |> String.split "/"
+                |> List.reverse
+                |> List.take 2
+                |> (\res ->
+                        case res of
+                            [ pageid, researchid ] ->
+                                -- note that we get them in reverse order
+                                researchid ++ "/" ++ pageid
+
+                            _ ->
+                                "0/0"
+                   )
+
+        parsedLink : Element Msg
+        parsedLink =
+            Element.newTabLink
+                [ paddingXY 5 10
+                , Font.color (Element.rgb 0.0 0.0 1.0)
+                , Font.size 16
+                , Font.family [ RCStyles.globalFont ]
+                ]
+                { url = "https://keywords.sarconference2016.net/flaskapp/rcget/" ++ pageAndId research.defaultPage
+                , label = Element.text "generate json from content"
+                }
+
+        metainfo : Element Msg
+        metainfo =
+            column
+                [ width (Element.maximum w fill)
+                , Font.size 12
+                , Element.spacingXY 0 10
+                , paddingXY 10 0
+                ]
+                [ title
+                , Element.el [] author
+                , keywords
+                , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
+                , Element.el
+                    [ paddingXY 0 10
+                    , width fill
+                    , Border.solid
+                    , Border.color RCStyles.lightGray
+                    , Border.widthEach { bottom = 0, top = 1, left = 0, right = 0 }
+                    ]
+                  <|
+                    Element.html <|
+                        Html.hr [] []
+                ]
+
+        screenshotMatrix =
+            case urlLst of
+                Nothing ->
+                    Element.text "no screenshots available"
+
+                Just urls ->
+                    Page.makeMatrix dim scale makeImg urls
+    in
+    Element.column (RCStyles.withStandardPadding [ width fill ])
+        [ metainfo
+        , screenshotMatrix
+        , parsedLink
+        ]
 
 
 

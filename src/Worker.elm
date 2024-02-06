@@ -1,6 +1,7 @@
 port module Worker exposing (main)
 
 import EnrichedResearch exposing (ResearchWithKeywords)
+import Fuzzy
 import Http
 import Json.Decode as D exposing (errorToString)
 import Json.Encode as E

@@ -1240,11 +1240,7 @@ viewResearchDetail dim scale research =
         metainfo : Element Msg
         metainfo =
             column
-                [ width (Element.maximum w fill)
-                , Font.size 12
-                , Element.spacingXY 0 10
-                , paddingXY 10 0
-                ]
+                RCStyles.metastyling
                 [ title
                 , Element.el [] author
                 , keywords
@@ -1261,10 +1257,11 @@ viewResearchDetail dim scale research =
                         Html.hr [] []
                 ]
 
+        screenshotMatrix : Element msg
         screenshotMatrix =
             case urlLst of
                 Nothing ->
-                    Element.text "no screenshots available"
+                    Element.el RCStyles.metastyling <| Element.text "no screenshots available"
 
                 Just urls ->
                     Page.makeMatrix dim scale makeImg urls

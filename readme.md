@@ -4,13 +4,17 @@ This is something to test alternative layouts of RC content.
 
 # TODO
 
-[ ] Add zoom to detail page
-[ ] Cache problem on detail page
-[ ] Add number of tools on detail page
-[ ] I want to add a bigger amount of results
-[ ] Link back to the tool
+* [ ] Add zoom to detail page
+* [ ] Cache problem on detail page
+* [ ] Add number of tools on detail page
+* [ ] I want to add a bigger amount of results
+* [ ] Link back to the tool
       - Add a thumbnail?
 
+## BETAMAP todos
+
+* [ ] make portal a fixed parameter
+* [ ] see of issues can be filtered on
 
 # Requirements
 

@@ -529,7 +529,9 @@ update msg model =
             ( { model | view = advancedSearchToggle model.view }, Cmd.none )
 
         SimpleSearch str ->
-            ( { model | simpleSearch = str }, Cmd.none )
+            ( { model | simpleSearch = str }
+            , sendQuery (Queries.encodeSearchQuery (Queries.FindResearch (Queries.QuickSearch str)))
+            )
 
 
 sortViewByRank : Model -> Model
@@ -781,16 +783,7 @@ searchViewFromUrl url layout =
             sendQuery
                 (Queries.encodeSearchQuery
                     (FindResearch
-                        (Queries.emptySearch
-                            |> Queries.searchWithKeywords (Set.fromList keywords)
-                            |> Queries.withTitle title
-                            |> Queries.withAuthor author
-                            |> Queries.withAbstract abstract
-                            |> Queries.withPortal portal
-                            |> Queries.withAfter after
-                            |> Queries.withBefore before
-                            |> Queries.withAbstract abstract
-                        )
+                        (Queries.QuickSearch "")
                     )
                 )
     in
@@ -1544,7 +1537,7 @@ viewResearchResults simpleSearchQuery allPortals allKeywords submitting searchFo
                 ps =
                     pageSizeFromScale scale
             in
-            lst |> Queries.unrank |> sortResearch sv.sorting |> List.drop ((p - 1) * ps) |> List.take ps
+            lst |> Queries.Unranked |> sortResearch sv.sorting |> List.drop ((p - 1) * ps) |> List.take ps
 
         expositions : Element Msg
         expositions =

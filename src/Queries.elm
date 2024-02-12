@@ -1,8 +1,10 @@
 module Queries exposing
-    ( RankedResult(..)
+    ( ExpositionSearch(..)
+    , RankedResult(..)
     , Search(..)
     , SearchQuery(..)
     , SearchResult(..)
+    , concatRanked
     , decodeSearchQuery
     , decodeSearchResult
     , emptySearch
@@ -21,6 +23,7 @@ module Queries exposing
     , searchWithKeywords
     , sortByRank
     , toList
+    , uniqueRankedResult
     , unrank
     , withAbstract
     , withAfter
@@ -39,9 +42,11 @@ import Html exposing (a)
 import Iso8601
 import Json.Decode as D exposing (field, int, list, map, maybe, string)
 import Json.Encode as E
+import List.Extra
 import Research as RC exposing (Research)
 import Set exposing (Set)
 import Time
+import Toc exposing (decode)
 
 
 
@@ -49,6 +54,11 @@ import Time
 -- type Portal
 --     = Journal String
 --     | Portal String
+
+
+type ExpositionSearch
+    = Advanced Search
+    | QuickSearch String
 
 
 type Search
@@ -67,9 +77,56 @@ type Ranked a
     = Ranked Int a
 
 
+mapRanked : (a -> b) -> Ranked a -> Ranked b
+mapRanked f (Ranked i a) =
+    Ranked i (f a)
+
+
 type RankedResult a
     = RankedResult (List (Ranked a))
     | Unranked (List a)
+
+
+uniqueRankedResult : (a -> comparable) -> RankedResult a -> RankedResult a
+uniqueRankedResult toComparable rr =
+    case rr of
+        Unranked lst ->
+            Unranked (List.Extra.uniqueBy toComparable lst)
+
+        RankedResult lst ->
+            RankedResult (List.Extra.uniqueBy (mapRanked toComparable) lst)
+
+
+unrank : List (Ranked a) -> List a
+unrank rs =
+    rs |> List.map (\(Ranked _ x) -> x)
+
+
+joinRanked : RankedResult a -> RankedResult a -> RankedResult a
+joinRanked a b =
+    case ( a, b ) of
+        ( RankedResult lsta, RankedResult lstb ) ->
+            RankedResult (lsta ++ lstb |> List.sortBy getRank)
+
+        ( RankedResult lsta, Unranked [] ) ->
+            RankedResult lsta
+
+        ( Unranked [], RankedResult lstb ) ->
+            RankedResult lstb
+
+        ( RankedResult lsta, Unranked lstb ) ->
+            Unranked (unrank lsta ++ lstb)
+
+        ( Unranked lsta, RankedResult lstb ) ->
+            Unranked (lsta ++ unrank lstb)
+
+        ( Unranked lsta, Unranked lstb ) ->
+            Unranked (lsta ++ lstb)
+
+
+concatRanked : List (RankedResult a) -> RankedResult a
+concatRanked rs =
+    List.foldl joinRanked (Unranked []) rs
 
 
 filterRanked : (a -> Bool) -> RankedResult a -> RankedResult a
@@ -107,8 +164,8 @@ rank f lst =
     List.map (\x -> Ranked (f x) x) lst |> RankedResult
 
 
-unrank : List a -> RankedResult a
-unrank xs =
+unranked : List a -> RankedResult a
+unranked xs =
     Unranked xs
 
 
@@ -195,9 +252,14 @@ emptySearch =
         }
 
 
-getKeywords : Search -> Set String
-getKeywords (Search s) =
-    s.keywords
+getKeywords : ExpositionSearch -> Set String
+getKeywords s =
+    case s of
+        QuickSearch _ ->
+            Set.empty
+
+        Advanced (Search advancedSearch) ->
+            advancedSearch.keywords
 
 
 searchWithKeywords : Set String -> Search -> Search
@@ -233,6 +295,39 @@ decodeSearch =
         (field "portal" string)
 
 
+decodeExpositionSearch : D.Decoder ExpositionSearch
+decodeExpositionSearch =
+    D.field "type" string
+        |> D.andThen
+            (\t ->
+                case t of
+                    "quick" ->
+                        field "search" string |> D.map QuickSearch
+
+                    "advanced" ->
+                        field "search" decodeSearch |> D.map Advanced
+
+                    _ ->
+                        D.fail "corrupted json, expected { \"type\" : \"quick\" }"
+            )
+
+
+encodeExpositionSearch : ExpositionSearch -> E.Value
+encodeExpositionSearch expSearch =
+    case expSearch of
+        QuickSearch qs ->
+            E.object
+                [ ( "type", E.string "quick" )
+                , ( "search", E.string qs )
+                ]
+
+        Advanced srch ->
+            E.object
+                [ ( "type", E.string "advanced" )
+                , ( "search", encodeSearch srch )
+                ]
+
+
 appendMaybe : Maybe a -> List a -> List a
 appendMaybe x xs =
     case x of
@@ -266,7 +361,7 @@ encodeSearch (Search data) =
 
 type SearchQuery
     = FindKeywords String RC.KeywordSorting
-    | FindResearch Search
+    | FindResearch ExpositionSearch
     | GetAllKeywords
     | GetAllPortals
     | GetExposition RC.ExpositionID
@@ -444,7 +539,7 @@ decodeSearchQuery =
 
                     "FindResearch" ->
                         D.map FindResearch
-                            (field "search" decodeSearch)
+                            (field "search" decodeExpositionSearch)
 
                     "GetAllKeywords" ->
                         D.succeed GetAllKeywords
@@ -470,10 +565,10 @@ encodeSearchQuery query =
                 , ( "sorting", encodeKeywordSorting sorting )
                 ]
 
-        FindResearch src ->
+        FindResearch srch ->
             E.object
                 [ ( "type", E.string "FindResearch" )
-                , ( "search", encodeSearch src )
+                , ( "search", encodeExpositionSearch srch )
                 ]
 
         GetAllKeywords ->
@@ -600,25 +695,6 @@ findResearchWithAuthor qauthor lst =
             filterRanked f lst
 
 
-type Compare
-    = Smaller
-
-
-
--- comparePosix : Posix -> Posix -> Compare
--- comparePosix p1 p2 =
---     let
---         ( m1, m2 ) =
---             ( Time.posixToMillis p1, Time.posixToMillis p2 )
---     in
---     if m1 == m2 then
---         Equal
---     else if m1 > m2 then
---         Bigger
---     else
---         Smaller
-
-
 findResearchAfter : Date -> RankedResult (Research r) -> RankedResult (Research r)
 findResearchAfter date lst =
     let
@@ -631,14 +707,12 @@ findResearchAfter date lst =
                     -- if there is no date it is not included in results
                     False
 
-        isJust m =
-            case m of
-                Just _ ->
-                    True
-
-                Nothing ->
-                    False
-
+        -- isJust m =
+        --     case m of
+        --         Just _ ->
+        --             True
+        --         Nothing ->
+        --             False
         -- _ =
         --     Debug.log "is there any research?" (List.any (\r -> isJust r.publication) lst)
     in

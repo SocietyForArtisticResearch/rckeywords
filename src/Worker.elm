@@ -2,14 +2,17 @@ port module Worker exposing (main)
 
 import EnrichedResearch exposing (ResearchWithKeywords)
 import Fuzzy
+import Html exposing (b)
 import Http
 import Json.Decode as D exposing (errorToString)
 import Json.Encode as E
+import List.Extra
 import Platform
 import Queries exposing (Search(..), SearchQuery(..))
 import Random
 import Random.List exposing (shuffle)
 import Research as RC exposing (Keyword, KeywordSet, KeywordSorting(..), ReverseKeywordDict)
+import Set
 
 
 
@@ -46,8 +49,8 @@ type alias LoadedModel =
 
 
 -- We are not sure things arrive in order, how we proceed may depend. For
--- example, if the app requests all keywords or does a search before we have loaded properly, we
--- have to store the request for later.
+-- example, if the app requests all keywords or does a search before we have
+-- loaded properly, we have to store the request for later.
 
 
 type Model
@@ -291,19 +294,36 @@ optionalFilter filter value lst =
             lst |> filter v
 
 
-searchResearch : Search -> ReverseKeywordDict ResearchWithKeywords -> List ResearchWithKeywords -> Queries.RankedResult ResearchWithKeywords
-searchResearch (Search search) revDict lst =
-    lst
-        |> Queries.findResearchWithTitle search.title
-        -- |> printLength "title"
-        |> Queries.findResearchWithAuthor search.author
-        -- |> printLength "author"
-        |> Queries.findResearchWithKeywords search.keywords revDict
-        -- |> printLength "keywords"
-        |> Queries.findResearchWithPortal search.portal
-        |> Queries.findResearchWithAbstract search.abstract
-        |> optionalFilter Queries.findResearchAfter search.after
-        |> optionalFilter Queries.findResearchBefore search.before
+{-| apply one value to a list of functions
+-}
+applyAll : a -> List (a -> b) -> List b
+applyAll x fs =
+    fs |> List.map (\f -> f x)
+
+
+searchResearch : Queries.ExpositionSearch -> ReverseKeywordDict ResearchWithKeywords -> List ResearchWithKeywords -> Queries.RankedResult ResearchWithKeywords
+searchResearch expSearch revDict lst =
+    case expSearch of
+        Queries.QuickSearch qs ->
+            [ Queries.findResearchWithTitle qs lst
+            , Queries.findResearchWithAuthor qs (Queries.Unranked lst)
+            , Queries.findResearchWithKeywords (Set.fromList [ qs ]) revDict (Queries.Unranked lst)
+            ]
+                |> Queries.concatRanked
+                |> Queries.uniqueRankedResult .id
+
+        Queries.Advanced (Search search) ->
+            lst
+                |> Queries.findResearchWithTitle search.title
+                -- |> printLength "title"
+                |> Queries.findResearchWithAuthor search.author
+                -- |> printLength "author"
+                |> Queries.findResearchWithKeywords search.keywords revDict
+                -- |> printLength "keywords"
+                |> Queries.findResearchWithPortal search.portal
+                |> Queries.findResearchWithAbstract search.abstract
+                |> optionalFilter Queries.findResearchAfter search.after
+                |> optionalFilter Queries.findResearchBefore search.before
 
 
 

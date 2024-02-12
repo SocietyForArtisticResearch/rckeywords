@@ -13,9 +13,8 @@ import Research as RC exposing (Keyword, KeywordSet, KeywordSorting(..), Reverse
 
 
 
--- to avoid blocking the main thread, we sort and search keywords in this worker.
+-- to avoid blocking the main thread, we sort and search keywords in this separate worker.
 -- We also keep the keyword state here (as a kind of semi-backend)
--- TODO make it possible to search abstract
 
 
 port searchQuery : (D.Value -> msg) -> Sub msg
@@ -43,6 +42,12 @@ type alias LoadedModel =
     , problems : List Problem
     , reverseKeywordDict : ReverseKeywordDict ResearchWithKeywords
     }
+
+
+
+-- We are not sure things arrive in order, how we proceed may depend. For
+-- example, if the app requests all keywords or does a search before we have loaded properly, we
+-- have to store the request for later.
 
 
 type Model

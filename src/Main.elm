@@ -72,6 +72,7 @@ type alias Model =
     , allKeywords : List KeywordString
     , allPortals : List RC.Portal
     , currentExposition : Result String EnrichedResearch.ResearchWithKeywords
+    , simpleSearch : String
     }
 
 
@@ -116,6 +117,7 @@ init { width, height } url key =
                 , form = emptyForm
                 , sorting = RC.Random
                 , page = Page 1
+                , search = False
                 }
     in
     { query = ""
@@ -133,6 +135,7 @@ init { width, height } url key =
     , allPortals = []
     , time = 0
     , currentExposition = Err "initial"
+    , simpleSearch = ""
     }
         |> (\model ->
                 ( model
@@ -205,6 +208,7 @@ type alias SearchViewState =
     , form : SearchForm
     , sorting : RC.TitleSorting
     , page : Page
+    , search : Bool
     }
 
 
@@ -216,6 +220,20 @@ type View
     = KeywordsView KeywordsViewState
     | SearchView SearchViewState
     | ExpositionView ExpositionViewState
+
+
+
+-- just a helper
+
+
+advancedSearchToggle : View -> View
+advancedSearchToggle v =
+    case v of
+        SearchView sv ->
+            SearchView { sv | search = not sv.search }
+
+        _ ->
+            v
 
 
 type alias ExpositionViewState =
@@ -368,6 +386,8 @@ type Msg
     | SubmitSearch (Form.Validated String SearchForm)
     | WindowResize Int Int
     | Tick Time.Posix
+    | ToggleAdvancedSearch Bool
+    | SimpleSearch String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -504,6 +524,12 @@ update msg model =
 
         Tick _ ->
             ( { model | time = model.time + 1 }, Cmd.none )
+
+        ToggleAdvancedSearch b ->
+            ( { model | view = advancedSearchToggle model.view }, Cmd.none )
+
+        SimpleSearch str ->
+            ( { model | simpleSearch = str }, Cmd.none )
 
 
 sortViewByRank : Model -> Model
@@ -677,6 +703,7 @@ handleUrl url model =
                         , form = emptyForm
                         , sorting = RC.NewestFirst
                         , page = Page 1
+                        , search = False
                         }
               }
             , Nav.pushUrl model.key "/#/research/search/list"
@@ -772,6 +799,7 @@ searchViewFromUrl url layout =
       , form = formWith title author keywords abstract portal after before
       , sorting = sorting
       , page = Page page
+      , search = False
       }
     )
 
@@ -1090,10 +1118,10 @@ view model =
                 SearchView sv ->
                     case model.search of
                         FoundResearch lst ->
-                            viewResearchResults model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions model.device sv lst
+                            viewResearchResults model.simpleSearch model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions model.device sv lst
 
                         FoundRankedResearch ranked ->
-                            viewRankedResults model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions model.device sv ranked
+                            viewRankedResults model.simpleSearch model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions model.device sv ranked
 
                         FoundKeywords _ ->
                             Element.none
@@ -1346,7 +1374,8 @@ anchor anchorId =
 
 
 viewRankedResults :
-    List RC.Portal
+    String
+    -> List RC.Portal
     -> List KeywordString
     -> Bool
     -> Form.Model
@@ -1355,7 +1384,7 @@ viewRankedResults :
     -> SearchViewState
     -> Queries.RankedResult ResearchWithKeywords
     -> Element Msg
-viewRankedResults allPortals allKeywords submitting searchFormState dimensions device sv lst =
+viewRankedResults simpleSearch allPortals allKeywords submitting searchFormState dimensions device sv lst =
     let
         (Page p) =
             sv.page
@@ -1471,7 +1500,7 @@ viewRankedResults allPortals allKeywords submitting searchFormState dimensions d
     in
     column
         (RCStyles.withStandardPadding [ anchor "top", spacingXY 0 5, width fill ])
-        [ viewSearch device (Just sv.form) allPortals allKeywords submitting searchFormState
+        [ viewSearch simpleSearch sv.search device (Just sv.form) allPortals allKeywords submitting searchFormState
         , buttons
         , Element.el [ paddingXY 15 0, width fill, Element.centerX ] expositions
         , pageNav numberOfPages (SearchView sv) dimensions (Page p)
@@ -1479,7 +1508,8 @@ viewRankedResults allPortals allKeywords submitting searchFormState dimensions d
 
 
 viewResearchResults :
-    List RC.Portal
+    String
+    -> List RC.Portal
     -> List KeywordString
     -> Bool
     -> Form.Model
@@ -1488,7 +1518,7 @@ viewResearchResults :
     -> SearchViewState
     -> List ResearchWithKeywords
     -> Element Msg
-viewResearchResults allPortals allKeywords submitting searchFormState dimensions device sv lst =
+viewResearchResults simpleSearchQuery allPortals allKeywords submitting searchFormState dimensions device sv lst =
     let
         (Page p) =
             sv.page
@@ -1604,7 +1634,7 @@ viewResearchResults allPortals allKeywords submitting searchFormState dimensions
     in
     column
         (RCStyles.withStandardPadding [ anchor "top", spacingXY 0 5, width fill ])
-        [ viewSearch device (Just sv.form) allPortals allKeywords submitting searchFormState
+        [ viewSearch simpleSearchQuery sv.search device (Just sv.form) allPortals allKeywords submitting searchFormState
         , buttons
         , Element.el [ paddingXY 15 0, width fill, Element.centerX ] expositions
         , pageNav numberOfPages (SearchView sv) dimensions (Page p)
@@ -2332,6 +2362,7 @@ selectField formState label field =
         ]
 
 
+searchGUI : Device -> List { a | name : String } -> List KeywordString -> Form.Form String { combine : Validation.Validation String SearchForm Never constraints3, view : { b | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg) } parsedCombined { title : String, author : String, keywords : List String, portal : String, after : Maybe Date, before : Maybe Date, abstract : String }
 searchGUI device portals keywords =
     let
         parseKeyword mk =
@@ -2569,8 +2600,26 @@ fieldView formState label field =
 --         ]
 
 
-viewSearch : Device -> Maybe SearchForm -> List RC.Portal -> List KeywordString -> Bool -> Form.Model -> Element Msg
-viewSearch device initialForm portals keywords submitting searchFormState =
+viewSearch : String -> Bool -> Device -> Maybe SearchForm -> List RC.Portal -> List KeywordString -> Bool -> Form.Model -> Element Msg
+viewSearch simpleSearchQuery isOpen device initialForm portals keywords submitting searchFormState =
+    let
+        toggleView =
+            Element.row [ width fill, Element.spacingXY 10 0 ]
+                [ Element.Input.text [ Element.centerX, width (Element.fillPortion 3) ]
+                    { onChange = SimpleSearch
+                    , text = simpleSearchQuery
+                    , placeholder = Nothing
+                    , label = Element.Input.labelLeft [] <| Element.text "Search"
+                    }
+                , Element.Input.checkbox
+                    [ Font.size 12, Element.width (Element.fillPortion 1) ]
+                    { label = Element.Input.labelRight [] (Element.text "advanced search")
+                    , icon = Element.Input.defaultCheckbox
+                    , onChange = ToggleAdvancedSearch
+                    , checked = isOpen
+                    }
+                ]
+    in
     case initialForm of
         Just formInput ->
             Element.el
@@ -2581,19 +2630,26 @@ viewSearch device initialForm portals keywords submitting searchFormState =
                 , width fill
                 ]
             <|
-                Element.html
-                    (searchGUI device portals keywords
-                        |> Form.renderHtml
-                            { submitting = submitting
-                            , state = searchFormState
-                            , toMsg = FormMsg
-                            }
-                            (Form.options "search"
-                                |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
-                                |> Form.withInput formInput
+                if isOpen then
+                    Element.column []
+                        [ toggleView
+                        , Element.html
+                            (searchGUI device portals keywords
+                                |> Form.renderHtml
+                                    { submitting = submitting
+                                    , state = searchFormState
+                                    , toMsg = FormMsg
+                                    }
+                                    (Form.options "search"
+                                        |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
+                                        |> Form.withInput formInput
+                                    )
+                                    []
                             )
-                            []
-                    )
+                        ]
+
+                else
+                    toggleView
 
         Nothing ->
             Element.text "loading form data.."

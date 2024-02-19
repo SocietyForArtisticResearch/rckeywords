@@ -20,7 +20,7 @@ import Form
 import Form.Field as Field
 import Form.FieldView as FieldView
 import Form.Validation as Validation
-import Html exposing (Html, div)
+import Html exposing (Html, div, th)
 import Html.Attributes as Attr
 import Html.Events
 import Html.Keyed
@@ -29,7 +29,7 @@ import Json.Encode
 import KeywordString exposing (KeywordString)
 import List
 import Page exposing (Scale(..), ScreenDimensions, makeNumColumns, transpose)
-import Queries exposing (SearchQuery(..))
+import Queries exposing (ExpositionSearch(..), SearchQuery(..))
 import RCStyles exposing (withStandardPadding)
 import Research as RC exposing (Research)
 import Screenshots
@@ -38,6 +38,7 @@ import String
 import Task
 import Time
 import Url exposing (Url)
+import Element exposing (layout)
 
 
 
@@ -66,13 +67,12 @@ type alias Model =
     , time : Int
 
     -- , keywords : Set String
-    , searchGUI : Form.Model
+    , searchGUI : Form.Model -- TODO should this be in view ?? Or maybe we just keep it around just in case ?
     , formOpen : Bool
     , submitting : Bool
     , allKeywords : List KeywordString
     , allPortals : List RC.Portal
     , currentExposition : Result String EnrichedResearch.ResearchWithKeywords
-    , simpleSearch : String
     }
 
 
@@ -113,11 +113,10 @@ init { width, height } url key =
         initView : View
         initView =
             SearchView
-                { layout = ScreenLayout Medium
-                , form = emptyForm
-                , sorting = RC.Random
+                { layout = ListLayout
+                , form = QuickSearch ""
+                , sorting = RC.Rank
                 , page = Page 1
-                , search = False
                 }
     in
     { query = ""
@@ -135,7 +134,6 @@ init { width, height } url key =
     , allPortals = []
     , time = 0
     , currentExposition = Err "initial"
-    , simpleSearch = ""
     }
         |> (\model ->
                 ( model
@@ -203,14 +201,24 @@ pageFromInt p =
     Page p
 
 
+type SearchFormView
+    = QuickSearch String
+    | AdvancedSearch SearchForm
+
+
 type alias SearchViewState =
     { layout : Layout
-    , form : SearchForm
+    , form : SearchFormView
     , sorting : RC.TitleSorting
     , page : Page
-    , search : Bool
     }
 
+type PortalSorting = PSDefault
+
+type alias PortalViewState =
+    { layout : Layout
+    , sorting : PortalSorting
+    }
 
 {-| This should always contain all the state of the view.
 If it is in this type, it should also get encoded in the URL.
@@ -220,6 +228,7 @@ type View
     = KeywordsView KeywordsViewState
     | SearchView SearchViewState
     | ExpositionView ExpositionViewState
+    | PortalView PortalViewState
 
 
 
@@ -229,8 +238,28 @@ type View
 advancedSearchToggle : View -> View
 advancedSearchToggle v =
     case v of
-        SearchView sv ->
-            SearchView { sv | search = not sv.search }
+        SearchView svs ->
+            case svs.form of
+                AdvancedSearch _ ->
+                    SearchView { svs | form = QuickSearch "" }
+
+                QuickSearch _ ->
+                    SearchView { svs | form = AdvancedSearch emptyForm }
+
+        _ ->
+            v
+
+
+setSimpleSearch : String -> View -> View
+setSimpleSearch str v =
+    case v of
+        SearchView svs ->
+            case svs.form of
+                AdvancedSearch _ ->
+                    SearchView { svs | form = QuickSearch str }
+
+                QuickSearch _ ->
+                    SearchView { svs | form = QuickSearch str }
 
         _ ->
             v
@@ -348,7 +377,7 @@ type SearchAction
     = Idle
     | Searching
     | FoundKeywords (List RC.Keyword)
-    | FoundResearch (List EnrichedResearch.ResearchWithKeywords)
+      --| FoundResearch (List EnrichedResearch.ResearchWithKeywords)
     | FoundRankedResearch (Queries.RankedResult EnrichedResearch.ResearchWithKeywords)
 
 
@@ -386,7 +415,7 @@ type Msg
     | SubmitSearch (Form.Validated String SearchForm)
     | WindowResize Int Int
     | Tick Time.Posix
-    | ToggleAdvancedSearch Bool
+    | ToggleAdvancedSearch
     | SimpleSearch String
 
 
@@ -434,9 +463,8 @@ update msg model =
                 Ok (Queries.Keywords kws) ->
                     ( { model | search = FoundKeywords kws }, Cmd.none )
 
-                Ok (Queries.Expositions exps) ->
-                    ( { model | search = FoundResearch exps }, Cmd.none )
-
+                -- Ok (Queries.Expositions exps) ->
+                --     ( { model | search = FoundResearch exps }, Cmd.none )
                 Ok (Queries.RankedExpositions rexps) ->
                     ( { model | search = FoundRankedResearch rexps } |> sortViewByRank, Cmd.none )
 
@@ -525,11 +553,11 @@ update msg model =
         Tick _ ->
             ( { model | time = model.time + 1 }, Cmd.none )
 
-        ToggleAdvancedSearch b ->
+        ToggleAdvancedSearch ->
             ( { model | view = advancedSearchToggle model.view }, Cmd.none )
 
         SimpleSearch str ->
-            ( { model | simpleSearch = str }
+            ( { model | view = setSimpleSearch str model.view }
             , sendQuery (Queries.encodeSearchQuery (Queries.FindResearch (Queries.QuickSearch str)))
             )
 
@@ -538,14 +566,9 @@ sortViewByRank : Model -> Model
 sortViewByRank model =
     case model.view of
         SearchView state ->
-            case state.form.title of
-                "" ->
-                    case state.sorting of
-                        RC.Rank ->
-                            { model | view = SearchView { state | sorting = RC.NewestFirst } }
-
-                        _ ->
-                            model
+            case state.sorting of
+                RC.Rank ->
+                    { model | view = SearchView { state | sorting = RC.NewestFirst } }
 
                 _ ->
                     { model | view = SearchView { state | sorting = RC.Rank } }
@@ -561,14 +584,26 @@ updateViewWithSearch srch v =
             KeywordsView s
 
         SearchView state ->
-            SearchView
-                { state
-                    | page = Page 1
-                    , form = srch
-                }
+            case srch.title of
+                "" ->
+                    SearchView
+                        { state
+                            | page = Page 1
+                            , form = AdvancedSearch srch
+                        }
+
+                nonEmpty ->
+                    SearchView
+                        { state
+                            | page = Page 1
+                            , sorting = RC.Rank
+                            , form = AdvancedSearch srch
+                        }
 
         ExpositionView s ->
             ExpositionView s
+
+        PortalView s ->
 
 
 urlWhereFragmentIsPath : Url -> AppUrl.AppUrl
@@ -632,7 +667,6 @@ handleUrl url model =
             )
 
         [ "keywords", "search" ] ->
-            -- keywords/search?
             let
                 q : String
                 q =
@@ -654,8 +688,6 @@ handleUrl url model =
 
                         someQ ->
                             sendQuery (Queries.encodeSearchQuery (FindKeywords someQ sorting))
-
-                --( someQ, RC.sortingToString sorting )
             in
             ( { model
                 | query = q
@@ -696,16 +728,14 @@ handleUrl url model =
             , cmd
             )
 
-        -- hallo
         _ ->
             ( { model
                 | view =
                     SearchView
                         { layout = ListLayout
-                        , form = emptyForm
+                        , form = QuickSearch ""
                         , sorting = RC.NewestFirst
                         , page = Page 1
-                        , search = False
                         }
               }
             , Nav.pushUrl model.key "/#/research/search/list"
@@ -714,6 +744,54 @@ handleUrl url model =
 
 searchViewFromUrl : AppUrl -> Layout -> ( Cmd Msg, SearchViewState )
 searchViewFromUrl url layout =
+    let
+        advanced =
+            url.queryParameters
+                |> Dict.get "advanced"
+                |> Maybe.andThen List.head
+                |> Maybe.map
+                    (\str ->
+                        case str of
+                            "0" ->
+                                False
+
+                            "1" ->
+                                True
+
+                            _ ->
+                                False
+                    )
+                |> Maybe.withDefault True
+    in
+    if advanced then
+        searchViewFromUrlAdvanced url layout
+
+    else
+        let
+            quickSearchStr =
+                url.queryParameters
+                    |> Dict.get "quicksearch"
+                    |> Maybe.andThen List.head
+                    |> Maybe.withDefault ""
+
+            cmd : Cmd msg
+            cmd =
+                sendQuery
+                    (Queries.encodeSearchQuery
+                        (FindResearch (Queries.QuickSearch quickSearchStr))
+                    )
+        in
+        ( cmd
+        , { layout = layout
+          , form = QuickSearch quickSearchStr
+          , sorting = RC.Rank
+          , page = Page 1
+          }
+        )
+
+
+searchViewFromUrlAdvanced : AppUrl -> Layout -> ( Cmd Msg, SearchViewState )
+searchViewFromUrlAdvanced url layout =
     let
         sorting : RC.TitleSorting
         sorting =
@@ -777,22 +855,18 @@ searchViewFromUrl url layout =
                 |> Maybe.andThen List.head
                 |> Maybe.withDefault ""
 
-        --                _ = Debug.log "query parameters" (url.queryParameters,portal)
         cmd : Cmd msg
         cmd =
             sendQuery
                 (Queries.encodeSearchQuery
-                    (FindResearch
-                        (Queries.QuickSearch "")
-                    )
+                    (FindResearch <| Queries.Advanced (Queries.Search { title = title, author = author, keywords = Set.fromList keywords, abstract = abstract, after = after, before = before, portal = portal }))
                 )
     in
     ( cmd
     , { layout = layout
-      , form = formWith title author keywords abstract portal after before
+      , form = AdvancedSearch (formWith title author keywords abstract portal after before)
       , sorting = sorting
       , page = Page page
-      , search = False
       }
     )
 
@@ -1110,11 +1184,14 @@ view model =
 
                 SearchView sv ->
                     case model.search of
-                        FoundResearch lst ->
-                            viewResearchResults model.simpleSearch model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions model.device sv lst
-
+                        -- FoundResearch lst ->
+                        --     let
+                        --         _ =
+                        --             Debug.log "unranked" ""
+                        --     in
+                        --     --viewResearchResults model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions model.device sv lst
                         FoundRankedResearch ranked ->
-                            viewRankedResults model.simpleSearch model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions model.device sv ranked
+                            viewRankedResults model.allPortals model.allKeywords model.submitting model.searchGUI model.screenDimensions model.device sv ranked
 
                         FoundKeywords _ ->
                             Element.none
@@ -1367,8 +1444,7 @@ anchor anchorId =
 
 
 viewRankedResults :
-    String
-    -> List RC.Portal
+    List RC.Portal
     -> List KeywordString
     -> Bool
     -> Form.Model
@@ -1377,7 +1453,7 @@ viewRankedResults :
     -> SearchViewState
     -> Queries.RankedResult ResearchWithKeywords
     -> Element Msg
-viewRankedResults simpleSearch allPortals allKeywords submitting searchFormState dimensions device sv lst =
+viewRankedResults allPortals allKeywords submitting searchFormState dimensions device sv lst =
     let
         (Page p) =
             sv.page
@@ -1493,142 +1569,13 @@ viewRankedResults simpleSearch allPortals allKeywords submitting searchFormState
     in
     column
         (RCStyles.withStandardPadding [ anchor "top", spacingXY 0 5, width fill ])
-        [ viewSearch simpleSearch sv.search device (Just sv.form) allPortals allKeywords submitting searchFormState
-        , buttons
-        , Element.el [ paddingXY 15 0, width fill, Element.centerX ] expositions
-        , pageNav numberOfPages (SearchView sv) dimensions (Page p)
-        ]
+        [ viewSearch device sv allPortals allKeywords submitting searchFormState
+        , case sv.form of
+            AdvancedSearch _ ->
+                buttons
 
-
-viewResearchResults :
-    String
-    -> List RC.Portal
-    -> List KeywordString
-    -> Bool
-    -> Form.Model
-    -> ScreenDimensions
-    -> Device
-    -> SearchViewState
-    -> List ResearchWithKeywords
-    -> Element Msg
-viewResearchResults simpleSearchQuery allPortals allKeywords submitting searchFormState dimensions device sv lst =
-    let
-        (Page p) =
-            sv.page
-
-        pageSizeFromScale : Scale -> Int
-        pageSizeFromScale scale =
-            case scale of
-                Micro ->
-                    192
-
-                Small ->
-                    128
-
-                Medium ->
-                    64
-
-                Large ->
-                    32
-
-        sorted : Scale -> List ResearchWithKeywords
-        sorted scale =
-            let
-                ps =
-                    pageSizeFromScale scale
-            in
-            lst |> Queries.Unranked |> sortResearch sv.sorting |> List.drop ((p - 1) * ps) |> List.take ps
-
-        expositions : Element Msg
-        expositions =
-            case sv.layout of
-                ListLayout ->
-                    let
-                        numCollumns =
-                            case device of
-                                Phone ->
-                                    1
-
-                                Tablet ->
-                                    3
-
-                                Desktop ->
-                                    4
-                    in
-                    sorted Medium
-                        |> List.map (viewResearchMicro numCollumns dimensions device)
-                        |> makeColumns numCollumns [ width fill, Element.spacingXY 10 10 ]
-
-                ScreenLayout scale ->
-                    viewScreenshots device dimensions sv scale (sorted scale)
-
-        urlFromLayout : SearchViewState -> Layout -> String
-        urlFromLayout st newlayout =
-            SearchView { st | layout = newlayout } |> appUrlFromView
-
-        urlFromSorting : SearchViewState -> RC.TitleSorting -> String
-        urlFromSorting st s =
-            SearchView { st | sorting = s } |> appUrlFromView
-
-        numberOfPages : Int
-        numberOfPages =
-            case sv.layout of
-                ScreenLayout scale ->
-                    lst |> List.length |> (\n -> n // pageSizeFromScale scale)
-
-                ListLayout ->
-                    lst |> List.length |> (\n -> n // 64)
-
-        scaleButton : Element Msg
-        scaleButton =
-            case sv.layout of
-                ListLayout ->
-                    Element.none
-
-                ScreenLayout scale ->
-                    Element.el
-                        [ case device of
-                            Phone ->
-                                Element.alignLeft
-
-                            Desktop ->
-                                Element.alignRight
-
-                            Tablet ->
-                                Element.alignRight
-                        ]
-                        (viewScaleSwitch scale (ScreenLayout >> urlFromLayout sv))
-
-        buttons : Element Msg
-        buttons =
-            case device of
-                Phone ->
-                    column [ width fill, spacingXY 0 5 ]
-                        [ Element.el [] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
-                        , scaleButton
-                        , Element.el [] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
-                        ]
-
-                Desktop ->
-                    row
-                        [ width fill, spacingXY 15 0 ]
-                        [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
-                        , scaleButton
-                        , Element.el [ Element.alignRight ] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
-                        ]
-
-                Tablet ->
-                    row
-                        [ width fill, spacingXY 15 0 ]
-                        [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
-                        , scaleButton
-                        , Element.el [ Element.alignRight ] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
-                        ]
-    in
-    column
-        (RCStyles.withStandardPadding [ anchor "top", spacingXY 0 5, width fill ])
-        [ viewSearch simpleSearchQuery sv.search device (Just sv.form) allPortals allKeywords submitting searchFormState
-        , buttons
+            QuickSearch _ ->
+                Element.none
         , Element.el [ paddingXY 15 0, width fill, Element.centerX ] expositions
         , pageNav numberOfPages (SearchView sv) dimensions (Page p)
         ]
@@ -1718,6 +1665,10 @@ pageToInt (Page p) =
     p
 
 
+{-| constructs a url from view. All view state needs to be represented in the url (except for the expo data)
+viewToUrl
+viewAsUrl
+-}
 appUrlFromView : View -> String
 appUrlFromView v =
     case v of
@@ -1731,6 +1682,7 @@ appUrlFromView v =
             appUrlFromExpositionView s
 
 
+maybeToList : Maybe a -> List a
 maybeToList m =
     case m of
         Nothing ->
@@ -1746,37 +1698,49 @@ dateToString date =
 
 
 appUrlFromSearchViewState : SearchViewState -> String
-appUrlFromSearchViewState sv =
+appUrlFromSearchViewState svs =
     let
         appurl =
-            case sv.layout of
-                ListLayout ->
+            case svs.form of
+                AdvancedSearch form ->
+                    case svs.layout of
+                        ListLayout ->
+                            AppUrl.fromPath [ "research", "search", "list" ]
+                                |> withParametersList
+                                    [ ( "keyword", form.keywords )
+                                    , ( "title", [ form.title ] )
+                                    , ( "author", [ form.author ] )
+                                    , ( "sorting", [ RC.titleSortingToString svs.sorting ] )
+                                    , ( "abstract", [ form.abstract ] )
+                                    , ( "page", [ pageAsString svs.page ] )
+                                    , ( "portal", [ form.portal ] )
+                                    , ( "after", maybeToList (form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
+                                    , ( "before", maybeToList (form.before |> Maybe.map dateToString) )
+                                    , ( "advanced", [ "1" ] )
+                                    ]
+
+                        ScreenLayout scale ->
+                            AppUrl.fromPath [ "research", "search", "screen" ]
+                                |> withParametersList
+                                    [ ( "keyword", form.keywords )
+                                    , ( "title", [ form.title ] )
+                                    , ( "author", [ form.author ] )
+                                    , ( "sorting", [ RC.titleSortingToString svs.sorting ] )
+                                    , ( "abstract", [ form.abstract ] )
+                                    , ( "page", [ pageAsString svs.page ] )
+                                    , ( "scale", [ scaleToString scale ] )
+                                    , ( "portal", [ form.portal ] )
+                                    , ( "after", maybeToList (form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
+                                    , ( "before", maybeToList (form.before |> Maybe.map dateToString) )
+                                    , ( "advanced", [ "1" ] )
+                                    ]
+
+                QuickSearch query ->
                     AppUrl.fromPath [ "research", "search", "list" ]
                         |> withParametersList
-                            [ ( "keyword", sv.form.keywords )
-                            , ( "title", [ sv.form.title ] )
-                            , ( "author", [ sv.form.author ] )
-                            , ( "sorting", [ RC.titleSortingToString sv.sorting ] )
-                            , ( "abstract", [ sv.form.abstract ] )
-                            , ( "page", [ pageAsString sv.page ] )
-                            , ( "portal", [ sv.form.portal ] )
-                            , ( "after", maybeToList (sv.form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
-                            , ( "before", maybeToList (sv.form.before |> Maybe.map dateToString) )
-                            ]
-
-                ScreenLayout scale ->
-                    AppUrl.fromPath [ "research", "search", "screen" ]
-                        |> withParametersList
-                            [ ( "keyword", sv.form.keywords )
-                            , ( "title", [ sv.form.title ] )
-                            , ( "author", [ sv.form.author ] )
-                            , ( "sorting", [ RC.titleSortingToString sv.sorting ] )
-                            , ( "abstract", [ sv.form.abstract ] )
-                            , ( "page", [ pageAsString sv.page ] )
-                            , ( "scale", [ scaleToString scale ] )
-                            , ( "portal", [ sv.form.portal ] )
-                            , ( "after", maybeToList (sv.form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
-                            , ( "before", maybeToList (sv.form.before |> Maybe.map dateToString) )
+                            [ ( "quickSearch", [ query ] )
+                            , ( "sorting", [ RC.titleSortingToString svs.sorting ] )
+                            , ( "advanced", [ "0" ] )
                             ]
     in
     appurl |> AppUrl.toString |> prefixHash
@@ -1966,9 +1930,8 @@ viewKeywords model keywordview =
                             [ Element.text "working..."
                             ]
 
-                    FoundResearch _ ->
-                        Element.text "found something else"
-
+                    -- FoundResearch _ ->
+                    --     Element.text "found something else"
                     FoundRankedResearch _ ->
                         Element.text "found something else"
                 ]
@@ -2560,61 +2523,27 @@ fieldView formState label field =
         ]
 
 
-
--- portalField allPortals formState label field =
---     let
---         allPortalStrings : List String
---         allPortalStrings =
---             List.map .name allPortals
---     in
---     div []
---         [ Html.label labelStyle
---             [ Html.text (label ++ " ")
---             , field |> Form.FieldView.input ([ Attr.list "portal-field", Attr.attribute "autocomplete" "off" ] ++ fieldStyle)
---             , Html.datalist [ Attr.id "portal-field" ]
---                 (List.map
---                     (\portal ->
---                         Html.option [ Attr.value portal ] []
---                     )
---                     allPortalStrings
---                 )
---             ]
---         , (if formState.submitAttempted then
---             formState.errors
---                 |> Form.errorsForField field
---                 |> List.map
---                     (\error ->
---                         Html.li [] [ Html.text error ]
---                     )
---            else
---             []
---           )
---             |> Html.ul [ Attr.style "color" "red" ]
---         ]
-
-
-viewSearch : String -> Bool -> Device -> Maybe SearchForm -> List RC.Portal -> List KeywordString -> Bool -> Form.Model -> Element Msg
-viewSearch simpleSearchQuery isOpen device initialForm portals keywords submitting searchFormState =
+viewSearch : Device -> SearchViewState -> List RC.Portal -> List KeywordString -> Bool -> Form.Model -> Element Msg
+viewSearch device svs portals keywords submitting searchFormState =
     let
         toggleView =
-            Element.row [ width fill, Element.spacingXY 10 0 ]
-                [ Element.Input.text [ Element.centerX, width (Element.fillPortion 3) ]
-                    { onChange = SimpleSearch
-                    , text = simpleSearchQuery
-                    , placeholder = Nothing
-                    , label = Element.Input.labelLeft [] <| Element.text "Search"
-                    }
-                , Element.Input.checkbox
-                    [ Font.size 12, Element.width (Element.fillPortion 1) ]
+            Element.el [ width fill, Element.spacingXY 10 0 ] <|
+                Element.Input.checkbox
+                    [ Font.size 12, Element.width (Element.px 100), Element.alignRight ]
                     { label = Element.Input.labelRight [] (Element.text "advanced search")
                     , icon = Element.Input.defaultCheckbox
-                    , onChange = ToggleAdvancedSearch
-                    , checked = isOpen
+                    , onChange = always ToggleAdvancedSearch
+                    , checked =
+                        case svs.form of
+                            AdvancedSearch _ ->
+                                True
+
+                            _ ->
+                                False
                     }
-                ]
     in
-    case initialForm of
-        Just formInput ->
+    case svs.form of
+        AdvancedSearch frm ->
             Element.el
                 [ paddingXY 15 15
                 , Border.solid
@@ -2623,26 +2552,31 @@ viewSearch simpleSearchQuery isOpen device initialForm portals keywords submitti
                 , width fill
                 ]
             <|
-                if isOpen then
-                    Element.column []
-                        [ toggleView
-                        , Element.html
-                            (searchGUI device portals keywords
-                                |> Form.renderHtml
-                                    { submitting = submitting
-                                    , state = searchFormState
-                                    , toMsg = FormMsg
-                                    }
-                                    (Form.options "search"
-                                        |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
-                                        |> Form.withInput formInput
-                                    )
-                                    []
-                            )
-                        ]
+                Element.column []
+                    [ toggleView
+                    , Element.html
+                        (searchGUI device portals keywords
+                            |> Form.renderHtml
+                                { submitting = submitting
+                                , state = searchFormState
+                                , toMsg = FormMsg
+                                }
+                                (Form.options "search"
+                                    |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
+                                    |> Form.withInput frm
+                                )
+                                []
+                        )
+                    ]
 
-                else
-                    toggleView
-
-        Nothing ->
-            Element.text "loading form data.."
+        QuickSearch simpleSearchQuery ->
+            Element.row [ width fill ]
+                [ Element.Input.text
+                    [ Element.centerX, width (Element.fillPortion 3) ]
+                    { onChange = SimpleSearch
+                    , text = simpleSearchQuery
+                    , placeholder = Nothing
+                    , label = Element.Input.labelLeft [] <| Element.text "search"
+                    }
+                , toggleView
+                ]

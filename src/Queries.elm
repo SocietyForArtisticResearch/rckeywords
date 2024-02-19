@@ -45,6 +45,7 @@ import Json.Encode as E
 import List.Extra
 import Research as RC exposing (Research)
 import Set exposing (Set)
+import String.Normalize
 import Time
 import Toc exposing (decode)
 
@@ -308,7 +309,7 @@ decodeExpositionSearch =
                         field "search" decodeSearch |> D.map Advanced
 
                     _ ->
-                        D.fail "corrupted json, expected { \"type\" : \"quick\" }"
+                        D.fail "corrupted json, expected { \"type\" : \"quicksearch\" }"
             )
 
 
@@ -367,9 +368,10 @@ type SearchQuery
     | GetExposition RC.ExpositionID
 
 
-type SearchResult
-    = Expositions (List (RC.Research ResearchWithKeywords))
-    | RankedExpositions (RankedResult ResearchWithKeywords)
+type
+    SearchResult
+    --= Expositions (List (RC.Research ResearchWithKeywords))
+    = RankedExpositions (RankedResult ResearchWithKeywords)
     | Keywords (List RC.Keyword)
     | AllKeywords (List RC.Keyword)
     | AllPortals (List RC.Portal)
@@ -381,9 +383,8 @@ decodeSearchResult =
     let
         parseResult typ =
             case typ of
-                "expositions" ->
-                    D.field "expositions" (D.list EnrichedResearch.decoder |> D.map Expositions)
-
+                -- "expositions" ->
+                --     D.field "expositions" (D.list EnrichedResearch.decoder |> D.map Expositions)
                 "ranked-expositions" ->
                     D.field "expositions" (decodeRanked EnrichedResearch.decoder) |> D.map RankedExpositions
 
@@ -456,12 +457,11 @@ decodeRanked decoder =
 encodeSearchResult : SearchResult -> E.Value
 encodeSearchResult result =
     case result of
-        Expositions exps ->
-            E.object
-                [ ( "type", E.string "expositions" )
-                , ( "expositions", E.list EnrichedResearch.encodeResearchWithKeywords exps )
-                ]
-
+        -- Expositions exps ->
+        --     E.object
+        --         [ ( "type", E.string "expositions" )
+        --         , ( "expositions", E.list EnrichedResearch.encodeResearchWithKeywords exps )
+        --         ]
         RankedExpositions exps ->
             E.object
                 [ ( "type", E.string "ranked-expositions" )
@@ -683,16 +683,48 @@ findResearchWithTitle q lst =
 findResearchWithAuthor : String -> RankedResult (Research r) -> RankedResult (Research r)
 findResearchWithAuthor qauthor lst =
     let
+        simplified s =
+            s |> String.toLower |> String.Normalize.removeDiacritics
+
         f : Research r -> Bool
         f r =
-            r.author |> RC.getName |> String.toLower |> String.contains (String.toLower qauthor)
+            r.author |> RC.getName |> simplified |> String.contains (simplified qauthor)
+
+        fragments : Research r -> Bool
+        fragments r =
+            let
+                authorname =
+                    r.author |> RC.getName |> simplified
+
+                test =
+                    qauthor |> simplified |> String.split " " |> List.any (\qFrag -> String.contains qFrag authorname)
+            in
+            test
     in
     case qauthor of
         "" ->
             lst
 
         _ ->
-            filterRanked f lst
+            let
+                res =
+                    filterRanked f lst
+            in
+            case toList res of
+                [] ->
+                    -- let
+                    --     _ =
+                    --         Debug.log "nothing was found, do a more pessimistic search" ""
+                    -- in
+                    filterRanked fragments lst
+
+                _ ->
+                    res
+
+
+
+-- _ ->
+--     res
 
 
 findResearchAfter : Date -> RankedResult (Research r) -> RankedResult (Research r)

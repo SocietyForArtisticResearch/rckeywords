@@ -7,7 +7,7 @@ import Browser.Events as Events
 import Browser.Navigation as Nav
 import Date exposing (Date)
 import Dict
-import Element exposing (Element, column, el, fill, height, padding, paddingEach, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
+import Element exposing (Element, column, el, fill, height, layout, padding, paddingEach, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
 import Element.Background
 import Element.Border as Border
 import Element.Font as Font
@@ -38,7 +38,6 @@ import String
 import Task
 import Time
 import Url exposing (Url)
-import Element exposing (layout)
 
 
 
@@ -213,12 +212,17 @@ type alias SearchViewState =
     , page : Page
     }
 
-type PortalSorting = PSDefault
 
-type alias PortalViewState =
-    { layout : Layout
-    , sorting : PortalSorting
-    }
+
+{-
+   type PortalSorting = PSDefault
+
+   type alias PortalViewState =
+       { layout : Layout
+       , sorting : PortalSorting
+       }
+-}
+
 
 {-| This should always contain all the state of the view.
 If it is in this type, it should also get encoded in the URL.
@@ -228,10 +232,10 @@ type View
     = KeywordsView KeywordsViewState
     | SearchView SearchViewState
     | ExpositionView ExpositionViewState
-    | PortalView PortalViewState
 
 
 
+-- | PortalView PortalViewState
 -- just a helper
 
 
@@ -602,8 +606,6 @@ updateViewWithSearch srch v =
 
         ExpositionView s ->
             ExpositionView s
-
-        PortalView s ->
 
 
 urlWhereFragmentIsPath : Url -> AppUrl.AppUrl

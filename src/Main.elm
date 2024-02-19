@@ -116,6 +116,7 @@ init { width, height } url key =
                 , form = QuickSearch ""
                 , sorting = RC.Rank
                 , page = Page 1
+                , interface = Show
                 }
     in
     { query = ""
@@ -210,7 +211,13 @@ type alias SearchViewState =
     , form : SearchFormView
     , sorting : RC.TitleSorting
     , page : Page
+    , interface : Visibility
     }
+
+
+type Visibility
+    = Show
+    | Hide
 
 
 
@@ -738,6 +745,7 @@ handleUrl url model =
                         , form = QuickSearch ""
                         , sorting = RC.NewestFirst
                         , page = Page 1
+                        , interface = Show
                         }
               }
             , Nav.pushUrl model.key "/#/research/search/list"
@@ -782,14 +790,35 @@ searchViewFromUrl url layout =
                     (Queries.encodeSearchQuery
                         (FindResearch (Queries.QuickSearch quickSearchStr))
                     )
+
+            interface =
+                interfaceFromUrl url
         in
         ( cmd
         , { layout = layout
           , form = QuickSearch quickSearchStr
           , sorting = RC.Rank
           , page = Page 1
+          , interface = interface
           }
         )
+
+
+interfaceFromUrl : AppUrl.AppUrl -> Visibility
+interfaceFromUrl url =
+    url.queryParameters
+        |> Dict.get "interface"
+        |> Maybe.andThen List.head
+        |> Maybe.map
+            (\str ->
+                case str of
+                    "hide" ->
+                        Hide
+
+                    _ ->
+                        Show
+            )
+        |> Maybe.withDefault Show
 
 
 searchViewFromUrlAdvanced : AppUrl -> Layout -> ( Cmd Msg, SearchViewState )
@@ -869,6 +898,7 @@ searchViewFromUrlAdvanced url layout =
       , form = AdvancedSearch (formWith title author keywords abstract portal after before)
       , sorting = sorting
       , page = Page page
+      , interface = interfaceFromUrl url
       }
     )
 
@@ -1159,10 +1189,29 @@ linkStyle active style =
 
 viewNav : View -> Element Msg
 viewNav currentView =
-    Element.row [ paddingXY 0 0, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-        [ Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search/list", label = Element.text "Search" }
-        , Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "Keyword Map" }
-        ]
+    if hideInterface currentView then
+        Element.none
+
+    else
+        Element.row [ paddingXY 0 0, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+            [ Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search/list", label = Element.text "Search" }
+            , Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "Keyword Map" }
+            ]
+
+
+hideInterface : View -> Bool
+hideInterface v =
+    case v of
+        SearchView sv ->
+            case sv.interface of
+                Show ->
+                    False
+
+                Hide ->
+                    True
+
+        _ ->
+            False
 
 
 isSearchView : View -> Bool
@@ -1572,11 +1621,16 @@ viewRankedResults allPortals allKeywords submitting searchFormState dimensions d
     column
         (RCStyles.withStandardPadding [ anchor "top", spacingXY 0 5, width fill ])
         [ viewSearch device sv allPortals allKeywords submitting searchFormState
-        , case sv.form of
-            AdvancedSearch _ ->
-                buttons
+        , case sv.interface of
+            Show ->
+                case sv.form of
+                    AdvancedSearch _ ->
+                        buttons
 
-            QuickSearch _ ->
+                    QuickSearch _ ->
+                        Element.none
+
+            Hide ->
                 Element.none
         , Element.el [ paddingXY 15 0, width fill, Element.centerX ] expositions
         , pageNav numberOfPages (SearchView sv) dimensions (Page p)
@@ -2546,30 +2600,35 @@ viewSearch device svs portals keywords submitting searchFormState =
     in
     case svs.form of
         AdvancedSearch frm ->
-            Element.el
-                [ paddingXY 15 15
-                , Border.solid
-                , Border.color black
-                , Border.width 1
-                , width fill
-                ]
-            <|
-                Element.column []
-                    [ toggleView
-                    , Element.html
-                        (searchGUI device portals keywords
-                            |> Form.renderHtml
-                                { submitting = submitting
-                                , state = searchFormState
-                                , toMsg = FormMsg
-                                }
-                                (Form.options "search"
-                                    |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
-                                    |> Form.withInput frm
+            case svs.interface of
+                Show ->
+                    Element.el
+                        [ paddingXY 15 15
+                        , Border.solid
+                        , Border.color black
+                        , Border.width 1
+                        , width fill
+                        ]
+                    <|
+                        Element.column []
+                            [ toggleView
+                            , Element.html
+                                (searchGUI device portals keywords
+                                    |> Form.renderHtml
+                                        { submitting = submitting
+                                        , state = searchFormState
+                                        , toMsg = FormMsg
+                                        }
+                                        (Form.options "search"
+                                            |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
+                                            |> Form.withInput frm
+                                        )
+                                        []
                                 )
-                                []
-                        )
-                    ]
+                            ]
+
+                Hide ->
+                    Element.none
 
         QuickSearch simpleSearchQuery ->
             Element.row [ width fill ]

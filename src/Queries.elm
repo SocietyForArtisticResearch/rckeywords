@@ -651,7 +651,7 @@ findResearchWithTitle q lst =
                     , Fuzzy.insertPenalty 5
                     , Fuzzy.movePenalty 50
                     ]
-                    []
+                    [ " " ]
                     q
                     research.title
                     |> .score
@@ -675,7 +675,7 @@ findResearchWithTitle q lst =
                             RankedResult rlst ->
                                 rlst
                                     |> List.filter
-                                        (\x -> getRank x |> (\score -> score < 500))
+                                        (\x -> getRank x |> (\score -> score < 50))
                                     |> RankedResult
                    )
 

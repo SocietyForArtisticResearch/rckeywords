@@ -218,6 +218,7 @@ type alias SearchViewState =
 type Visibility
     = Show
     | Hide
+    | HidePortal
 
 
 
@@ -417,8 +418,8 @@ problemize p =
 
 type Msg
     = ChangedQuery String
-    | UrlChanged Url.Url
-    | LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url -- this is the url actually changing
+    | LinkClicked Browser.UrlRequest -- This is the user clicking something
     | ReceiveResults Json.Decode.Value
     | HitEnter
     | NoOp
@@ -477,7 +478,7 @@ update msg model =
                 -- Ok (Queries.Expositions exps) ->
                 --     ( { model | search = FoundResearch exps }, Cmd.none )
                 Ok (Queries.RankedExpositions rexps) ->
-                    ( { model | search = FoundRankedResearch rexps } |> sortViewByRank, Cmd.none )
+                    ( { model | search = FoundRankedResearch rexps }, Cmd.none )
 
                 Ok (Queries.AllKeywords kws) ->
                     let
@@ -571,21 +572,6 @@ update msg model =
             ( { model | view = setSimpleSearch str model.view }
             , sendQuery (Queries.encodeSearchQuery (Queries.FindResearch (Queries.QuickSearch str)))
             )
-
-
-sortViewByRank : Model -> Model
-sortViewByRank model =
-    case model.view of
-        SearchView state ->
-            case state.sorting of
-                RC.Rank ->
-                    { model | view = SearchView { state | sorting = RC.NewestFirst } }
-
-                _ ->
-                    { model | view = SearchView { state | sorting = RC.Rank } }
-
-        _ ->
-            model
 
 
 updateViewWithSearch : SearchForm -> View -> View
@@ -742,7 +728,7 @@ handleUrl url model =
                 | view =
                     SearchView
                         { layout = ListLayout
-                        , form = QuickSearch ""
+                        , form = AdvancedSearch emptyForm
                         , sorting = RC.NewestFirst
                         , page = Page 1
                         , interface = Show
@@ -791,7 +777,7 @@ searchViewFromUrl url layout =
                         (FindResearch (Queries.QuickSearch quickSearchStr))
                     )
 
-            interface =
+            currentInterface =
                 interfaceFromUrl url
         in
         ( cmd
@@ -799,7 +785,7 @@ searchViewFromUrl url layout =
           , form = QuickSearch quickSearchStr
           , sorting = RC.Rank
           , page = Page 1
-          , interface = interface
+          , interface = currentInterface
           }
         )
 
@@ -814,6 +800,12 @@ interfaceFromUrl url =
                 case str of
                     "hide" ->
                         Hide
+
+                    "show" ->
+                        Show
+
+                    "hideportal" ->
+                        HidePortal
 
                     _ ->
                         Show
@@ -983,10 +975,6 @@ viewResearchMicro numCollums screen device research =
 
         imageUrl : String
         imageUrl =
-            -- let
-            --     _ =
-            --         Debug.log "thumb" research.thumbnail
-            -- in
             case research.thumbnail of
                 Just thumb ->
                     thumb
@@ -1189,29 +1177,25 @@ linkStyle active style =
 
 viewNav : View -> Element Msg
 viewNav currentView =
-    if hideInterface currentView then
-        Element.none
-
-    else
-        Element.row [ paddingXY 0 0, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
-            [ Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search/list", label = Element.text "Search" }
-            , Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "Keyword Map" }
-            ]
-
-
-hideInterface : View -> Bool
-hideInterface v =
-    case v of
-        SearchView sv ->
-            case sv.interface of
-                Show ->
-                    False
-
-                Hide ->
-                    True
+    case interface currentView of
+        Just Hide ->
+            Element.none
 
         _ ->
-            False
+            Element.row [ paddingXY 0 0, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
+                [ Element.link (linkStyle (isSearchView currentView) BigLink) { url = "/#/research/search/list", label = Element.text "Search" }
+                , Element.link (linkStyle (isKeywordView currentView) BigLink) { url = "/#/keywords", label = Element.text "Keyword Map" }
+                ]
+
+
+interface : View -> Maybe Visibility
+interface v =
+    case v of
+        SearchView sv ->
+            Just sv.interface
+
+        _ ->
+            Nothing
 
 
 isSearchView : View -> Bool
@@ -1621,17 +1605,24 @@ viewRankedResults allPortals allKeywords submitting searchFormState dimensions d
     column
         (RCStyles.withStandardPadding [ anchor "top", spacingXY 0 5, width fill ])
         [ viewSearch device sv allPortals allKeywords submitting searchFormState
-        , case sv.interface of
-            Show ->
+        , let
+            btns =
                 case sv.form of
                     AdvancedSearch _ ->
                         buttons
 
                     QuickSearch _ ->
                         Element.none
+          in
+          case sv.interface of
+            Show ->
+                btns
 
             Hide ->
                 Element.none
+
+            HidePortal ->
+                btns
         , Element.el [ paddingXY 15 0, width fill, Element.centerX ] expositions
         , pageNav numberOfPages (SearchView sv) dimensions (Page p)
         ]
@@ -2353,6 +2344,7 @@ keywordField keywords formState label field =
 --searchGUI : List { a | name : String } -> List KeywordString -> Form.Form String { combine : Validation.Validation String SearchForm Never constraints3, view : { b | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg) } parsedCombined SearchForm
 
 
+selectField : { a | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Field String parsed2 (FieldView.Options String) -> Html msg
 selectField formState label field =
     div [ Attr.style "width" "100%" ]
         [ Html.label labelStyle
@@ -2374,9 +2366,10 @@ selectField formState label field =
         ]
 
 
-searchGUI : Device -> List { a | name : String } -> List KeywordString -> Form.Form String { combine : Validation.Validation String SearchForm Never constraints3, view : { b | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg) } parsedCombined { title : String, author : String, keywords : List String, portal : String, after : Maybe Date, before : Maybe Date, abstract : String }
-searchGUI device portals keywords =
+searchGUI : Bool -> Device -> List { a | name : String } -> List KeywordString -> Form.Form String { combine : Validation.Validation String SearchForm Never constraints3, view : { b | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg) } parsedCombined { title : String, author : String, keywords : List String, portal : String, after : Maybe Date, before : Maybe Date, abstract : String }
+searchGUI hidePortal device portals keywords =
     let
+        parseKeyword : Maybe String -> Result String (Maybe String)
         parseKeyword mk =
             case mk of
                 Nothing ->
@@ -2442,7 +2435,11 @@ searchGUI device portals keywords =
                                             [ fieldView info "after" after
                                             , fieldView info "before" before
                                             ]
-                                        , div [] [ selectField info "portal" portal ]
+                                        , if hidePortal then
+                                            div [] []
+
+                                          else
+                                            div [] [ selectField info "portal" portal ]
                                         ]
 
                                 Desktop ->
@@ -2453,7 +2450,11 @@ searchGUI device portals keywords =
                                             , keywordField keywords info "keywords" keyword1
                                             , keywordField keywords info "" keyword2
                                             , fieldView info "abstract" abstract
-                                            , selectField info "portal" portal
+                                            , if hidePortal then
+                                                div [] []
+
+                                              else
+                                                div [] [ selectField info "portal" portal ]
                                             ]
                                         , rowdiv
                                             [ fieldView info "after" after
@@ -2468,7 +2469,11 @@ searchGUI device portals keywords =
                                         , keywordField keywords info "keywords" keyword1
                                         , keywordField keywords info "" keyword2
                                         , fieldView info "abstact" abstract
-                                        , selectField info "portal" portal
+                                        , if hidePortal then
+                                            div [] []
+
+                                          else
+                                            div [] [ selectField info "portal" portal ]
                                         , fieldView info "after" after
                                         , fieldView info "before" before
                                         ]
@@ -2489,7 +2494,7 @@ searchGUI device portals keywords =
         |> Form.field "keyword 1" (Field.text |> Field.search |> Field.withInitialValue getFirstKeyword)
         |> Form.field "keyword 2" (Field.text |> Field.search |> Field.withInitialValue getSecondKeyword)
         |> Form.field "abstract" (Field.text |> Field.search |> Field.withInitialValue .abstract)
-        |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "Error !!!") |> Field.withInitialValue (\_ -> "All portals"))
+        |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "Error !!!") |> Field.withInitialValue (\frm -> frm.portal))
         |> Form.field "after" (Field.date { invalid = \_ -> "invalid date" })
         |> Form.field "before" (Field.date { invalid = \_ -> "invalid date" })
 
@@ -2613,7 +2618,33 @@ viewSearch device svs portals keywords submitting searchFormState =
                         Element.column []
                             [ toggleView
                             , Element.html
-                                (searchGUI device portals keywords
+                                (searchGUI False device portals keywords
+                                    |> Form.renderHtml
+                                        { submitting = submitting
+                                        , state = searchFormState
+                                        , toMsg = FormMsg
+                                        }
+                                        (Form.options "search"
+                                            |> Form.withOnSubmit (\record -> SubmitSearch record.parsed)
+                                            |> Form.withInput frm
+                                        )
+                                        []
+                                )
+                            ]
+
+                HidePortal ->
+                    Element.el
+                        [ paddingXY 15 15
+                        , Border.solid
+                        , Border.color black
+                        , Border.width 1
+                        , width fill
+                        ]
+                    <|
+                        Element.column []
+                            [ toggleView
+                            , Element.html
+                                (searchGUI True device portals keywords
                                     |> Form.renderHtml
                                         { submitting = submitting
                                         , state = searchFormState

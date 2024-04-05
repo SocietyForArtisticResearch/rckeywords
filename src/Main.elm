@@ -566,7 +566,11 @@ update msg model =
             ( { model | time = model.time + 1 }, Cmd.none )
 
         ToggleAdvancedSearch ->
-            ( { model | view = advancedSearchToggle model.view }, Cmd.none )
+            let
+                newView =
+                    advancedSearchToggle model.view
+            in
+            ( model, Nav.pushUrl model.key (appUrlFromView newView) )
 
         SimpleSearch str ->
             ( { model | view = setSimpleSearch str model.view }
@@ -853,7 +857,7 @@ searchViewFromUrlAdvanced url layout =
             url.queryParameters
                 |> Dict.get "portal"
                 |> Maybe.andThen List.head
-                |> Maybe.withDefault ""
+                |> Maybe.withDefault "Any portal"
 
         after : Maybe Date
         after =
@@ -2242,7 +2246,7 @@ emptyForm =
     { title = ""
     , author = ""
     , keywords = []
-    , portal = ""
+    , portal = "Any portal"
     , after = Nothing
     , before = Nothing
     , abstract = ""
@@ -2388,7 +2392,7 @@ searchGUI hidePortal device portals keywords =
 
         portalsAsOptions : List ( String, String )
         portalsAsOptions =
-            ( "", "All portals" ) :: (portals |> List.map (\p -> ( p.name, p.name )))
+            ( "Any portal", "Any portal" ) :: (portals |> List.map (\p -> ( p.name, p.name )))
 
         rowdiv elements =
             div [ Attr.style "display" "flex" ] elements
@@ -2494,9 +2498,19 @@ searchGUI hidePortal device portals keywords =
         |> Form.field "keyword 1" (Field.text |> Field.search |> Field.withInitialValue getFirstKeyword)
         |> Form.field "keyword 2" (Field.text |> Field.search |> Field.withInitialValue getSecondKeyword)
         |> Form.field "abstract" (Field.text |> Field.search |> Field.withInitialValue .abstract)
-        |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "Error !!!") |> Field.withInitialValue (\frm -> frm.portal))
+        |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "") |> Field.withInitialValue (\frm -> frm.portal))
         |> Form.field "after" (Field.date { invalid = \_ -> "invalid date" })
         |> Form.field "before" (Field.date { invalid = \_ -> "invalid date" })
+
+
+
+-- preventEmpty : String -> String
+-- preventEmpty str =
+--     case str of
+--         "" ->
+--             ""
+--         _ ->
+--             str
 
 
 getFirstKeyword : SearchForm -> String

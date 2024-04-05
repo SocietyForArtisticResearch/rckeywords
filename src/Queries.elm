@@ -776,6 +776,12 @@ findResearchWithPortal portalq lst =
         "" ->
             lst
 
+        "All Portals" ->
+            lst
+
+        "Any portal" ->
+            lst
+
         nonemptyq ->
             let
                 f : Research r -> Bool

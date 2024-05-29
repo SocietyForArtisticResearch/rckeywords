@@ -2248,7 +2248,7 @@ type alias SearchForm =
     , portal : String
     , after : Maybe Date
     , before : Maybe Date
-    , status : PublicationStatus
+    , status : Maybe PublicationStatus
     }
 
 
@@ -2271,7 +2271,7 @@ emptyForm =
     , after = Nothing
     , before = Nothing
     , abstract = ""
-    , status = Undecided
+    , status = Nothing
     }
 
 
@@ -2284,7 +2284,7 @@ formWith title author keywords abstract portal after before status =
     , portal = portal
     , after = after
     , before = before
-    , status = status |> Maybe.withDefault Undecided
+    , status = status
     }
 
 
@@ -2293,9 +2293,6 @@ searchForm title author keyword1 keyword2 abstract portal after before status =
     let
         nothingIsJustEmpty =
             Maybe.withDefault ""
-
-        _ =
-            Debug.todo "note the always !!!"
     in
     SearchForm
         (nothingIsJustEmpty title)
@@ -2305,7 +2302,7 @@ searchForm title author keyword1 keyword2 abstract portal after before status =
         (nothingIsJustEmpty portal)
         after
         before
-        (status |> always Published)
+        status
 
 
 

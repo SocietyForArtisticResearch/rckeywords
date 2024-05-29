@@ -6866,8 +6866,7 @@ var $author$project$Main$ResultProblem = function (a) {
 var $author$project$Main$AdvancedSearch = function (a) {
 	return {$: 'AdvancedSearch', a: a};
 };
-var $author$project$Research$Undecided = {$: 'Undecided'};
-var $author$project$Main$emptyForm = {_abstract: '', after: $elm$core$Maybe$Nothing, author: '', before: $elm$core$Maybe$Nothing, keywords: _List_Nil, portal: 'Any portal', status: $author$project$Research$Undecided, title: ''};
+var $author$project$Main$emptyForm = {_abstract: '', after: $elm$core$Maybe$Nothing, author: '', before: $elm$core$Maybe$Nothing, keywords: _List_Nil, portal: 'Any portal', status: $elm$core$Maybe$Nothing, title: ''};
 var $author$project$Main$advancedSearchToggle = function (v) {
 	if (v.$ === 'SearchView') {
 		var svs = v.a;
@@ -7505,6 +7504,7 @@ var $author$project$Queries$RankedExpositions = function (a) {
 };
 var $author$project$Research$InProgress = {$: 'InProgress'};
 var $author$project$Research$Published = {$: 'Published'};
+var $author$project$Research$Undecided = {$: 'Undecided'};
 var $elm_community$json_extra$Json$Decode$Extra$andMap = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
 var $author$project$Research$Author = function (a) {
 	return {$: 'Author', a: a};
@@ -8767,16 +8767,7 @@ var $author$project$Queries$Search = function (a) {
 };
 var $author$project$Main$formWith = F8(
 	function (title, author, keywords, _abstract, portal, after, before, status) {
-		return {
-			_abstract: _abstract,
-			after: after,
-			author: author,
-			before: before,
-			keywords: keywords,
-			portal: portal,
-			status: A2($elm$core$Maybe$withDefault, $author$project$Research$Undecided, status),
-			title: title
-		};
+		return {_abstract: _abstract, after: after, author: author, before: before, keywords: keywords, portal: portal, status: status, title: title};
 	});
 var $elm$core$Set$Set_elm_builtin = function (a) {
 	return {$: 'Set_elm_builtin', a: a};
@@ -21198,7 +21189,7 @@ var $author$project$Main$searchForm = F9(
 			nothingIsJustEmpty(portal),
 			after,
 			before,
-			A2($elm$core$Basics$always, $author$project$Research$Published, status));
+			status);
 	});
 var $dillonkearns$elm_form$Internal$Input$Options = F2(
 	function (a, b) {
@@ -21343,8 +21334,8 @@ var $dillonkearns$elm_form$Form$FieldView$select = F3(
 				},
 				possibleValues));
 	});
-var $author$project$Main$selectField = F3(
-	function (formState, label, field) {
+var $author$project$Main$selectField = F4(
+	function (displayWith, formState, label, field) {
 		return A2(
 			$elm$html$Html$div,
 			_List_fromArray(
@@ -21363,7 +21354,9 @@ var $author$project$Main$selectField = F3(
 							$dillonkearns$elm_form$Form$FieldView$select,
 							$author$project$Main$dropdownStyle,
 							function (p) {
-								return _Utils_Tuple2(_List_Nil, p);
+								return _Utils_Tuple2(
+									_List_Nil,
+									displayWith(p));
 							},
 							field)
 						])),
@@ -21433,9 +21426,9 @@ var $author$project$Main$searchGUI = F4(
 	function (hidePortal, device, portals, keywords) {
 		var statusAsOptions = _List_fromArray(
 			[
-				_Utils_Tuple2('Published', 'Published'),
-				_Utils_Tuple2('In progress', 'InProgress'),
-				_Utils_Tuple2('Undecided', 'Undecided')
+				_Utils_Tuple2('Published', $author$project$Research$Published),
+				_Utils_Tuple2('In progress', $author$project$Research$InProgress),
+				_Utils_Tuple2('Undecided', $author$project$Research$Undecided)
 			]);
 		var rowdiv = function (elements) {
 			return A2(
@@ -21484,7 +21477,7 @@ var $author$project$Main$searchGUI = F4(
 			A2(
 				$dillonkearns$elm_form$Form$Field$withInitialValue,
 				function (_v5) {
-					return '';
+					return $author$project$Research$Published;
 				},
 				A2(
 					$dillonkearns$elm_form$Form$Field$select,
@@ -21653,7 +21646,7 @@ var $author$project$Main$searchGUI = F4(
 																											_List_Nil,
 																											_List_fromArray(
 																												[
-																													A3($author$project$Main$selectField, info, 'portal', portal)
+																													A4($author$project$Main$selectField, $elm$core$Basics$identity, info, 'portal', portal)
 																												]))
 																										]));
 																							case 'Desktop':
@@ -21674,7 +21667,7 @@ var $author$project$Main$searchGUI = F4(
 																													_List_Nil,
 																													_List_fromArray(
 																														[
-																															A3($author$project$Main$selectField, info, 'portal', portal)
+																															A4($author$project$Main$selectField, $elm$core$Basics$identity, info, 'portal', portal)
 																														]))
 																												])),
 																											rowdiv(
@@ -21682,7 +21675,7 @@ var $author$project$Main$searchGUI = F4(
 																												[
 																													A3($author$project$Main$fieldView, info, 'after', after),
 																													A3($author$project$Main$fieldView, info, 'before', before),
-																													A3($author$project$Main$selectField, info, 'status', status)
+																													A4($author$project$Main$selectField, fromPublication, info, 'status', status)
 																												]))
 																										]));
 																							default:
@@ -21700,7 +21693,7 @@ var $author$project$Main$searchGUI = F4(
 																											_List_Nil,
 																											_List_fromArray(
 																												[
-																													A3($author$project$Main$selectField, info, 'portal', portal)
+																													A4($author$project$Main$selectField, $elm$core$Basics$identity, info, 'portal', portal)
 																												])),
 																											A3($author$project$Main$fieldView, info, 'after', after),
 																											A3($author$project$Main$fieldView, info, 'before', before)

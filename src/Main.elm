@@ -31,7 +31,7 @@ import List
 import Page exposing (Scale(..), ScreenDimensions, makeNumColumns, transpose)
 import Queries exposing (ExpositionSearch(..), SearchQuery(..))
 import RCStyles exposing (withStandardPadding)
-import Research as RC exposing (Research)
+import Research as RC exposing (PublicationStatus(..), Research)
 import Screenshots
 import Set
 import String
@@ -882,16 +882,36 @@ searchViewFromUrlAdvanced url layout =
                 |> Maybe.andThen List.head
                 |> Maybe.withDefault ""
 
+        publicationStatus : Maybe PublicationStatus
+        publicationStatus =
+            url.queryParameters
+                |> Dict.get "status"
+                |> Maybe.andThen List.head
+                |> Maybe.map Queries.publicationFilterOfString
+
         cmd : Cmd msg
         cmd =
             sendQuery
                 (Queries.encodeSearchQuery
-                    (FindResearch <| Queries.Advanced (Queries.Search { title = title, author = author, keywords = Set.fromList keywords, abstract = abstract, after = after, before = before, portal = portal }))
+                    (FindResearch <|
+                        Queries.Advanced
+                            (Queries.Search
+                                { title = title
+                                , author = author
+                                , keywords = Set.fromList keywords
+                                , abstract = abstract
+                                , after = after
+                                , before = before
+                                , portal = portal
+                                , publicationStatus = publicationStatus
+                                }
+                            )
+                    )
                 )
     in
     ( cmd
     , { layout = layout
-      , form = AdvancedSearch (formWith title author keywords abstract portal after before)
+      , form = AdvancedSearch (formWith title author keywords abstract portal after before publicationStatus)
       , sorting = sorting
       , page = Page page
       , interface = interfaceFromUrl url
@@ -2228,6 +2248,7 @@ type alias SearchForm =
     , portal : String
     , after : Maybe Date
     , before : Maybe Date
+    , status : PublicationStatus
     }
 
 
@@ -2250,11 +2271,12 @@ emptyForm =
     , after = Nothing
     , before = Nothing
     , abstract = ""
+    , status = Undecided
     }
 
 
-formWith : String -> String -> List String -> String -> String -> Maybe Date -> Maybe Date -> SearchForm
-formWith title author keywords abstract portal after before =
+formWith : String -> String -> List String -> String -> String -> Maybe Date -> Maybe Date -> Maybe PublicationStatus -> SearchForm
+formWith title author keywords abstract portal after before status =
     { title = title
     , author = author
     , keywords = keywords
@@ -2262,14 +2284,18 @@ formWith title author keywords abstract portal after before =
     , portal = portal
     , after = after
     , before = before
+    , status = status |> Maybe.withDefault Undecided
     }
 
 
-searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Date -> Maybe Date -> SearchForm
-searchForm title author keyword1 keyword2 abstract portal after before =
+searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Date -> Maybe Date -> Maybe String -> SearchForm
+searchForm title author keyword1 keyword2 abstract portal after before status =
     let
         nothingIsJustEmpty =
             Maybe.withDefault ""
+
+        _ =
+            Debug.todo "note the always !!!"
     in
     SearchForm
         (nothingIsJustEmpty title)
@@ -2279,6 +2305,11 @@ searchForm title author keyword1 keyword2 abstract portal after before =
         (nothingIsJustEmpty portal)
         after
         before
+        (status |> always Published)
+
+
+
+-- TODO !!!
 
 
 quote : String -> String
@@ -2348,7 +2379,6 @@ keywordField keywords formState label field =
 --searchGUI : List { a | name : String } -> List KeywordString -> Form.Form String { combine : Validation.Validation String SearchForm Never constraints3, view : { b | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg) } parsedCombined SearchForm
 
 
-selectField : { a | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Field String parsed2 (FieldView.Options String) -> Html msg
 selectField formState label field =
     div [ Attr.style "width" "100%" ]
         [ Html.label labelStyle
@@ -2370,7 +2400,6 @@ selectField formState label field =
         ]
 
 
-searchGUI : Bool -> Device -> List { a | name : String } -> List KeywordString -> Form.Form String { combine : Validation.Validation String SearchForm Never constraints3, view : { b | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg) } parsedCombined { title : String, author : String, keywords : List String, portal : String, after : Maybe Date, before : Maybe Date, abstract : String }
 searchGUI hidePortal device portals keywords =
     let
         parseKeyword : Maybe String -> Result String (Maybe String)
@@ -2394,105 +2423,127 @@ searchGUI hidePortal device portals keywords =
         portalsAsOptions =
             ( "Any portal", "Any portal" ) :: (portals |> List.map (\p -> ( p.name, p.name )))
 
+        statusAsOptions =
+            [ ( "Published", "Published" )
+            , ( "In progress", "InProgress" )
+            , ( "Undecided", "Undecided" )
+            ]
+
+        fromPublication mp =
+            case mp of
+                Published ->
+                    "Published"
+
+                InProgress ->
+                    "In progress"
+
+                Undecided ->
+                    "Undecided"
+
         rowdiv elements =
             div [ Attr.style "display" "flex" ] elements
     in
-    Form.form
-        (\title author keyword1 keyword2 abstract portal after before ->
-            { combine =
-                Validation.succeed searchForm
-                    |> Validation.andMap title
-                    |> Validation.andMap author
-                    |> Validation.andMap
-                        (keyword1
-                            |> Validation.map parseKeyword
-                            |> Validation.fromResult
-                        )
-                    |> Validation.andMap
-                        (keyword2
-                            |> Validation.map parseKeyword
-                            |> Validation.fromResult
-                        )
-                    |> Validation.andMap abstract
-                    |> Validation.andMap
-                        portal
-                    |> Validation.andMap after
-                    |> Validation.andMap before
-            , view =
-                \info ->
-                    [ div [ Attr.style "width" "100%" ]
-                        [ Html.h1 headerStyle [ Html.text "search:" ]
-                        , Html.label []
-                            [ case device of
-                                Tablet ->
-                                    div []
-                                        [ rowdiv
-                                            [ fieldView info "title" title
-                                            , fieldView info "author" author
-                                            ]
-                                        , rowdiv
-                                            [ keywordField keywords info "keywords" keyword1
-                                            , keywordField keywords info "" keyword2
-                                            , fieldView info "abstract" abstract
-                                            ]
-                                        , rowdiv
-                                            [ fieldView info "after" after
-                                            , fieldView info "before" before
-                                            ]
-                                        , if hidePortal then
-                                            div [] []
-
-                                          else
-                                            div [] [ selectField info "portal" portal ]
-                                        ]
-
-                                Desktop ->
-                                    div []
-                                        [ rowdiv
-                                            [ fieldView info "title" title
-                                            , fieldView info "author" author
-                                            , keywordField keywords info "keywords" keyword1
-                                            , keywordField keywords info "" keyword2
-                                            , fieldView info "abstract" abstract
-                                            , if hidePortal then
-                                                div [] []
-
-                                              else
-                                                div [] [ selectField info "portal" portal ]
-                                            ]
-                                        , rowdiv
-                                            [ fieldView info "after" after
-                                            , fieldView info "before" before
-                                            ]
-                                        ]
-
-                                Phone ->
-                                    div []
+    (\title author keyword1 keyword2 abstract portal after before status ->
+        { combine =
+            Validation.succeed searchForm
+                |> Validation.andMap title
+                |> Validation.andMap author
+                |> Validation.andMap
+                    (keyword1
+                        |> Validation.map parseKeyword
+                        |> Validation.fromResult
+                    )
+                |> Validation.andMap
+                    (keyword2
+                        |> Validation.map parseKeyword
+                        |> Validation.fromResult
+                    )
+                |> Validation.andMap abstract
+                |> Validation.andMap
+                    portal
+                |> Validation.andMap after
+                |> Validation.andMap before
+                |> Validation.andMap status
+        , view =
+            \info ->
+                [ div [ Attr.style "width" "100%" ]
+                    [ Html.h1 headerStyle [ Html.text "search:" ]
+                    , Html.label []
+                        [ case device of
+                            Tablet ->
+                                div []
+                                    [ rowdiv
                                         [ fieldView info "title" title
                                         , fieldView info "author" author
-                                        , keywordField keywords info "keywords" keyword1
-                                        , keywordField keywords info "" keyword2
-                                        , fieldView info "abstact" abstract
+                                        ]
+                                    , rowdiv
+                                        [ keywordField keywords info "keyword" keyword1
+
+                                        --, keywordField keywords info "" keyword2
+                                        , fieldView info "abstract" abstract
+                                        ]
+                                    , rowdiv
+                                        [ fieldView info "after" after
+                                        , fieldView info "before" before
+                                        ]
+                                    , if hidePortal then
+                                        div [] []
+
+                                      else
+                                        div [] [ selectField info "portal" portal ]
+                                    ]
+
+                            Desktop ->
+                                div []
+                                    [ rowdiv
+                                        [ fieldView info "title" title
+                                        , fieldView info "author" author
+                                        , keywordField keywords info "keyword" keyword1
+
+                                        --, keywordField keywords info "" keyword2
+                                        , fieldView info "abstract" abstract
                                         , if hidePortal then
                                             div [] []
 
                                           else
                                             div [] [ selectField info "portal" portal ]
-                                        , fieldView info "after" after
-                                        , fieldView info "before" before
                                         ]
-                            ]
-                        , Html.button submitButtonStyle
-                            [ if info.submitting then
-                                Html.text "searching..."
+                                    , rowdiv
+                                        [ fieldView info "after" after
+                                        , fieldView info "before" before
+                                        , selectField info "status" status
+                                        ]
+                                    ]
 
-                              else
-                                Html.text "search"
-                            ]
+                            Phone ->
+                                div []
+                                    [ fieldView info "title" title
+                                    , fieldView info "author" author
+                                    , keywordField keywords info "keyword" keyword1
+
+                                    --, keywordField keywords info "" keyword2
+                                    , fieldView info "abstact" abstract
+                                    , if hidePortal then
+                                        div [] []
+
+                                      else
+                                        div [] [ selectField info "portal" portal ]
+                                    , fieldView info "after" after
+                                    , fieldView info "before" before
+                                    ]
+                        ]
+                    , Html.button submitButtonStyle
+                        [ if info.submitting then
+                            Html.text "searching..."
+
+                          else
+                            Html.text "search"
                         ]
                     ]
-            }
-        )
+                ]
+        }
+    )
+        |> Form.form
         |> Form.field "title" (Field.text |> Field.search |> Field.withInitialValue .title)
         |> Form.field "author" (Field.text |> Field.search |> Field.withInitialValue .author)
         |> Form.field "keyword 1" (Field.text |> Field.search |> Field.withInitialValue getFirstKeyword)
@@ -2501,6 +2552,7 @@ searchGUI hidePortal device portals keywords =
         |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "") |> Field.withInitialValue (\frm -> frm.portal))
         |> Form.field "after" (Field.date { invalid = \_ -> "invalid date" })
         |> Form.field "before" (Field.date { invalid = \_ -> "invalid date" })
+        |> Form.field "status" (Field.select statusAsOptions (\_ -> "") |> Field.withInitialValue (\_ -> ""))
 
 
 

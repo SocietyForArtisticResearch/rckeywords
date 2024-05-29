@@ -20,6 +20,7 @@ module Queries exposing
     , findResearchWithTitle
     , getKeywords
     , length
+    , publicationFilterOfString
     , searchWithKeywords
     , sortByRank
     , toList
@@ -43,7 +44,7 @@ import Iso8601
 import Json.Decode as D exposing (field, int, list, map, maybe, string)
 import Json.Encode as E
 import List.Extra
-import Research as RC exposing (Research)
+import Research as RC exposing (PublicationStatus(..), Research)
 import Set exposing (Set)
 import String.Normalize
 import Time
@@ -71,6 +72,7 @@ type Search
         , after : Maybe Date
         , before : Maybe Date
         , portal : String
+        , publicationStatus : Maybe PublicationStatus
         }
 
 
@@ -78,9 +80,19 @@ type Ranked a
     = Ranked Int a
 
 
+
+-- Ranked score. Higher means more relevant
+
+
 mapRanked : (a -> b) -> Ranked a -> Ranked b
 mapRanked f (Ranked i a) =
     Ranked i (f a)
+
+
+
+-- A ranked result is a search result that has an intrensic order.
+-- An example can be date, or fuzzy string match.
+-- Unranked means that order should be ignored (perhaps it is best to randomize such results?)
 
 
 type RankedResult a
@@ -250,6 +262,7 @@ emptySearch =
         , after = Nothing
         , before = Nothing
         , portal = ""
+        , publicationStatus = Nothing
         }
 
 
@@ -271,8 +284,8 @@ searchWithKeywords kws (Search s) =
         }
 
 
-search : String -> String -> Set String -> String -> Maybe Date -> Maybe Date -> String -> Search
-search title author keywords abstract after before portal =
+search : String -> String -> Set String -> String -> Maybe Date -> Maybe Date -> String -> Maybe PublicationStatus -> Search
+search title author keywords abstract after before portal publicationStatus =
     Search
         { title = title
         , author = author
@@ -281,12 +294,13 @@ search title author keywords abstract after before portal =
         , after = after
         , before = before
         , portal = portal
+        , publicationStatus = publicationStatus
         }
 
 
 decodeSearch : D.Decoder Search
 decodeSearch =
-    D.map7 search
+    D.map8 search
         (field "title" string)
         (field "author" string)
         (field "keywords" (list string) |> map Set.fromList)
@@ -294,6 +308,20 @@ decodeSearch =
         (maybe (field "after" int |> map Date.fromRataDie))
         (maybe (field "before" int |> map Date.fromRataDie))
         (field "portal" string)
+        (maybe (field "publicationStatus" (string |> D.map publicationFilterOfString)))
+
+
+publicationFilterOfString : String -> PublicationStatus
+publicationFilterOfString str =
+    case str of
+        "published" ->
+            Published
+
+        "inprogress" ->
+            InProgress
+
+        _ ->
+            Undecided
 
 
 decodeExpositionSearch : D.Decoder ExpositionSearch
@@ -786,16 +814,11 @@ findResearchWithPortal portalq lst =
             let
                 f : Research r -> Bool
                 f research =
-                    case research.portals of
-                        [] ->
-                            False
-
-                        somePortals ->
-                            let
-                                names =
-                                    somePortals |> List.map (.name >> String.toLower)
-                            in
-                            names |> List.any (\p -> p == (nonemptyq |> String.toLower))
+                    let
+                        names =
+                            (research.portals ++ research.connectedTo) |> List.map (.name >> String.toLower)
+                    in
+                    names |> List.any (\p -> p == (nonemptyq |> String.toLower))
             in
             filterRanked f lst
 

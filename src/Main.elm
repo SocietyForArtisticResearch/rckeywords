@@ -2288,7 +2288,7 @@ formWith title author keywords abstract portal after before status =
     }
 
 
-searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Date -> Maybe Date -> Maybe String -> SearchForm
+searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Date -> Maybe Date -> Maybe PublicationStatus -> SearchForm
 searchForm title author keyword1 keyword2 abstract portal after before status =
     let
         nothingIsJustEmpty =
@@ -2379,11 +2379,11 @@ keywordField keywords formState label field =
 --searchGUI : List { a | name : String } -> List KeywordString -> Form.Form String { combine : Validation.Validation String SearchForm Never constraints3, view : { b | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg) } parsedCombined SearchForm
 
 
-selectField formState label field =
+selectField displayWith formState label field =
     div [ Attr.style "width" "100%" ]
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
-            , FieldView.select dropdownStyle (\p -> ( [], p )) field
+            , FieldView.select dropdownStyle (\p -> ( [], displayWith p )) field
             ]
         , (if formState.submitAttempted then
             formState.errors
@@ -2424,9 +2424,9 @@ searchGUI hidePortal device portals keywords =
             ( "Any portal", "Any portal" ) :: (portals |> List.map (\p -> ( p.name, p.name )))
 
         statusAsOptions =
-            [ ( "Published", "Published" )
-            , ( "In progress", "InProgress" )
-            , ( "Undecided", "Undecided" )
+            [ ( "Published", Published )
+            , ( "In progress", InProgress )
+            , ( "Undecided", Undecided )
             ]
 
         fromPublication mp =
@@ -2490,7 +2490,7 @@ searchGUI hidePortal device portals keywords =
                                         div [] []
 
                                       else
-                                        div [] [ selectField info "portal" portal ]
+                                        div [] [ selectField identity info "portal" portal ]
                                     ]
 
                             Desktop ->
@@ -2506,12 +2506,12 @@ searchGUI hidePortal device portals keywords =
                                             div [] []
 
                                           else
-                                            div [] [ selectField info "portal" portal ]
+                                            div [] [ selectField identity info "portal" portal ]
                                         ]
                                     , rowdiv
                                         [ fieldView info "after" after
                                         , fieldView info "before" before
-                                        , selectField info "status" status
+                                        , selectField fromPublication info "status" status
                                         ]
                                     ]
 
@@ -2527,7 +2527,7 @@ searchGUI hidePortal device portals keywords =
                                         div [] []
 
                                       else
-                                        div [] [ selectField info "portal" portal ]
+                                        div [] [ selectField identity info "portal" portal ]
                                     , fieldView info "after" after
                                     , fieldView info "before" before
                                     ]
@@ -2552,7 +2552,7 @@ searchGUI hidePortal device portals keywords =
         |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "") |> Field.withInitialValue (\frm -> frm.portal))
         |> Form.field "after" (Field.date { invalid = \_ -> "invalid date" })
         |> Form.field "before" (Field.date { invalid = \_ -> "invalid date" })
-        |> Form.field "status" (Field.select statusAsOptions (\_ -> "") |> Field.withInitialValue (\_ -> ""))
+        |> Form.field "status" (Field.select statusAsOptions (\_ -> "") |> Field.withInitialValue (\_ -> Published))
 
 
 

@@ -5448,13 +5448,43 @@ var $elm$json$Json$Encode$object = function (pairs) {
 			_Json_emptyObject(_Utils_Tuple0),
 			pairs));
 };
+var $author$project$Research$publicationStatusAsString = function (status) {
+	switch (status.$) {
+		case 'InProgress':
+			return 'progress';
+		case 'Published':
+			return 'published';
+		case 'Review':
+			return 'review';
+		case 'Republish':
+			return 'republish';
+		case 'Revision':
+			return 'revision';
+		case 'Archived':
+			return 'archived';
+		default:
+			return 'undecided';
+	}
+};
 var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$Research$publicationstatus = function (status) {
+	return $elm$json$Json$Encode$string(
+		$author$project$Research$publicationStatusAsString(status));
+};
 var $justinmimbs$date$Date$toRataDie = function (_v0) {
 	var rd = _v0.a;
 	return rd;
 };
 var $author$project$Queries$encodeSearch = function (_v0) {
 	var data = _v0.a;
+	var status = A2(
+		$elm$core$Maybe$map,
+		function (st) {
+			return _Utils_Tuple2(
+				'status',
+				$author$project$Research$publicationstatus(st));
+		},
+		data.publicationStatus);
 	var mbefore = A2(
 		$elm$core$Maybe$map,
 		function (before) {
@@ -5476,31 +5506,34 @@ var $author$project$Queries$encodeSearch = function (_v0) {
 	return $elm$json$Json$Encode$object(
 		A2(
 			$author$project$Queries$appendMaybe,
-			mbefore,
+			status,
 			A2(
 				$author$project$Queries$appendMaybe,
-				mafter,
-				_List_fromArray(
-					[
-						_Utils_Tuple2(
-						'title',
-						$elm$json$Json$Encode$string(data.title)),
-						_Utils_Tuple2(
-						'author',
-						$elm$json$Json$Encode$string(data.author)),
-						_Utils_Tuple2(
-						'keywords',
-						A2(
-							$elm$json$Json$Encode$list,
-							$elm$json$Json$Encode$string,
-							$elm$core$Set$toList(data.keywords))),
-						_Utils_Tuple2(
-						'abstract',
-						$elm$json$Json$Encode$string(data._abstract)),
-						_Utils_Tuple2(
-						'portal',
-						$elm$json$Json$Encode$string(data.portal))
-					]))));
+				mbefore,
+				A2(
+					$author$project$Queries$appendMaybe,
+					mafter,
+					_List_fromArray(
+						[
+							_Utils_Tuple2(
+							'title',
+							$elm$json$Json$Encode$string(data.title)),
+							_Utils_Tuple2(
+							'author',
+							$elm$json$Json$Encode$string(data.author)),
+							_Utils_Tuple2(
+							'keywords',
+							A2(
+								$elm$json$Json$Encode$list,
+								$elm$json$Json$Encode$string,
+								$elm$core$Set$toList(data.keywords))),
+							_Utils_Tuple2(
+							'abstract',
+							$elm$json$Json$Encode$string(data._abstract)),
+							_Utils_Tuple2(
+							'portal',
+							$elm$json$Json$Encode$string(data.portal))
+						])))));
 };
 var $author$project$Queries$encodeExpositionSearch = function (expSearch) {
 	if (expSearch.$ === 'QuickSearch') {
@@ -7380,6 +7413,16 @@ var $author$project$Main$appUrlFromSearchViewState = function (svs) {
 							$author$project$Main$maybeToList(
 								A2($elm$core$Maybe$map, $author$project$Main$dateToString, form.before))),
 							_Utils_Tuple2(
+							'status',
+							function (x) {
+								return _List_fromArray(
+									[x]);
+							}(
+								A2(
+									$elm$core$Maybe$withDefault,
+									'undecided',
+									A2($elm$core$Maybe$map, $author$project$Research$publicationStatusAsString, form.status)))),
+							_Utils_Tuple2(
 							'advanced',
 							_List_fromArray(
 								['1']))
@@ -7436,6 +7479,16 @@ var $author$project$Main$appUrlFromSearchViewState = function (svs) {
 							'before',
 							$author$project$Main$maybeToList(
 								A2($elm$core$Maybe$map, $author$project$Main$dateToString, form.before))),
+							_Utils_Tuple2(
+							'status',
+							function (x) {
+								return _List_fromArray(
+									[x]);
+							}(
+								A2(
+									$elm$core$Maybe$withDefault,
+									'undecided',
+									A2($elm$core$Maybe$map, $author$project$Research$publicationStatusAsString, form.status)))),
 							_Utils_Tuple2(
 							'advanced',
 							_List_fromArray(
@@ -7502,9 +7555,6 @@ var $author$project$Queries$Keywords = function (a) {
 var $author$project$Queries$RankedExpositions = function (a) {
 	return {$: 'RankedExpositions', a: a};
 };
-var $author$project$Research$InProgress = {$: 'InProgress'};
-var $author$project$Research$Published = {$: 'Published'};
-var $author$project$Research$Undecided = {$: 'Undecided'};
 var $elm_community$json_extra$Json$Decode$Extra$andMap = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
 var $author$project$Research$Author = function (a) {
 	return {$: 'Author', a: a};
@@ -7522,14 +7572,6 @@ var $author$project$Research$author = function () {
 		A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
 		A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string));
 }();
-var $author$project$Research$calcStatus = function (research) {
-	var _v0 = research.publicationStatus;
-	if (_v0.$ === 'InProgress') {
-		return $author$project$Research$InProgress;
-	} else {
-		return $author$project$Research$Published;
-	}
-};
 var $elm$parser$Parser$Done = function (a) {
 	return {$: 'Done', a: a};
 };
@@ -8364,6 +8406,33 @@ var $author$project$EnrichedResearch$mkResearchWithKeywords = function (id) {
 		};
 	};
 };
+var $author$project$Research$Archived = {$: 'Archived'};
+var $author$project$Research$InProgress = {$: 'InProgress'};
+var $author$project$Research$Published = {$: 'Published'};
+var $author$project$Research$Republish = {$: 'Republish'};
+var $author$project$Research$Review = {$: 'Review'};
+var $author$project$Research$Revision = {$: 'Revision'};
+var $author$project$Research$Undecided = {$: 'Undecided'};
+var $author$project$Research$publicationStatusFromString = function (status) {
+	switch (status) {
+		case 'progress':
+			return $author$project$Research$InProgress;
+		case 'published':
+			return $author$project$Research$Published;
+		case 'archived':
+			return $author$project$Research$Archived;
+		case 'republish':
+			return $author$project$Research$Republish;
+		case 'revision':
+			return $author$project$Research$Revision;
+		case 'undecided':
+			return $author$project$Research$Undecided;
+		case 'review':
+			return $author$project$Research$Review;
+		default:
+			return $author$project$Research$Undecided;
+	}
+};
 var $author$project$Research$Portal = F3(
 	function (id, name, type_) {
 		return {id: id, name: name, type_: type_};
@@ -8415,110 +8484,88 @@ var $author$project$Research$rcPortalDecoder = A4(
 		$elm$json$Json$Decode$map,
 		$author$project$Research$portalType,
 		A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string)));
-var $author$project$EnrichedResearch$decoder = function () {
-	var statusFromString = function (statusString) {
-		switch (statusString) {
-			case 'published':
-				return $author$project$Research$Published;
-			case 'progress':
-				return $author$project$Research$InProgress;
-			default:
-				return $author$project$Research$Undecided;
-		}
-	};
-	var researchPublicationStatus = function (research) {
-		return _Utils_update(
-			research,
-			{
-				publicationStatus: $author$project$Research$calcStatus(research)
-			});
-	};
-	return A2(
-		$elm$json$Json$Decode$map,
-		researchPublicationStatus,
+var $author$project$EnrichedResearch$decoder = A2(
+	$elm_community$json_extra$Json$Decode$Extra$andMap,
+	$elm$json$Json$Decode$maybe(
+		A2($elm$json$Json$Decode$field, 'screenshots', $author$project$Screenshots$decodeExposition)),
+	A2(
+		$elm_community$json_extra$Json$Decode$Extra$andMap,
+		$elm$json$Json$Decode$maybe(
+			A2($elm$json$Json$Decode$field, 'toc', $author$project$Toc$decodeToc)),
 		A2(
 			$elm_community$json_extra$Json$Decode$Extra$andMap,
-			$elm$json$Json$Decode$maybe(
-				A2($elm$json$Json$Decode$field, 'screenshots', $author$project$Screenshots$decodeExposition)),
+			A2($elm$json$Json$Decode$field, 'abstractWithKeywords', $author$project$RichAbstract$decodeAbstractWithKeywords),
 			A2(
 				$elm_community$json_extra$Json$Decode$Extra$andMap,
-				$elm$json$Json$Decode$maybe(
-					A2($elm$json$Json$Decode$field, 'toc', $author$project$Toc$decodeToc)),
+				A2(
+					$elm$json$Json$Decode$field,
+					'connectedTo',
+					$elm$json$Json$Decode$list($author$project$Research$rcPortalDecoder)),
 				A2(
 					$elm_community$json_extra$Json$Decode$Extra$andMap,
-					A2($elm$json$Json$Decode$field, 'abstractWithKeywords', $author$project$RichAbstract$decodeAbstractWithKeywords),
+					A2(
+						$elm$json$Json$Decode$field,
+						'portals',
+						$elm$json$Json$Decode$list($author$project$Research$rcPortalDecoder)),
 					A2(
 						$elm_community$json_extra$Json$Decode$Extra$andMap,
-						A2(
-							$elm$json$Json$Decode$field,
-							'connectedTo',
-							$elm$json$Json$Decode$list($author$project$Research$rcPortalDecoder)),
+						A2($elm$json$Json$Decode$field, 'defaultPage', $elm$json$Json$Decode$string),
 						A2(
 							$elm_community$json_extra$Json$Decode$Extra$andMap,
-							A2(
-								$elm$json$Json$Decode$field,
-								'portals',
-								$elm$json$Json$Decode$list($author$project$Research$rcPortalDecoder)),
+							$elm$json$Json$Decode$maybe(
+								A2($elm$json$Json$Decode$field, 'abstract', $elm$json$Json$Decode$string)),
 							A2(
 								$elm_community$json_extra$Json$Decode$Extra$andMap,
-								A2($elm$json$Json$Decode$field, 'defaultPage', $elm$json$Json$Decode$string),
+								$elm$json$Json$Decode$maybe(
+									A2($elm$json$Json$Decode$field, 'thumbnail', $elm$json$Json$Decode$string)),
 								A2(
 									$elm_community$json_extra$Json$Decode$Extra$andMap,
 									$elm$json$Json$Decode$maybe(
-										A2($elm$json$Json$Decode$field, 'abstract', $elm$json$Json$Decode$string)),
+										A2(
+											$elm$json$Json$Decode$field,
+											'published',
+											A2($elm$json$Json$Decode$map, $justinmimbs$date$Date$fromRataDie, $elm$json$Json$Decode$int))),
 									A2(
 										$elm_community$json_extra$Json$Decode$Extra$andMap,
-										$elm$json$Json$Decode$maybe(
-											A2($elm$json$Json$Decode$field, 'thumbnail', $elm$json$Json$Decode$string)),
+										A2(
+											$elm$json$Json$Decode$map,
+											$author$project$Research$publicationStatusFromString,
+											A2($elm$json$Json$Decode$field, 'status', $elm$json$Json$Decode$string)),
 										A2(
 											$elm_community$json_extra$Json$Decode$Extra$andMap,
 											$elm$json$Json$Decode$maybe(
 												A2(
 													$elm$json$Json$Decode$field,
-													'published',
-													A2($elm$json$Json$Decode$map, $justinmimbs$date$Date$fromRataDie, $elm$json$Json$Decode$int))),
+													'issue',
+													A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int))),
 											A2(
 												$elm_community$json_extra$Json$Decode$Extra$andMap,
-												A2(
-													$elm$json$Json$Decode$map,
-													statusFromString,
-													A2($elm$json$Json$Decode$field, 'status', $elm$json$Json$Decode$string)),
+												A2($elm$json$Json$Decode$field, 'author', $author$project$Research$author),
 												A2(
 													$elm_community$json_extra$Json$Decode$Extra$andMap,
-													$elm$json$Json$Decode$maybe(
-														A2(
-															$elm$json$Json$Decode$field,
-															'issue',
-															A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int))),
+													A2(
+														$elm$json$Json$Decode$field,
+														'createdDate',
+														A2($elm$json$Json$Decode$map, $justinmimbs$date$Date$fromRataDie, $elm$json$Json$Decode$int)),
 													A2(
 														$elm_community$json_extra$Json$Decode$Extra$andMap,
-														A2($elm$json$Json$Decode$field, 'author', $author$project$Research$author),
+														A2($elm$json$Json$Decode$field, 'created', $elm$json$Json$Decode$string),
 														A2(
 															$elm_community$json_extra$Json$Decode$Extra$andMap,
 															A2(
-																$elm$json$Json$Decode$field,
-																'createdDate',
-																A2($elm$json$Json$Decode$map, $justinmimbs$date$Date$fromRataDie, $elm$json$Json$Decode$int)),
+																$elm$json$Json$Decode$map,
+																$elm$core$List$map($author$project$KeywordString$fromString),
+																A2(
+																	$elm$json$Json$Decode$field,
+																	'keywords',
+																	$elm$json$Json$Decode$list($elm$json$Json$Decode$string))),
 															A2(
 																$elm_community$json_extra$Json$Decode$Extra$andMap,
-																A2($elm$json$Json$Decode$field, 'created', $elm$json$Json$Decode$string),
+																A2($elm$json$Json$Decode$field, 'title', $elm$json$Json$Decode$string),
 																A2(
 																	$elm_community$json_extra$Json$Decode$Extra$andMap,
-																	A2(
-																		$elm$json$Json$Decode$map,
-																		$elm$core$List$map($author$project$KeywordString$fromString),
-																		A2(
-																			$elm$json$Json$Decode$field,
-																			'keywords',
-																			$elm$json$Json$Decode$list($elm$json$Json$Decode$string))),
-																	A2(
-																		$elm_community$json_extra$Json$Decode$Extra$andMap,
-																		A2($elm$json$Json$Decode$field, 'title', $elm$json$Json$Decode$string),
-																		A2(
-																			$elm_community$json_extra$Json$Decode$Extra$andMap,
-																			A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
-																			$elm$json$Json$Decode$succeed($author$project$EnrichedResearch$mkResearchWithKeywords)))))))))))))))))));
-}();
+																	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
+																	$elm$json$Json$Decode$succeed($author$project$EnrichedResearch$mkResearchWithKeywords))))))))))))))))));
 var $author$project$EnrichedResearch$decodeExpositionResult = function () {
 	var decodeOk = A2(
 		$elm$json$Json$Decode$map,
@@ -8807,16 +8854,6 @@ var $author$project$Main$getSortingOfUrl = function (url) {
 			$elm$core$List$head,
 			A2($elm$core$Dict$get, 'sorting', url.queryParameters)));
 };
-var $author$project$Queries$publicationFilterOfString = function (str) {
-	switch (str) {
-		case 'published':
-			return $author$project$Research$Published;
-		case 'inprogress':
-			return $author$project$Research$InProgress;
-		default:
-			return $author$project$Research$Undecided;
-	}
-};
 var $author$project$Main$searchViewFromUrlAdvanced = F2(
 	function (url, layout) {
 		var title = A2(
@@ -8832,7 +8869,7 @@ var $author$project$Main$searchViewFromUrlAdvanced = F2(
 			$author$project$Main$getSortingOfUrl(url));
 		var publicationStatus = A2(
 			$elm$core$Maybe$map,
-			$author$project$Queries$publicationFilterOfString,
+			$author$project$Research$publicationStatusFromString,
 			A2(
 				$elm$core$Maybe$andThen,
 				$elm$core$List$head,
@@ -21166,16 +21203,9 @@ var $author$project$Main$SearchForm = F8(
 	function (title, author, keywords, _abstract, portal, after, before, status) {
 		return {_abstract: _abstract, after: after, author: author, before: before, keywords: keywords, portal: portal, status: status, title: title};
 	});
-var $elm$core$Debug$todo = _Debug_todo;
 var $author$project$Main$searchForm = F9(
 	function (title, author, keyword1, keyword2, _abstract, portal, after, before, status) {
 		var nothingIsJustEmpty = $elm$core$Maybe$withDefault('');
-		var _v0 = _Debug_todo(
-			'Main',
-			{
-				start: {line: 2298, column: 13},
-				end: {line: 2298, column: 23}
-			})('note the always !!!');
 		return A8(
 			$author$project$Main$SearchForm,
 			nothingIsJustEmpty(title),
@@ -21189,7 +21219,7 @@ var $author$project$Main$searchForm = F9(
 			nothingIsJustEmpty(portal),
 			after,
 			before,
-			status);
+			A2($elm$core$Maybe$withDefault, $elm$core$Maybe$Nothing, status));
 	});
 var $dillonkearns$elm_form$Internal$Input$Options = F2(
 	function (a, b) {
@@ -21406,6 +21436,35 @@ var $dillonkearns$elm_form$Form$Field$text = A2(
 		properties: _List_Nil
 	},
 	$dillonkearns$elm_form$Internal$Input$Input($dillonkearns$elm_form$Internal$Input$Text));
+var $author$project$Main$viewPublicationStatus = function (mstr) {
+	if (mstr.$ === 'Nothing') {
+		return 'All';
+	} else {
+		switch (mstr.a.$) {
+			case 'Published':
+				var _v1 = mstr.a;
+				return 'Published';
+			case 'InProgress':
+				var _v2 = mstr.a;
+				return 'In Progress';
+			case 'Archived':
+				var _v3 = mstr.a;
+				return 'Archived';
+			case 'Republish':
+				var _v4 = mstr.a;
+				return 'Republish';
+			case 'Revision':
+				var _v5 = mstr.a;
+				return 'Revision';
+			case 'Review':
+				var _v6 = mstr.a;
+				return 'Review';
+			default:
+				var _v7 = mstr.a;
+				return 'Undecided';
+		}
+	}
+};
 var $dillonkearns$elm_form$Form$Field$withInitialValue = F2(
 	function (toInitialValue, _v0) {
 		var field = _v0.a;
@@ -21424,12 +21483,24 @@ var $dillonkearns$elm_form$Form$Field$withInitialValue = F2(
 	});
 var $author$project$Main$searchGUI = F4(
 	function (hidePortal, device, portals, keywords) {
-		var statusAsOptions = _List_fromArray(
-			[
-				_Utils_Tuple2('Published', $author$project$Research$Published),
-				_Utils_Tuple2('In progress', $author$project$Research$InProgress),
-				_Utils_Tuple2('Undecided', $author$project$Research$Undecided)
-			]);
+		var statusAsOptions = A2(
+			$elm$core$List$map,
+			function (status) {
+				return _Utils_Tuple2(
+					$author$project$Main$viewPublicationStatus(status),
+					status);
+			},
+			_List_fromArray(
+				[
+					$elm$core$Maybe$Nothing,
+					$elm$core$Maybe$Just($author$project$Research$Published),
+					$elm$core$Maybe$Just($author$project$Research$InProgress),
+					$elm$core$Maybe$Just($author$project$Research$Undecided),
+					$elm$core$Maybe$Just($author$project$Research$Review),
+					$elm$core$Maybe$Just($author$project$Research$Revision),
+					$elm$core$Maybe$Just($author$project$Research$Archived),
+					$elm$core$Maybe$Just($author$project$Research$Republish)
+				]));
 		var rowdiv = function (elements) {
 			return A2(
 				$elm$html$Html$div,
@@ -21461,23 +21532,13 @@ var $author$project$Main$searchGUI = F4(
 					$author$project$Main$quote(k) + ' not used');
 			}
 		};
-		var fromPublication = function (mp) {
-			switch (mp.$) {
-				case 'Published':
-					return 'Published';
-				case 'InProgress':
-					return 'In progress';
-				default:
-					return 'Undecided';
-			}
-		};
 		return A3(
 			$dillonkearns$elm_form$Form$field,
 			'status',
 			A2(
 				$dillonkearns$elm_form$Form$Field$withInitialValue,
-				function (_v5) {
-					return $author$project$Research$Published;
+				function (frm) {
+					return frm.status;
 				},
 				A2(
 					$dillonkearns$elm_form$Form$Field$select,
@@ -21675,7 +21736,7 @@ var $author$project$Main$searchGUI = F4(
 																												[
 																													A3($author$project$Main$fieldView, info, 'after', after),
 																													A3($author$project$Main$fieldView, info, 'before', before),
-																													A4($author$project$Main$selectField, fromPublication, info, 'status', status)
+																													A4($author$project$Main$selectField, $author$project$Main$viewPublicationStatus, info, 'status', status)
 																												]))
 																										]));
 																							default:
@@ -22353,6 +22414,12 @@ var $author$project$Main$viewResearchDetail = F3(
 						])),
 				url: research.defaultPage
 			});
+		var status = A2(
+			$mdgriffith$elm_ui$Element$el,
+			_List_Nil,
+			$mdgriffith$elm_ui$Element$text(
+				$author$project$Main$viewPublicationStatus(
+					$elm$core$Maybe$Just(research.publicationStatus))));
 		var pageAndId = function (link) {
 			return function (res) {
 				if ((res.b && res.b.b) && (!res.b.b.b)) {
@@ -22397,7 +22464,8 @@ var $author$project$Main$viewResearchDetail = F3(
 							_List_fromArray(
 								[
 									$mdgriffith$elm_ui$Element$width(
-									$mdgriffith$elm_ui$Element$px(imgw))
+									$mdgriffith$elm_ui$Element$px(imgw)),
+									$mdgriffith$elm_ui$Element$Font$size(12)
 								]),
 							{description: 'screenshot', src: data.screenshot}),
 						url: data.weave
@@ -22473,6 +22541,7 @@ var $author$project$Main$viewResearchDetail = F3(
 				[
 					title,
 					A2($mdgriffith$elm_ui$Element$el, _List_Nil, author),
+					status,
 					keywords,
 					A2(
 					$mdgriffith$elm_ui$Element$paragraph,

@@ -284,6 +284,8 @@ main =
     Platform.worker { init = init, update = update, subscriptions = subscriptions }
 
 
+{-| Given a filter, maybe a key, filter the object
+-}
 optionalFilter : (a -> b -> b) -> Maybe a -> b -> b
 optionalFilter filter value lst =
     case value of
@@ -324,6 +326,7 @@ searchResearch expSearch revDict lst =
                 |> Queries.findResearchWithAbstract search.abstract
                 |> optionalFilter Queries.findResearchAfter search.after
                 |> optionalFilter Queries.findResearchBefore search.before
+                |> optionalFilter Queries.findResearchWithStatus search.publicationStatus
 
 
 

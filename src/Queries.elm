@@ -17,10 +17,10 @@ module Queries exposing
     , findResearchWithAuthor
     , findResearchWithKeywords
     , findResearchWithPortal
+    , findResearchWithStatus
     , findResearchWithTitle
     , getKeywords
     , length
-    , publicationFilterOfString
     , searchWithKeywords
     , sortByRank
     , toList
@@ -42,6 +42,7 @@ import Fuzzy
 import Html exposing (a)
 import Iso8601
 import Json.Decode as D exposing (field, int, list, map, maybe, string)
+import Json.Decode.Pipeline as JDP
 import Json.Encode as E
 import List.Extra
 import Research as RC exposing (PublicationStatus(..), Research)
@@ -308,20 +309,7 @@ decodeSearch =
         (maybe (field "after" int |> map Date.fromRataDie))
         (maybe (field "before" int |> map Date.fromRataDie))
         (field "portal" string)
-        (maybe (field "publicationStatus" (string |> D.map publicationFilterOfString)))
-
-
-publicationFilterOfString : String -> PublicationStatus
-publicationFilterOfString str =
-    case str of
-        "published" ->
-            Published
-
-        "inprogress" ->
-            InProgress
-
-        _ ->
-            Undecided
+        (maybe (field "status" (string |> D.map RC.publicationStatusFromString)))
 
 
 decodeExpositionSearch : D.Decoder ExpositionSearch
@@ -375,6 +363,9 @@ encodeSearch (Search data) =
 
         mbefore =
             data.before |> Maybe.map (\before -> ( "before", E.int (Date.toRataDie before) ))
+
+        status =
+            data.publicationStatus |> Maybe.map (\st -> ( "status", RC.publicationstatus st ))
     in
     E.object
         ([ ( "title", E.string data.title )
@@ -385,6 +376,7 @@ encodeSearch (Search data) =
          ]
             |> appendMaybe mafter
             |> appendMaybe mbefore
+            |> appendMaybe status
         )
 
 
@@ -857,3 +849,10 @@ findResearchWithAbstract abstractQ lst =
                     Just nonEmptyString ->
                         containsIgnoreCase abstractQ nonEmptyString
             )
+
+
+findResearchWithStatus : PublicationStatus -> RankedResult (Research r) -> RankedResult (Research r)
+findResearchWithStatus status lst =
+    filterRanked
+        (\r -> r.publicationStatus == status)
+        lst

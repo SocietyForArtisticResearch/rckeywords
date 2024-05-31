@@ -887,7 +887,7 @@ searchViewFromUrlAdvanced url layout =
             url.queryParameters
                 |> Dict.get "status"
                 |> Maybe.andThen List.head
-                |> Maybe.map Queries.publicationFilterOfString
+                |> Maybe.map RC.publicationStatusFromString
 
         cmd : Cmd msg
         cmd =
@@ -1302,6 +1302,10 @@ screenshotFolder =
     "screenshots2"
 
 
+
+-- metadata page
+
+
 viewResearchDetail : ScreenDimensions -> Scale -> EnrichedResearch.ResearchWithKeywords -> Element Msg
 viewResearchDetail dim scale research =
     let
@@ -1313,7 +1317,7 @@ viewResearchDetail dim scale research =
             Element.newTabLink []
                 { url = data.weave
                 , label =
-                    Element.image [ Element.width (px imgw) ] { src = data.screenshot, description = "screenshot" }
+                    Element.image [ Element.width (px imgw), Font.size 12 ] { src = data.screenshot, description = "screenshot" }
                 }
 
         urlLst : Maybe (List Screenshots.WeaveScreenshot)
@@ -1394,12 +1398,17 @@ viewResearchDetail dim scale research =
                 , label = Element.text "generate json from content"
                 }
 
+        status : Element Msg
+        status =
+            Element.el [] <| Element.text (research.publicationStatus |> Maybe.Just |> viewPublicationStatus)
+
         metainfo : Element Msg
         metainfo =
             column
                 RCStyles.metastyling
                 [ title
                 , Element.el [] author
+                , status
                 , keywords
                 , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
                 , Element.el
@@ -1787,6 +1796,7 @@ appUrlFromSearchViewState svs =
                                     , ( "portal", [ form.portal ] )
                                     , ( "after", maybeToList (form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
                                     , ( "before", maybeToList (form.before |> Maybe.map dateToString) )
+                                    , ( "status", (form.status |> Maybe.map RC.publicationStatusAsString |> Maybe.withDefault "undecided") |> (\x -> [ x ]) )
                                     , ( "advanced", [ "1" ] )
                                     ]
 
@@ -1803,6 +1813,7 @@ appUrlFromSearchViewState svs =
                                     , ( "portal", [ form.portal ] )
                                     , ( "after", maybeToList (form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
                                     , ( "before", maybeToList (form.before |> Maybe.map dateToString) )
+                                    , ( "status", (form.status |> Maybe.map RC.publicationStatusAsString |> Maybe.withDefault "undecided") |> (\x -> [ x ]) )
                                     , ( "advanced", [ "1" ] )
                                     ]
 
@@ -2262,6 +2273,34 @@ formToString form =
         |> String.join "\n"
 
 
+viewPublicationStatus : Maybe PublicationStatus -> String
+viewPublicationStatus mstr =
+    case mstr of
+        Nothing ->
+            "All"
+
+        Just Published ->
+            "Published"
+
+        Just InProgress ->
+            "In Progress"
+
+        Just Archived ->
+            "Archived"
+
+        Just Republish ->
+            "Republish"
+
+        Just Revision ->
+            "Revision"
+
+        Just Review ->
+            "Review"
+
+        Just Undecided ->
+            "Undecided"
+
+
 emptyForm : SearchForm
 emptyForm =
     { title = ""
@@ -2288,7 +2327,7 @@ formWith title author keywords abstract portal after before status =
     }
 
 
-searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Date -> Maybe Date -> Maybe PublicationStatus -> SearchForm
+searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Date -> Maybe Date -> Maybe (Maybe PublicationStatus) -> SearchForm
 searchForm title author keyword1 keyword2 abstract portal after before status =
     let
         nothingIsJustEmpty =
@@ -2302,7 +2341,9 @@ searchForm title author keyword1 keyword2 abstract portal after before status =
         (nothingIsJustEmpty portal)
         after
         before
-        status
+        (status
+            |> Maybe.withDefault Nothing
+        )
 
 
 
@@ -2376,6 +2417,7 @@ keywordField keywords formState label field =
 --searchGUI : List { a | name : String } -> List KeywordString -> Form.Form String { combine : Validation.Validation String SearchForm Never constraints3, view : { b | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg) } parsedCombined SearchForm
 
 
+selectField : (a -> String) -> { b | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Field String parsed2 (FieldView.Options a) -> Html msg
 selectField displayWith formState label field =
     div [ Attr.style "width" "100%" ]
         [ Html.label labelStyle
@@ -2421,21 +2463,16 @@ searchGUI hidePortal device portals keywords =
             ( "Any portal", "Any portal" ) :: (portals |> List.map (\p -> ( p.name, p.name )))
 
         statusAsOptions =
-            [ ( "Published", Published )
-            , ( "In progress", InProgress )
-            , ( "Undecided", Undecided )
+            [ Nothing
+            , Just Published
+            , Just InProgress
+            , Just Undecided
+            , Just Review
+            , Just Revision
+            , Just Archived
+            , Just Republish
             ]
-
-        fromPublication mp =
-            case mp of
-                Published ->
-                    "Published"
-
-                InProgress ->
-                    "In progress"
-
-                Undecided ->
-                    "Undecided"
+                |> List.map (\status -> ( viewPublicationStatus status, status ))
 
         rowdiv elements =
             div [ Attr.style "display" "flex" ] elements
@@ -2508,7 +2545,7 @@ searchGUI hidePortal device portals keywords =
                                     , rowdiv
                                         [ fieldView info "after" after
                                         , fieldView info "before" before
-                                        , selectField fromPublication info "status" status
+                                        , selectField viewPublicationStatus info "status" status
                                         ]
                                     ]
 
@@ -2549,7 +2586,7 @@ searchGUI hidePortal device portals keywords =
         |> Form.field "portal" (Field.select portalsAsOptions (\_ -> "") |> Field.withInitialValue (\frm -> frm.portal))
         |> Form.field "after" (Field.date { invalid = \_ -> "invalid date" })
         |> Form.field "before" (Field.date { invalid = \_ -> "invalid date" })
-        |> Form.field "status" (Field.select statusAsOptions (\_ -> "") |> Field.withInitialValue (\_ -> Published))
+        |> Form.field "status" (Field.select statusAsOptions (\_ -> "") |> Field.withInitialValue (\frm -> frm.status))
 
 
 

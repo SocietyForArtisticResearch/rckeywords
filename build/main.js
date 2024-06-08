@@ -7420,7 +7420,7 @@ var $author$project$Main$appUrlFromSearchViewState = function (svs) {
 							}(
 								A2(
 									$elm$core$Maybe$withDefault,
-									'undecided',
+									'',
 									A2($elm$core$Maybe$map, $author$project$Research$publicationStatusAsString, form.status)))),
 							_Utils_Tuple2(
 							'advanced',
@@ -7572,6 +7572,7 @@ var $author$project$Research$author = function () {
 		A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
 		A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string));
 }();
+var $author$project$EnrichedResearch$connectedToField = 'connectedTo';
 var $elm$parser$Parser$Done = function (a) {
 	return {$: 'Done', a: a};
 };
@@ -8371,6 +8372,7 @@ var $elm$json$Json$Decode$maybe = function (decoder) {
 				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
 			]));
 };
+var $author$project$Research$Undecided = {$: 'Undecided'};
 var $author$project$EnrichedResearch$mkResearchWithKeywords = function (id) {
 	return function (title) {
 		return function (keywords) {
@@ -8378,7 +8380,7 @@ var $author$project$EnrichedResearch$mkResearchWithKeywords = function (id) {
 				return function (createdDate) {
 					return function (authr) {
 						return function (issueId) {
-							return function (publicationStatus) {
+							return function (mpublicationStatus) {
 								return function (publication) {
 									return function (thumbnail) {
 										return function (_abstract) {
@@ -8388,7 +8390,25 @@ var $author$project$EnrichedResearch$mkResearchWithKeywords = function (id) {
 														return function (abstractWithKw) {
 															return function (simpleToc) {
 																return function (screenshots) {
-																	return {_abstract: _abstract, abstractWithKeywords: abstractWithKw, author: authr, connectedTo: connectedToPortals, created: created, createdDate: createdDate, defaultPage: defaultPage, id: id, issueId: issueId, keywords: keywords, portals: portals, publication: publication, publicationStatus: publicationStatus, screenshots: screenshots, thumbnail: thumbnail, title: title, toc: simpleToc};
+																	return {
+																		_abstract: _abstract,
+																		abstractWithKeywords: abstractWithKw,
+																		author: authr,
+																		connectedTo: connectedToPortals,
+																		created: created,
+																		createdDate: createdDate,
+																		defaultPage: defaultPage,
+																		id: id,
+																		issueId: issueId,
+																		keywords: keywords,
+																		portals: portals,
+																		publication: publication,
+																		publicationStatus: A2($elm$core$Maybe$withDefault, $author$project$Research$Undecided, mpublicationStatus),
+																		screenshots: screenshots,
+																		thumbnail: thumbnail,
+																		title: title,
+																		toc: simpleToc
+																	};
 																};
 															};
 														};
@@ -8412,25 +8432,24 @@ var $author$project$Research$Published = {$: 'Published'};
 var $author$project$Research$Republish = {$: 'Republish'};
 var $author$project$Research$Review = {$: 'Review'};
 var $author$project$Research$Revision = {$: 'Revision'};
-var $author$project$Research$Undecided = {$: 'Undecided'};
 var $author$project$Research$publicationStatusFromString = function (status) {
 	switch (status) {
 		case 'progress':
-			return $author$project$Research$InProgress;
+			return $elm$core$Maybe$Just($author$project$Research$InProgress);
 		case 'published':
-			return $author$project$Research$Published;
+			return $elm$core$Maybe$Just($author$project$Research$Published);
 		case 'archived':
-			return $author$project$Research$Archived;
+			return $elm$core$Maybe$Just($author$project$Research$Archived);
 		case 'republish':
-			return $author$project$Research$Republish;
+			return $elm$core$Maybe$Just($author$project$Research$Republish);
 		case 'revision':
-			return $author$project$Research$Revision;
+			return $elm$core$Maybe$Just($author$project$Research$Revision);
 		case 'undecided':
-			return $author$project$Research$Undecided;
+			return $elm$core$Maybe$Just($author$project$Research$Undecided);
 		case 'review':
-			return $author$project$Research$Review;
+			return $elm$core$Maybe$Just($author$project$Research$Review);
 		default:
-			return $author$project$Research$Undecided;
+			return $elm$core$Maybe$Nothing;
 	}
 };
 var $author$project$Research$Portal = F3(
@@ -8471,9 +8490,9 @@ var $elm$core$List$member = F2(
 			xs);
 	});
 var $author$project$Research$portalType = function (portalName) {
-	var institutional = _List_fromArray(
-		['KC Research Portal', 'Stockholm University of the Arts (SKH)', 'University of the Arts Helsinki', 'Norwegian Academy of Music', 'The Danish National School of Performing Arts', 'Rhythmic Music Conservatory Copenhagen', 'Konstfack - University of Arts, Crafts and Design', 'NTNU', 'i2ADS - Research Institute in Art, Design and Society', 'University of Applied Arts Vienna', 'Academy of Creative and Performing Arts', 'International Center for Knowledge in the Arts (Denmark)', 'Inland Norway University of Applied Sciences, The Norwegian Film School', 'Fontys Academy of the Arts (internal)']);
-	return A2($elm$core$List$member, portalName, institutional) ? $author$project$Research$Institutional : $author$project$Research$Journal;
+	var journal = _List_fromArray(
+		['Journal for Artistic Research', 'Ruukku', 'Journal of Sonic Studies', 'HUB', 'VIS - Nordic Journal for Artistic Research', 'ArteActa – Journal for Performing Arts and Artistic Research']);
+	return A2($elm$core$List$member, portalName, journal) ? $author$project$Research$Journal : $author$project$Research$Institutional;
 };
 var $author$project$Research$rcPortalDecoder = A4(
 	$elm$json$Json$Decode$map3,
@@ -8499,7 +8518,7 @@ var $author$project$EnrichedResearch$decoder = A2(
 				$elm_community$json_extra$Json$Decode$Extra$andMap,
 				A2(
 					$elm$json$Json$Decode$field,
-					'connectedTo',
+					$author$project$EnrichedResearch$connectedToField,
 					$elm$json$Json$Decode$list($author$project$Research$rcPortalDecoder)),
 				A2(
 					$elm_community$json_extra$Json$Decode$Extra$andMap,
@@ -8868,7 +8887,7 @@ var $author$project$Main$searchViewFromUrlAdvanced = F2(
 			$author$project$Research$NewestFirst,
 			$author$project$Main$getSortingOfUrl(url));
 		var publicationStatus = A2(
-			$elm$core$Maybe$map,
+			$elm$core$Maybe$andThen,
 			$author$project$Research$publicationStatusFromString,
 			A2(
 				$elm$core$Maybe$andThen,
@@ -19198,12 +19217,6 @@ var $author$project$Main$lazyImageWithErrorHandling = F3(
 						A2($author$project$Screenshots$getUrls, $author$project$Main$screenshotFolder, research.id),
 						screenshots)));
 		};
-		var urlFromId = function (i) {
-			return function (fileName) {
-				return 'screenshots/' + (fileName + '.jpeg');
-			}(
-				$elm$core$String$fromInt(i));
-		};
 		var device = $author$project$Main$classifyDevice(dimensions);
 		var height = function () {
 			switch (device.$) {
@@ -21487,7 +21500,10 @@ var $author$project$Main$searchGUI = F4(
 			$elm$core$List$map,
 			function (status) {
 				return _Utils_Tuple2(
-					$author$project$Main$viewPublicationStatus(status),
+					A2(
+						$elm$core$Maybe$withDefault,
+						'Any',
+						A2($elm$core$Maybe$map, $author$project$Research$publicationStatusAsString, status)),
 					status);
 			},
 			_List_fromArray(
@@ -21498,7 +21514,6 @@ var $author$project$Main$searchGUI = F4(
 					$elm$core$Maybe$Just($author$project$Research$Undecided),
 					$elm$core$Maybe$Just($author$project$Research$Review),
 					$elm$core$Maybe$Just($author$project$Research$Revision),
-					$elm$core$Maybe$Just($author$project$Research$Archived),
 					$elm$core$Maybe$Just($author$project$Research$Republish)
 				]));
 		var rowdiv = function (elements) {
@@ -22420,12 +22435,30 @@ var $author$project$Main$viewResearchDetail = F3(
 			$mdgriffith$elm_ui$Element$text(
 				$author$project$Main$viewPublicationStatus(
 					$elm$core$Maybe$Just(research.publicationStatus))));
+		var published_in = function () {
+			var _v4 = research.portals;
+			if (!_v4.b) {
+				return $mdgriffith$elm_ui$Element$text('not published');
+			} else {
+				var portals = _v4;
+				return $mdgriffith$elm_ui$Element$text(
+					'published in portals: ' + A2(
+						$elm$core$String$join,
+						',',
+						A2(
+							$elm$core$List$map,
+							function ($) {
+								return $.name;
+							},
+							portals)));
+			}
+		}();
 		var pageAndId = function (link) {
 			return function (res) {
 				if ((res.b && res.b.b) && (!res.b.b.b)) {
 					var pageid = res.a;
-					var _v2 = res.b;
-					var researchid = _v2.a;
+					var _v3 = res.b;
+					var researchid = _v3.a;
 					return researchid + ('/' + pageid);
 				} else {
 					return '0/0';
@@ -22513,6 +22546,24 @@ var $author$project$Main$viewResearchDetail = F3(
 					$elm$core$Maybe$withDefault,
 					'in progress',
 					A2($elm$core$Maybe$map, $author$project$Main$formatDate, research.publication))));
+		var connectedPortals = function () {
+			var _v0 = research.connectedTo;
+			if (!_v0.b) {
+				return $mdgriffith$elm_ui$Element$none;
+			} else {
+				var portals = _v0;
+				return $mdgriffith$elm_ui$Element$text(
+					'connected to portals' + A2(
+						$elm$core$String$join,
+						',',
+						A2(
+							$elm$core$List$map,
+							function ($) {
+								return $.name;
+							},
+							portals)));
+			}
+		}();
 		var author = A2(
 			$mdgriffith$elm_ui$Element$newTabLink,
 			_List_fromArray(
@@ -22542,6 +22593,14 @@ var $author$project$Main$viewResearchDetail = F3(
 					title,
 					A2($mdgriffith$elm_ui$Element$el, _List_Nil, author),
 					status,
+					A2(
+					$mdgriffith$elm_ui$Element$row,
+					_List_fromArray(
+						[
+							A2($mdgriffith$elm_ui$Element$spacingXY, 15, 0)
+						]),
+					_List_fromArray(
+						[connectedPortals, published_in])),
 					keywords,
 					A2(
 					$mdgriffith$elm_ui$Element$paragraph,

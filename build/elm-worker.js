@@ -3200,6 +3200,7 @@ var $author$project$Research$author = function () {
 		A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
 		A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string));
 }();
+var $author$project$EnrichedResearch$connectedToField = 'connectedTo';
 var $elm$parser$Parser$Done = function (a) {
 	return {$: 'Done', a: a};
 };
@@ -4219,6 +4220,7 @@ var $elm$json$Json$Decode$maybe = function (decoder) {
 				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
 			]));
 };
+var $author$project$Research$Undecided = {$: 'Undecided'};
 var $author$project$EnrichedResearch$mkResearchWithKeywords = function (id) {
 	return function (title) {
 		return function (keywords) {
@@ -4226,7 +4228,7 @@ var $author$project$EnrichedResearch$mkResearchWithKeywords = function (id) {
 				return function (createdDate) {
 					return function (authr) {
 						return function (issueId) {
-							return function (publicationStatus) {
+							return function (mpublicationStatus) {
 								return function (publication) {
 									return function (thumbnail) {
 										return function (_abstract) {
@@ -4236,7 +4238,25 @@ var $author$project$EnrichedResearch$mkResearchWithKeywords = function (id) {
 														return function (abstractWithKw) {
 															return function (simpleToc) {
 																return function (screenshots) {
-																	return {_abstract: _abstract, abstractWithKeywords: abstractWithKw, author: authr, connectedTo: connectedToPortals, created: created, createdDate: createdDate, defaultPage: defaultPage, id: id, issueId: issueId, keywords: keywords, portals: portals, publication: publication, publicationStatus: publicationStatus, screenshots: screenshots, thumbnail: thumbnail, title: title, toc: simpleToc};
+																	return {
+																		_abstract: _abstract,
+																		abstractWithKeywords: abstractWithKw,
+																		author: authr,
+																		connectedTo: connectedToPortals,
+																		created: created,
+																		createdDate: createdDate,
+																		defaultPage: defaultPage,
+																		id: id,
+																		issueId: issueId,
+																		keywords: keywords,
+																		portals: portals,
+																		publication: publication,
+																		publicationStatus: A2($elm$core$Maybe$withDefault, $author$project$Research$Undecided, mpublicationStatus),
+																		screenshots: screenshots,
+																		thumbnail: thumbnail,
+																		title: title,
+																		toc: simpleToc
+																	};
 																};
 															};
 														};
@@ -4260,25 +4280,24 @@ var $author$project$Research$Published = {$: 'Published'};
 var $author$project$Research$Republish = {$: 'Republish'};
 var $author$project$Research$Review = {$: 'Review'};
 var $author$project$Research$Revision = {$: 'Revision'};
-var $author$project$Research$Undecided = {$: 'Undecided'};
 var $author$project$Research$publicationStatusFromString = function (status) {
 	switch (status) {
 		case 'progress':
-			return $author$project$Research$InProgress;
+			return $elm$core$Maybe$Just($author$project$Research$InProgress);
 		case 'published':
-			return $author$project$Research$Published;
+			return $elm$core$Maybe$Just($author$project$Research$Published);
 		case 'archived':
-			return $author$project$Research$Archived;
+			return $elm$core$Maybe$Just($author$project$Research$Archived);
 		case 'republish':
-			return $author$project$Research$Republish;
+			return $elm$core$Maybe$Just($author$project$Research$Republish);
 		case 'revision':
-			return $author$project$Research$Revision;
+			return $elm$core$Maybe$Just($author$project$Research$Revision);
 		case 'undecided':
-			return $author$project$Research$Undecided;
+			return $elm$core$Maybe$Just($author$project$Research$Undecided);
 		case 'review':
-			return $author$project$Research$Review;
+			return $elm$core$Maybe$Just($author$project$Research$Review);
 		default:
-			return $author$project$Research$Undecided;
+			return $elm$core$Maybe$Nothing;
 	}
 };
 var $author$project$Research$Portal = F3(
@@ -4319,9 +4338,9 @@ var $elm$core$List$member = F2(
 			xs);
 	});
 var $author$project$Research$portalType = function (portalName) {
-	var institutional = _List_fromArray(
-		['KC Research Portal', 'Stockholm University of the Arts (SKH)', 'University of the Arts Helsinki', 'Norwegian Academy of Music', 'The Danish National School of Performing Arts', 'Rhythmic Music Conservatory Copenhagen', 'Konstfack - University of Arts, Crafts and Design', 'NTNU', 'i2ADS - Research Institute in Art, Design and Society', 'University of Applied Arts Vienna', 'Academy of Creative and Performing Arts', 'International Center for Knowledge in the Arts (Denmark)', 'Inland Norway University of Applied Sciences, The Norwegian Film School', 'Fontys Academy of the Arts (internal)']);
-	return A2($elm$core$List$member, portalName, institutional) ? $author$project$Research$Institutional : $author$project$Research$Journal;
+	var journal = _List_fromArray(
+		['Journal for Artistic Research', 'Ruukku', 'Journal of Sonic Studies', 'HUB', 'VIS - Nordic Journal for Artistic Research', 'ArteActa – Journal for Performing Arts and Artistic Research']);
+	return A2($elm$core$List$member, portalName, journal) ? $author$project$Research$Journal : $author$project$Research$Institutional;
 };
 var $author$project$Research$rcPortalDecoder = A4(
 	$elm$json$Json$Decode$map3,
@@ -4347,7 +4366,7 @@ var $author$project$EnrichedResearch$decoder = A2(
 				$elm_community$json_extra$Json$Decode$Extra$andMap,
 				A2(
 					$elm$json$Json$Decode$field,
-					'connectedTo',
+					$author$project$EnrichedResearch$connectedToField,
 					$elm$json$Json$Decode$list($author$project$Research$rcPortalDecoder)),
 				A2(
 					$elm_community$json_extra$Json$Decode$Extra$andMap,
@@ -5231,7 +5250,13 @@ var $author$project$Queries$decodeSearch = A9(
 		A2(
 			$elm$json$Json$Decode$field,
 			'status',
-			A2($elm$json$Json$Decode$map, $author$project$Research$publicationStatusFromString, $elm$json$Json$Decode$string))));
+			A2(
+				$elm$json$Json$Decode$map,
+				A2(
+					$elm$core$Basics$composeR,
+					$author$project$Research$publicationStatusFromString,
+					$elm$core$Maybe$withDefault($author$project$Research$Undecided)),
+				$elm$json$Json$Decode$string))));
 var $author$project$Queries$decodeExpositionSearch = A2(
 	$elm$json$Json$Decode$andThen,
 	function (t) {
@@ -5468,6 +5493,7 @@ var $author$project$Toc$encodeToc = function (expToc) {
 				A2($elm$json$Json$Encode$list, $author$project$Toc$encodeWeave, expToc.weaves))
 			]));
 };
+var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Maybe$map = F2(
 	function (f, maybe) {
 		if (maybe.$ === 'Just') {
@@ -5572,6 +5598,7 @@ var $author$project$EnrichedResearch$encodeResearchWithKeywords = function (exp)
 				string(a));
 		},
 		exp._abstract);
+	var _v0 = A2($elm$core$Debug$log, 'connected to', exp.connectedTo);
 	return $elm$json$Json$Encode$object(
 		A2(
 			maybeAppend,
@@ -5625,8 +5652,8 @@ var $author$project$EnrichedResearch$encodeResearchWithKeywords = function (exp)
 										'portals',
 										A2(list, $author$project$Research$encodePortal, exp.portals)),
 										_Utils_Tuple2(
-										'connectedTo',
-										A2(list, $author$project$Research$encodePortal, exp.portals)),
+										$author$project$EnrichedResearch$connectedToField,
+										A2(list, $author$project$Research$encodePortal, exp.connectedTo)),
 										_Utils_Tuple2(
 										'abstractWithKeywords',
 										$author$project$RichAbstract$encodeAbstract(exp.abstractWithKeywords))
@@ -9200,13 +9227,23 @@ var $author$project$Queries$findResearchWithPortal = F2(
 		}
 	});
 var $author$project$Queries$findResearchWithStatus = F2(
-	function (status, lst) {
-		return A2(
-			$author$project$Queries$filterRanked,
-			function (r) {
-				return _Utils_eq(r.publicationStatus, status);
-			},
-			lst);
+	function (mstatus, lst) {
+		if (mstatus.$ === 'Nothing') {
+			return lst;
+		} else {
+			if (mstatus.a.$ === 'Undecided') {
+				var _v1 = mstatus.a;
+				return lst;
+			} else {
+				var status = mstatus.a;
+				return A2(
+					$author$project$Queries$filterRanked,
+					function (r) {
+						return _Utils_eq(r.publicationStatus, status);
+					},
+					lst);
+			}
+		}
 	});
 var $tripokey$elm_fuzzy$Fuzzy$AddPenalty = function (a) {
 	return {$: 'AddPenalty', a: a};
@@ -9838,8 +9875,7 @@ var $author$project$Worker$searchResearch = F3(
 						])));
 		} else {
 			var search = expSearch.a.a;
-			return A3(
-				$author$project$Worker$optionalFilter,
+			return A2(
 				$author$project$Queries$findResearchWithStatus,
 				search.publicationStatus,
 				A3(

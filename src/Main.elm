@@ -887,7 +887,7 @@ searchViewFromUrlAdvanced url layout =
             url.queryParameters
                 |> Dict.get "status"
                 |> Maybe.andThen List.head
-                |> Maybe.map RC.publicationStatusFromString
+                |> Maybe.andThen RC.publicationStatusFromString
 
         cmd : Cmd msg
         cmd =
@@ -1402,6 +1402,22 @@ viewResearchDetail dim scale research =
         status =
             Element.el [] <| Element.text (research.publicationStatus |> Maybe.Just |> viewPublicationStatus)
 
+        connectedPortals =
+            case research.connectedTo of
+                [] ->
+                    Element.none
+
+                portals ->
+                    Element.text ("connected to portals" ++ String.join "," (List.map .name portals))
+
+        published_in =
+            case research.portals of
+                [] ->
+                    Element.none
+
+                portals ->
+                    Element.text ("published in portals: " ++ String.join "," (List.map .name portals))
+
         metainfo : Element Msg
         metainfo =
             column
@@ -1409,6 +1425,7 @@ viewResearchDetail dim scale research =
                 [ title
                 , Element.el [] author
                 , status
+                , Element.row [ Element.spacingXY 15 0 ] [ connectedPortals, published_in ]
                 , keywords
                 , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
                 , Element.el
@@ -1796,7 +1813,7 @@ appUrlFromSearchViewState svs =
                                     , ( "portal", [ form.portal ] )
                                     , ( "after", maybeToList (form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
                                     , ( "before", maybeToList (form.before |> Maybe.map dateToString) )
-                                    , ( "status", (form.status |> Maybe.map RC.publicationStatusAsString |> Maybe.withDefault "undecided") |> (\x -> [ x ]) )
+                                    , ( "status", (form.status |> Maybe.map RC.publicationStatusAsString |> Maybe.withDefault "") |> (\x -> [ x ]) )
                                     , ( "advanced", [ "1" ] )
                                     ]
 
@@ -2091,10 +2108,9 @@ lazyImageWithErrorHandling groupSize dimensions research =
         device =
             classifyDevice dimensions
 
-        urlFromId : Int -> String
-        urlFromId i =
-            String.fromInt i |> (\fileName -> "screenshots/" ++ fileName ++ ".jpeg")
-
+        -- urlFromId : Int -> String
+        -- urlFromId i =
+        --     String.fromInt i |> (\fileName -> "screenshots/" ++ fileName ++ ".jpeg")
         urlFromScreenshots : Maybe Screenshots.Exposition -> String
         urlFromScreenshots screenshots =
             screenshots
@@ -2332,6 +2348,9 @@ searchForm title author keyword1 keyword2 abstract portal after before status =
     let
         nothingIsJustEmpty =
             Maybe.withDefault ""
+
+        -- _ =
+        --     Debug.log "status" status
     in
     SearchForm
         (nothingIsJustEmpty title)
@@ -2469,10 +2488,9 @@ searchGUI hidePortal device portals keywords =
             , Just Undecided
             , Just Review
             , Just Revision
-            , Just Archived
             , Just Republish
             ]
-                |> List.map (\status -> ( viewPublicationStatus status, status ))
+                |> List.map (\status -> ( status |> Maybe.map RC.publicationStatusAsString |> Maybe.withDefault "Any", status ))
 
         rowdiv elements =
             div [ Attr.style "display" "flex" ] elements

@@ -309,7 +309,7 @@ decodeSearch =
         (maybe (field "after" int |> map Date.fromRataDie))
         (maybe (field "before" int |> map Date.fromRataDie))
         (field "portal" string)
-        (maybe (field "status" (string |> D.map RC.publicationStatusFromString)))
+        (maybe (field "status" (string |> D.map (RC.publicationStatusFromString >> Maybe.withDefault Undecided))))
 
 
 decodeExpositionSearch : D.Decoder ExpositionSearch
@@ -851,8 +851,16 @@ findResearchWithAbstract abstractQ lst =
             )
 
 
-findResearchWithStatus : PublicationStatus -> RankedResult (Research r) -> RankedResult (Research r)
-findResearchWithStatus status lst =
-    filterRanked
-        (\r -> r.publicationStatus == status)
-        lst
+findResearchWithStatus : Maybe PublicationStatus -> RankedResult (Research r) -> RankedResult (Research r)
+findResearchWithStatus mstatus lst =
+    case mstatus of
+        Nothing ->
+            lst
+
+        Just Undecided ->
+            lst
+
+        Just status ->
+            filterRanked
+                (\r -> r.publicationStatus == status)
+                lst

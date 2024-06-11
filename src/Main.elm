@@ -1029,10 +1029,21 @@ viewResearchMicro numCollums screen device research =
                 }
 
         date =
+            let
+                d =
+                    case research.publication of
+                        Nothing ->
+                            "(" ++ formatDate research.lastModified ++ ")"
+
+                        Just pDate ->
+                            "(" ++ formatDate pDate ++ ")"
+
+                --case research.publication of
+            in
             Element.el
                 [ Font.family [ Font.monospace ]
                 ]
-                (Element.text <| "(" ++ (research.publication |> Maybe.map formatDate |> Maybe.withDefault "") ++ ")")
+                (Element.text d)
 
         keywords =
             Element.el
@@ -1408,7 +1419,7 @@ viewResearchDetail dim scale research =
                     Element.none
 
                 portals ->
-                    Element.text ("connected to portals" ++ String.join "," (List.map .name portals))
+                    Element.text ("connected to portals: " ++ String.join "," (List.map .name portals))
 
         published_in =
             case research.portals of
@@ -2485,7 +2496,8 @@ searchGUI hidePortal device portals keywords =
             [ Nothing
             , Just Published
             , Just InProgress
-            , Just Undecided
+
+            --            , Just Undecided I don't think this makes sense to include
             , Just Review
             , Just Revision
             , Just Republish

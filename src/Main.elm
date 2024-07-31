@@ -1839,9 +1839,13 @@ appUrlFromSearchViewState svs =
                                     parametersList
 
                         ScreenLayout scale ->
+                            let
+                                parListWithScale =
+                                    ( "scale", [ scaleToString scale ] ) :: parametersList
+                            in
                             AppUrl.fromPath [ "research", "search", "screen" ]
                                 |> withParametersList
-                                    parametersList
+                                    parListWithScale
 
                 QuickSearch query ->
                     AppUrl.fromPath [ "research", "search", "list" ]

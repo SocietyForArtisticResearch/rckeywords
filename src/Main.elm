@@ -7,7 +7,7 @@ import Browser.Events as Events
 import Browser.Navigation as Nav
 import Date exposing (Date)
 import Dict
-import Element exposing (Element, column, el, fill, height, layout, padding, paddingEach, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
+import Element exposing (Element, column, el, fill, height, layout, padding, paddingXY, px, rgb255, row, shrink, spacing, spacingXY, text, width)
 import Element.Background
 import Element.Border as Border
 import Element.Font as Font
@@ -1617,6 +1617,11 @@ viewRankedResults allPortals allKeywords submitting searchFormState dimensions d
                 ListLayout ->
                     lst |> Queries.length |> (\n -> n // 64)
 
+        viewResultCount : Element Msg
+        viewResultCount =
+            Element.el (RCStyles.withStandardPadding []) <|
+                Element.html (Html.p [ Attr.title "number of results", Attr.style "font-size" "12px" ] [ Html.text ((lst |> Queries.length |> String.fromInt) ++ " results") ])
+
         scaleButton : Element Msg
         scaleButton =
             case sv.layout of
@@ -1651,6 +1656,7 @@ viewRankedResults allPortals allKeywords submitting searchFormState dimensions d
                     row
                         [ width fill, spacingXY 15 0 ]
                         [ Element.el [ Element.alignLeft ] <| viewLayoutSwitch sv.layout (urlFromLayout sv)
+                        , Element.el [ Element.alignRight ] viewResultCount
                         , scaleButton
                         , Element.el [ Element.alignRight ] <| toggleTitleSorting sv.sorting (urlFromSorting sv)
                         ]
@@ -1811,39 +1817,31 @@ appUrlFromSearchViewState svs =
         appurl =
             case svs.form of
                 AdvancedSearch form ->
+                    let
+                        parametersList =
+                            [ ( "keyword", form.keywords )
+                            , ( "title", [ form.title ] )
+                            , ( "author", [ form.author ] )
+                            , ( "sorting", [ RC.titleSortingToString svs.sorting ] )
+                            , ( "abstract", [ form.abstract ] )
+                            , ( "page", [ pageAsString svs.page ] )
+                            , ( "portal", [ form.portal ] )
+                            , ( "after", maybeToList (form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
+                            , ( "before", maybeToList (form.before |> Maybe.map dateToString) )
+                            , ( "status", (form.status |> Maybe.map RC.publicationStatusAsString |> Maybe.withDefault "") |> (\x -> [ x ]) )
+                            , ( "advanced", [ "1" ] )
+                            ]
+                    in
                     case svs.layout of
                         ListLayout ->
                             AppUrl.fromPath [ "research", "search", "list" ]
                                 |> withParametersList
-                                    [ ( "keyword", form.keywords )
-                                    , ( "title", [ form.title ] )
-                                    , ( "author", [ form.author ] )
-                                    , ( "sorting", [ RC.titleSortingToString svs.sorting ] )
-                                    , ( "abstract", [ form.abstract ] )
-                                    , ( "page", [ pageAsString svs.page ] )
-                                    , ( "portal", [ form.portal ] )
-                                    , ( "after", maybeToList (form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
-                                    , ( "before", maybeToList (form.before |> Maybe.map dateToString) )
-                                    , ( "status", (form.status |> Maybe.map RC.publicationStatusAsString |> Maybe.withDefault "") |> (\x -> [ x ]) )
-                                    , ( "advanced", [ "1" ] )
-                                    ]
+                                    parametersList
 
                         ScreenLayout scale ->
                             AppUrl.fromPath [ "research", "search", "screen" ]
                                 |> withParametersList
-                                    [ ( "keyword", form.keywords )
-                                    , ( "title", [ form.title ] )
-                                    , ( "author", [ form.author ] )
-                                    , ( "sorting", [ RC.titleSortingToString svs.sorting ] )
-                                    , ( "abstract", [ form.abstract ] )
-                                    , ( "page", [ pageAsString svs.page ] )
-                                    , ( "scale", [ scaleToString scale ] )
-                                    , ( "portal", [ form.portal ] )
-                                    , ( "after", maybeToList (form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
-                                    , ( "before", maybeToList (form.before |> Maybe.map dateToString) )
-                                    , ( "status", (form.status |> Maybe.map RC.publicationStatusAsString |> Maybe.withDefault "undecided") |> (\x -> [ x ]) )
-                                    , ( "advanced", [ "1" ] )
-                                    ]
+                                    parametersList
 
                 QuickSearch query ->
                     AppUrl.fromPath [ "research", "search", "list" ]
@@ -2433,7 +2431,12 @@ keywordField keywords formState label field =
                 |> Form.errorsForField field
                 |> List.map
                     (\error ->
-                        Html.li [] [ Html.text error ]
+                        Html.li
+                            [ Attr.style "color" "#ff8080"
+                            , Attr.style "list-style" "none"
+                            , Attr.style "font-size" "12px"
+                            ]
+                            [ Html.text error ]
                     )
 
            else
@@ -2450,6 +2453,28 @@ keywordField keywords formState label field =
 selectField : (a -> String) -> { b | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Field String parsed2 (FieldView.Options a) -> Html msg
 selectField displayWith formState label field =
     div [ Attr.style "width" "100%" ]
+        [ Html.label labelStyle
+            [ Html.text (label ++ " ")
+            , FieldView.select dropdownStyle (\p -> ( [], displayWith p )) field
+            ]
+        , (if formState.submitAttempted then
+            formState.errors
+                |> Form.errorsForField field
+                |> List.map
+                    (\error ->
+                        Html.li [] [ Html.text error ]
+                    )
+
+           else
+            []
+          )
+            |> Html.ul [ Attr.style "color" "red" ]
+        ]
+
+
+selectFieldWidth : Int -> (a -> String) -> { b | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Field String parsed2 (FieldView.Options a) -> Html msg
+selectFieldWidth widthInPx displayWith formState label field =
+    div [ Attr.style "width" (String.fromInt widthInPx ++ "px") ]
         [ Html.label labelStyle
             [ Html.text (label ++ " ")
             , FieldView.select dropdownStyle (\p -> ( [], displayWith p )) field
@@ -2486,7 +2511,7 @@ searchGUI hidePortal device portals keywords =
                         Ok (Just k)
 
                     else
-                        Err (quote k ++ " not used")
+                        Err "unknown keyword"
 
         portalsAsOptions : List ( String, String )
         portalsAsOptions =
@@ -2550,11 +2575,14 @@ searchGUI hidePortal device portals keywords =
                                         [ fieldView info "after" after
                                         , fieldView info "before" before
                                         ]
-                                    , if hidePortal then
-                                        div [] []
+                                    , rowdiv
+                                        [ if hidePortal then
+                                            div [] []
 
-                                      else
-                                        div [] [ selectField identity info "portal" portal ]
+                                          else
+                                            div [] [ selectFieldWidth 406 identity info "portal" portal ]
+                                        , selectFieldWidth 406 viewPublicationStatus info "status" status
+                                        ]
                                     ]
 
                             Desktop ->
@@ -2566,16 +2594,18 @@ searchGUI hidePortal device portals keywords =
 
                                         --, keywordField keywords info "" keyword2
                                         , fieldView info "abstract" abstract
-                                        , if hidePortal then
+                                        ]
+                                    , rowdiv
+                                        [ if hidePortal then
                                             div [] []
 
                                           else
-                                            div [] [ selectField identity info "portal" portal ]
+                                            div [] [ selectFieldWidth 406 identity info "portal" portal ]
+                                        , selectFieldWidth 406 viewPublicationStatus info "status" status
                                         ]
                                     , rowdiv
                                         [ fieldView info "after" after
                                         , fieldView info "before" before
-                                        , selectField viewPublicationStatus info "status" status
                                         ]
                                     ]
 
@@ -2592,6 +2622,7 @@ searchGUI hidePortal device portals keywords =
 
                                       else
                                         div [] [ selectField identity info "portal" portal ]
+                                    , selectField viewPublicationStatus info "status" status
                                     , fieldView info "after" after
                                     , fieldView info "before" before
                                     ]

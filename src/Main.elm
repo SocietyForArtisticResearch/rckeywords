@@ -1028,23 +1028,6 @@ viewResearchMicro numCollums screen device research =
                 , url = RC.authorUrl research.author
                 }
 
-        date =
-            let
-                d =
-                    case research.publication of
-                        Nothing ->
-                            "(" ++ formatDate research.lastModified ++ ")"
-
-                        Just pDate ->
-                            "(" ++ formatDate pDate ++ ")"
-
-                --case research.publication of
-            in
-            Element.el
-                [ Font.family [ Font.monospace ]
-                ]
-                (Element.text d)
-
         keywords =
             Element.el
                 [ width fill ]
@@ -1055,6 +1038,36 @@ viewResearchMicro numCollums screen device research =
                     )
                 )
 
+        publicationStatus =
+            case research.publicationStatus of
+                RC.Published ->
+                    Element.el
+                        [ width fill ]
+                        (Element.el
+                            [ Font.family [ Font.monospace ]
+                            ]
+                            (Element.text
+                                (RC.publicationStatusAsString research.publicationStatus
+                                    ++ " "
+                                    ++ Maybe.withDefault "" (Maybe.map formatDate research.publication)
+                                )
+                            )
+                        )
+
+                _ ->
+                    Element.el
+                        [ width fill ]
+                        (Element.el
+                            [ Font.family [ Font.monospace ]
+                            ]
+                            (Element.text <| RC.publicationStatusAsString research.publicationStatus)
+                        )
+
+        modified =
+            Element.el
+                [ width fill, Font.family [ Font.monospace ], Font.italic ]
+                (Element.el [] (Element.text <| "(modified: " ++ formatDate research.lastModified ++ ")"))
+
         metabox =
             Element.column
                 [ width fill
@@ -1062,9 +1075,11 @@ viewResearchMicro numCollums screen device research =
                 , Element.spacingXY 0 5
                 ]
                 [ title
-                , row [ spacingXY 5 0 ] [ author, date ]
+                , author
+                , publicationStatus
                 , keywords
                 , Element.el [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] abstract
+                , modified
                 , Element.el
                     [ Element.paddingEach { top = 10, bottom = 0, left = 0, right = 0 }
                     , width fill
@@ -1709,8 +1724,8 @@ toggleTitleSorting sorting sortingToUrl =
     Element.row [ paddingXY 0 0, Element.Region.navigation, width fill, spacing 5, Font.color (Element.rgb 0.0 0.0 1.0) ]
         [ Element.el toggleLabelStyle <| Element.text "sort:"
         , Element.link (linkStyle (sorting == RC.Random) SmallLink) { url = sortingToUrl RC.Random, label = Element.text "random" }
-        , Element.link (linkStyle (sorting == RC.NewestFirst) SmallLink) { url = sortingToUrl RC.NewestFirst, label = Element.text "newest first" }
-        , Element.link (linkStyle (sorting == RC.OldestFirst) SmallLink) { url = sortingToUrl RC.OldestFirst, label = Element.text "oldest first" }
+        , Element.link (linkStyle (sorting == RC.NewestFirst) SmallLink) { url = sortingToUrl RC.NewestFirst, label = Element.text "recent" }
+        , Element.link (linkStyle (sorting == RC.OldestFirst) SmallLink) { url = sortingToUrl RC.OldestFirst, label = Element.text "oldest" }
         , Element.link (linkStyle (sorting == RC.Rank) SmallLink) { url = sortingToUrl RC.Rank, label = Element.text "rank" }
         ]
 
@@ -2229,17 +2244,17 @@ scaleToGroupSize device scale =
                     3
 
 
-sortResearch : RC.TitleSorting -> Queries.RankedResult (Research r) -> List (Research r)
+sortResearch : RC.TitleSorting -> Queries.RankedResult ResearchWithKeywords -> List ResearchWithKeywords
 sortResearch sorting research =
     case sorting of
         RC.OldestFirst ->
-            research |> Queries.toList |> List.sortBy (\r -> r.created)
+            research |> Queries.toList |> List.sortBy (\r -> r.lastModified |> Date.toRataDie)
 
         RC.Random ->
             research |> Queries.toList |> RC.shuffleWithSeed 42
 
         RC.NewestFirst ->
-            research |> Queries.toList |> List.sortBy (\r -> r.created) |> List.reverse
+            research |> Queries.toList |> List.sortBy (\r -> r.lastModified |> Date.toRataDie) |> List.reverse
 
         RC.Rank ->
             research |> Queries.sortByRank

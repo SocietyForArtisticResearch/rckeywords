@@ -6,6 +6,7 @@ This is something to test alternative layouts of RC content.
 
 * ## quicksearch
 
+- [ ] if there is only one keyword that matches, can we still show something?
 - [ ] Integrate state of advanced search in url
 - [ ] Worker.elm: Add a special search query that does something smart with just a string
 - [ ] Integrate everything

@@ -438,9 +438,25 @@ update msg model =
             ( model, Cmd.none )
 
         ChangedQuery q ->
-            ( { model | query = q }
-            , Cmd.none
-            )
+            case model.view of
+                KeywordsView (KeywordMainView sorting _) ->
+                    ( { model | query = q, view = KeywordsView (KeywordMainView sorting (Page 1)), searchPageSize = 20 }
+                    , Cmd.batch
+                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords q sorting))
+                        , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ q ++ "&sorting=" ++ RC.sortingToString sorting)
+                        ]
+                    )
+
+                KeywordsView (KeywordSearch _ sorting _) ->
+                    ( { model | query = q, view = KeywordsView (KeywordMainView sorting (Page 1)) }
+                    , Cmd.batch
+                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords q sorting))
+                        , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ q ++ "&sorting=" ++ RC.sortingToString sorting)
+                        ]
+                    )
+
+                _ ->
+                    ( { model | query = q }, Cmd.none )
 
         UrlChanged url ->
             let
@@ -1047,7 +1063,7 @@ viewResearchMicro numCollums screen device research =
                             [ Font.family [ Font.monospace ]
                             ]
                             (Element.text
-                                (RC.publicationStatusAsString research.publicationStatus
+                                (viewPublicationStatus (Just research.publicationStatus)
                                     ++ " "
                                     ++ Maybe.withDefault "" (Maybe.map formatDate research.publication)
                                 )
@@ -1060,13 +1076,13 @@ viewResearchMicro numCollums screen device research =
                         (Element.el
                             [ Font.family [ Font.monospace ]
                             ]
-                            (Element.text <| RC.publicationStatusAsString research.publicationStatus)
+                            (Element.text <| viewPublicationStatus (Just research.publicationStatus))
                         )
 
         modified =
             Element.el
                 [ width fill, Font.family [ Font.monospace ], Font.italic ]
-                (Element.el [] (Element.text <| "(modified: " ++ formatDate research.lastModified ++ ")"))
+                (Element.el [] (Element.text <| "(last modified: " ++ formatDate research.lastModified ++ ")"))
 
         metabox =
             Element.column
@@ -1428,6 +1444,7 @@ viewResearchDetail dim scale research =
         status =
             Element.el [] <| Element.text (research.publicationStatus |> Maybe.Just |> viewPublicationStatus)
 
+        connectedPortals : Element msg
         connectedPortals =
             case research.connectedTo of
                 [] ->
@@ -1436,13 +1453,44 @@ viewResearchDetail dim scale research =
                 portals ->
                     Element.text ("connected to portals: " ++ String.join "," (List.map .name portals))
 
+        published_in : Element msg
         published_in =
             case research.portals of
                 [] ->
                     Element.none
 
                 portals ->
-                    Element.text ("published in portals: " ++ String.join "," (List.map .name portals))
+                    case portals of
+                        [] ->
+                            Element.none
+
+                        [ one ] ->
+                            Element.text ("portal: " ++ .name one)
+
+                        many_portals ->
+                            Element.text ("portals: " ++ String.join "," (List.map .name many_portals))
+
+        doi : Element msg
+        doi =
+            case research.doi of
+                Nothing ->
+                    Element.none
+
+                Just d ->
+                    Element.newTabLink []
+                        { url = RC.doiUrl d
+                        , label = Element.el [ Font.size 12, Font.family [ RCStyles.globalFont ] ] (Element.text <| RC.doiId d)
+                        }
+
+        publicationOrModifiedDate =
+            case research.publicationStatus of
+                Published ->
+                    research.publication
+                        |> Maybe.map (\pdate -> Element.text ("published on: " ++ formatDate pdate))
+                        |> Maybe.withDefault Element.none
+
+                _ ->
+                    Element.el [] (Element.text ("last modified: " ++ formatDate research.lastModified))
 
         metainfo : Element Msg
         metainfo =
@@ -1450,10 +1498,11 @@ viewResearchDetail dim scale research =
                 RCStyles.metastyling
                 [ title
                 , Element.el [] author
-                , status
+                , Element.row [ Element.spacingXY 15 0 ] [ status, doi ]
                 , Element.row [ Element.spacingXY 15 0 ] [ connectedPortals, published_in ]
                 , keywords
-                , Element.paragraph [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] [ abstract, date ]
+                , Element.el [ Font.size 12, Font.family [ RCStyles.globalFont ], width (px w) ] abstract
+                , publicationOrModifiedDate
                 , Element.el
                     [ paddingXY 0 10
                     , width fill
@@ -1911,12 +1960,18 @@ appUrlFromKeywordViewState kwview =
 
 keywordPageSize : number
 keywordPageSize =
-    2048
+    1024 -- Note this may be made smaller if there is a query, see viewKeywords
 
 
 viewKeywords : Model -> KeywordsViewState -> Element Msg
 viewKeywords model keywordview =
     let
+        dynamicPageSize = 
+            case model.query of
+                "" -> keywordPageSize
+
+                any -> 256
+
         page =
             case keywordview of
                 KeywordMainView _ p ->
@@ -1944,7 +1999,15 @@ viewKeywords model keywordview =
                     page |> pageToInt
 
                 showing =
-                    [ "results ", (p - 1) * keywordPageSize |> String.fromInt, "-", min (p * keywordPageSize) count |> String.fromInt, " (total: ", count |> String.fromInt, ")" ] |> String.concat
+                    [ "results "
+                    , (p - 1) * dynamicPageSize |> String.fromInt
+                    , "-"
+                    , min (p * dynamicPageSize) count |> String.fromInt
+                    , " (total: "
+                    , count |> String.fromInt
+                    , ")"
+                    ]
+                        |> String.concat
             in
             el [ Font.size 12 ] (Element.text showing)
 
@@ -1984,17 +2047,18 @@ viewKeywords model keywordview =
                     , placeholder = Just (Element.Input.placeholder [ Font.size 16 ] (Element.text "search for keyword"))
                     , label = Element.Input.labelAbove [ Font.size 16, paddingXY 0 5 ] (Element.text "filter")
                     }
-                , Element.link (Element.moveDown 12 :: linkStyle shouldEnable BigLink)
-                    { url = url
-                    , label = Element.text "search"
-                    }
+
+                -- , Element.link (Element.moveDown 12 :: linkStyle shouldEnable BigLink)
+                --     { url = url
+                --     , label = Element.text "search"
+                --     }
                 ]
 
         pageNavigation : List a -> Page -> Element Msg
         pageNavigation lst (Page p) =
             let
                 total =
-                    lst |> List.length |> (\n -> n // keywordPageSize)
+                    lst |> List.length |> (\n -> n // dynamicPageSize)
 
                 pageLink n =
                     Element.link (linkStyle (n == p) SmallLink)
@@ -2040,7 +2104,7 @@ viewKeywords model keywordview =
                     FoundKeywords results ->
                         let
                             currentPage =
-                                pageOfList keywordPageSize page results
+                                pageOfList dynamicPageSize page results
                         in
                         column [ width fill, Element.spacing 15 ]
                             [ Element.el [ width shrink, Element.paddingXY 0 5 ] (toggleSorting sorting)

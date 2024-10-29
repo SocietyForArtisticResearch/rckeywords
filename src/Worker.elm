@@ -6,6 +6,7 @@ import Html exposing (b)
 import Http
 import Json.Decode as D exposing (errorToString)
 import Json.Encode as E
+import Dict exposing (Dict)
 import List.Extra
 import Platform
 import Queries exposing (Search(..), SearchQuery(..))
@@ -13,6 +14,7 @@ import Random
 import Random.List exposing (shuffle)
 import Research as RC exposing (Keyword, KeywordSet, KeywordSorting(..), ReverseKeywordDict)
 import Set
+import KeywordString exposing (KeywordString)
 
 
 
@@ -98,8 +100,13 @@ update msg model =
                     case D.decodeValue Queries.decodeSearchQuery json of
                         Ok q ->
                             case q of
-                                Queries.FindKeywords str kwSorting ->
-                                    ( Loaded lmodel, findKeywords str kwSorting lmodel.keywords |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults )
+                                Queries.FindKeywords str kwSorting mportal ->
+                                    case mportal of
+                                        Nothing -> 
+                                            ( Loaded lmodel, findKeywords str kwSorting lmodel.keywords |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults )
+
+                                        Just portal -> 
+                                            ( Loaded lmodel, findKeywordsPortal portal lmodel.research kwSorting |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults )
 
                                 -- This is actual search form query
                                 Queries.FindResearch search ->
@@ -165,7 +172,7 @@ update msg model =
                                 cmdOfQ : SearchQuery -> Cmd msg
                                 cmdOfQ query =
                                     case query of
-                                        FindKeywords str kwsorting ->
+                                        FindKeywords str kwsorting mportal ->
                                             findKeywords str kwsorting kws |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults
 
                                         FindResearch search ->
@@ -224,7 +231,7 @@ shuffleWithSeed seed lst =
         |> Tuple.first
 
 
-findKeywords : String -> RC.KeywordSorting -> KeywordSet -> List Keyword
+findKeywords : String -> RC.KeywordSorting -> KeywordSet  -> List Keyword
 findKeywords query sorting keywords =
     let
         lst : List Keyword
@@ -250,6 +257,9 @@ findKeywords query sorting keywords =
         RC.RandomKeyword ->
             shuffleWithSeed 42 filtered
 
+findKeywordsPortal :  RC.Portal -> List (RC.Research a) -> RC.KeywordSorting -> List Keyword
+findKeywordsPortal portal lst sorting =
+    lst |> Queries.filterResearchWithPortal portal.name |> RC.keywordSet |> findKeywords "" sorting 
 
 problemize : Problem -> Model -> Model
 problemize p m =

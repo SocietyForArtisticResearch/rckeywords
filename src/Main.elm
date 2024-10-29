@@ -38,6 +38,7 @@ import String
 import Task
 import Time
 import Url exposing (Url)
+import Research exposing (Portal)
 
 
 
@@ -442,7 +443,7 @@ update msg model =
                 KeywordsView (KeywordMainView sorting _) ->
                     ( { model | query = q, view = KeywordsView (KeywordMainView sorting (Page 1)), searchPageSize = 20 }
                     , Cmd.batch
-                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords q sorting))
+                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords q sorting Nothing))
                         , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ q ++ "&sorting=" ++ RC.sortingToString sorting)
                         ]
                     )
@@ -450,7 +451,7 @@ update msg model =
                 KeywordsView (KeywordSearch _ sorting _) ->
                     ( { model | query = q, view = KeywordsView (KeywordMainView sorting (Page 1)) }
                     , Cmd.batch
-                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords q sorting))
+                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords q sorting Nothing))
                         , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ q ++ "&sorting=" ++ RC.sortingToString sorting)
                         ]
                     )
@@ -518,7 +519,7 @@ update msg model =
                 KeywordsView (KeywordMainView sorting _) ->
                     ( { model | view = KeywordsView (KeywordMainView sorting (Page 1)), searchPageSize = 20 }
                     , Cmd.batch
-                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting))
+                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting Nothing))
                         , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)
                         ]
                     )
@@ -526,7 +527,7 @@ update msg model =
                 KeywordsView (KeywordSearch _ sorting _) ->
                     ( { model | view = KeywordsView (KeywordMainView sorting (Page 1)) }
                     , Cmd.batch
-                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting))
+                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting Nothing))
                         , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)
                         ]
                     )
@@ -678,7 +679,7 @@ handleUrl url model =
                 | search = Searching
                 , view = KeywordsView (KeywordMainView sorting page)
               }
-            , sendQuery (Queries.encodeSearchQuery (FindKeywords "" sorting))
+            , sendQuery (Queries.encodeSearchQuery (FindKeywords "" sorting Nothing))
             )
 
         [ "keywords", "search" ] ->
@@ -695,14 +696,18 @@ handleUrl url model =
                 page =
                     url.queryParameters |> Dict.get "page" |> Maybe.andThen List.head |> Maybe.andThen String.toInt |> Maybe.withDefault 1 |> pageFromInt
 
+                portal : Maybe Portal
+                portal =
+                    url.queryParameters |> Dict.get "portal" |> Maybe.andThen List.head |> Maybe.andThen (RC.decodePortalIdString model.allPortals)
+
                 cmd : Cmd msg
                 cmd =
                     case q of
                         "" ->
-                            sendQuery (Queries.encodeSearchQuery (FindKeywords "" sorting))
+                            sendQuery (Queries.encodeSearchQuery (FindKeywords "" sorting portal))
 
                         someQ ->
-                            sendQuery (Queries.encodeSearchQuery (FindKeywords someQ sorting))
+                            sendQuery (Queries.encodeSearchQuery (FindKeywords someQ sorting portal))
             in
             ( { model
                 | query = q

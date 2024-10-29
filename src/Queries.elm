@@ -19,6 +19,7 @@ module Queries exposing
     , findResearchWithPortal
     , findResearchWithStatus
     , findResearchWithTitle
+    , filterResearchWithPortal
     , getKeywords
     , length
     , searchWithKeywords
@@ -26,6 +27,7 @@ module Queries exposing
     , toList
     , uniqueRankedResult
     , unrank
+    , unranked
     , withAbstract
     , withAfter
     , withAuthor
@@ -116,6 +118,11 @@ unrank rs =
     rs |> List.map (\(Ranked _ x) -> x)
 
 
+unranked : List a -> RankedResult a
+unranked lst =
+    Unranked lst
+
+
 joinRanked : RankedResult a -> RankedResult a -> RankedResult a
 joinRanked a b =
     case ( a, b ) of
@@ -176,11 +183,6 @@ getValue (Ranked _ value) =
 rank : (a -> Int) -> List a -> RankedResult a
 rank f lst =
     List.map (\x -> Ranked (f x) x) lst |> RankedResult
-
-
-unranked : List a -> RankedResult a
-unranked xs =
-    Unranked xs
 
 
 toList : RankedResult a -> List a
@@ -381,7 +383,7 @@ encodeSearch (Search data) =
 
 
 type SearchQuery
-    = FindKeywords String RC.KeywordSorting
+    = FindKeywords String RC.KeywordSorting (Maybe RC.Portal)
     | FindResearch ExpositionSearch
     | GetAllKeywords
     | GetAllPortals
@@ -553,9 +555,10 @@ decodeSearchQuery =
             (\t ->
                 case t of
                     "FindKeywords" ->
-                        D.map2 FindKeywords
+                        D.map3 FindKeywords
                             (field "keywords" string |> D.map String.toLower)
                             (field "sorting" decodeKeywordSorting)
+                            (maybe (field "mportal" RC.decodePortal))
 
                     "FindResearch" ->
                         D.map FindResearch
@@ -575,15 +578,31 @@ decodeSearchQuery =
             )
 
 
+prependMaybe : Maybe a -> List a -> List a
+prependMaybe x xs =
+    case x of
+        Nothing ->
+            xs
+
+        Just some ->
+            some :: xs
+
+
 encodeSearchQuery : SearchQuery -> E.Value
 encodeSearchQuery query =
     case query of
-        FindKeywords keywords sorting ->
+        FindKeywords keywords sorting mportal ->
+            let
+                maybePortal =
+                    mportal |> Maybe.map (\p -> ( "portal", RC.encodePortal p ))
+            in
             E.object
-                [ ( "type", E.string "FindKeywords" )
-                , ( "keywords", E.string (String.toLower keywords) ) -- Badly named: this is only a query for searching keywords
-                , ( "sorting", encodeKeywordSorting sorting )
-                ]
+                (prependMaybe maybePortal
+                    [ ( "type", E.string "FindKeywords" )
+                    , ( "keywords", E.string (String.toLower keywords) ) -- Badly named: this is only a query for searching keywords
+                    , ( "sorting", encodeKeywordSorting sorting )
+                    ]
+                )
 
         FindResearch srch ->
             E.object
@@ -814,6 +833,33 @@ findResearchWithPortal portalq lst =
             in
             filterRanked f lst
 
+filterResearchWithPortal : String -> List (Research r) -> List (Research r)
+filterResearchWithPortal portalq lst =
+    -- let
+    --     _ =
+    --         Debug.log portalq "portalq"
+    -- in
+    case portalq of
+        "" ->
+            lst
+
+        "All Portals" ->
+            lst
+
+        "Any portal" ->
+            lst
+
+        nonemptyq ->
+            let
+                f : Research r -> Bool
+                f research =
+                    let
+                        names =
+                            (research.portals ++ research.connectedTo) |> List.map (.name >> String.toLower)
+                    in
+                    names |> List.any (\p -> p == (nonemptyq |> String.toLower))
+            in
+            List.filter f lst
 
 
 -- maybe the not found error could also by a type?

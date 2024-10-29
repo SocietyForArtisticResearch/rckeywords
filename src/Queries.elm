@@ -10,6 +10,8 @@ module Queries exposing
     , emptySearch
     , encodeSearchQuery
     , encodeSearchResult
+    , filterResearchWithPortal
+    , filterResearchWithPortalID
     , findExpositionWithId
     , findResearchAfter
     , findResearchBefore
@@ -19,7 +21,6 @@ module Queries exposing
     , findResearchWithPortal
     , findResearchWithStatus
     , findResearchWithTitle
-    , filterResearchWithPortal
     , getKeywords
     , length
     , searchWithKeywords
@@ -383,7 +384,7 @@ encodeSearch (Search data) =
 
 
 type SearchQuery
-    = FindKeywords String RC.KeywordSorting (Maybe RC.Portal)
+    = FindKeywords String RC.KeywordSorting (Maybe Int)
     | FindResearch ExpositionSearch
     | GetAllKeywords
     | GetAllPortals
@@ -558,7 +559,7 @@ decodeSearchQuery =
                         D.map3 FindKeywords
                             (field "keywords" string |> D.map String.toLower)
                             (field "sorting" decodeKeywordSorting)
-                            (maybe (field "mportal" RC.decodePortal))
+                            (maybe (field "portal" int))
 
                     "FindResearch" ->
                         D.map FindResearch
@@ -594,7 +595,7 @@ encodeSearchQuery query =
         FindKeywords keywords sorting mportal ->
             let
                 maybePortal =
-                    mportal |> Maybe.map (\p -> ( "portal", RC.encodePortal p ))
+                    mportal |> Maybe.map (\p -> ( "portal", E.int p ))
             in
             E.object
                 (prependMaybe maybePortal
@@ -833,6 +834,7 @@ findResearchWithPortal portalq lst =
             in
             filterRanked f lst
 
+
 filterResearchWithPortal : String -> List (Research r) -> List (Research r)
 filterResearchWithPortal portalq lst =
     -- let
@@ -860,6 +862,21 @@ filterResearchWithPortal portalq lst =
                     names |> List.any (\p -> p == (nonemptyq |> String.toLower))
             in
             List.filter f lst
+
+
+filterResearchWithPortalID : Int -> List (Research r) -> List (Research r)
+filterResearchWithPortalID portalID lst =
+    let
+        f : Research r -> Bool
+        f research =
+            let
+                names =
+                    (research.portals ++ research.connectedTo) |> List.map .id
+            in
+            names |> List.any (\p -> p == portalID)
+    in
+    List.filter f lst
+
 
 
 -- maybe the not found error could also by a type?

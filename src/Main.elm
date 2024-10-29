@@ -20,7 +20,7 @@ import Form
 import Form.Field as Field
 import Form.FieldView as FieldView
 import Form.Validation as Validation
-import Html exposing (Html, div, th)
+import Html exposing (Html, a, div, th)
 import Html.Attributes as Attr
 import Html.Events
 import Html.Keyed
@@ -31,14 +31,13 @@ import List
 import Page exposing (Scale(..), ScreenDimensions, makeNumColumns, transpose)
 import Queries exposing (ExpositionSearch(..), SearchQuery(..))
 import RCStyles exposing (withStandardPadding)
-import Research as RC exposing (PublicationStatus(..), Research)
+import Research as RC exposing (Portal, PublicationStatus(..), Research)
 import Screenshots
 import Set
 import String
 import Task
 import Time
 import Url exposing (Url)
-import Research exposing (Portal)
 
 
 
@@ -56,7 +55,7 @@ port problem : String -> Cmd msg
 
 
 type alias Model =
-    { query : String
+    { keywordForm : KeywordForm -- aparently, this is both
     , search : SearchAction
     , screenDimensions : { w : Int, h : Int }
     , device : Device
@@ -74,6 +73,14 @@ type alias Model =
     , allPortals : List RC.Portal
     , currentExposition : Result String EnrichedResearch.ResearchWithKeywords
     }
+
+
+type alias KeywordForm =
+    String
+
+
+
+-- just the query
 
 
 type alias Flags =
@@ -103,6 +110,11 @@ subscriptions _ =
         ]
 
 
+initKeywordForm : KeywordForm
+initKeywordForm =
+    ""
+
+
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init { width, height } url key =
     let
@@ -120,7 +132,7 @@ init { width, height } url key =
                 , interface = Show
                 }
     in
-    { query = ""
+    { keywordForm = initKeywordForm
     , search = Idle
     , screenDimensions = { w = width, h = height }
     , view = initView
@@ -363,7 +375,17 @@ viewLayoutSwitch layout makeurl =
 
 type KeywordsViewState
     = KeywordMainView RC.KeywordSorting Page -- query, sorting, page
-    | KeywordSearch String RC.KeywordSorting Page -- could be opaque type?
+    | KeywordSearch String RC.KeywordSorting Page (Maybe RC.Portal) Visibility -- could be opaque type?
+
+
+getKeywordViewPortal : KeywordsViewState -> Maybe Portal
+getKeywordViewPortal kv =
+    case kv of
+        KeywordSearch _ _ _ mp _ ->
+            mp
+
+        _ ->
+            Nothing
 
 
 nextPage : KeywordsViewState -> KeywordsViewState
@@ -372,8 +394,8 @@ nextPage current =
         KeywordMainView sorting (Page p) ->
             KeywordMainView sorting (Page (p + 1))
 
-        KeywordSearch q sorting (Page p) ->
-            KeywordSearch q sorting (Page (p + 1))
+        KeywordSearch q sorting (Page p) mPortal v ->
+            KeywordSearch q sorting (Page (p + 1)) mPortal v
 
 
 gotoPage : Page -> KeywordsViewState -> KeywordsViewState
@@ -382,8 +404,8 @@ gotoPage page current =
         KeywordMainView sorting _ ->
             KeywordMainView sorting page
 
-        KeywordSearch q sorting _ ->
-            KeywordSearch q sorting page
+        KeywordSearch q sorting _ mPortal v ->
+            KeywordSearch q sorting page mPortal v
 
 
 type SearchAction
@@ -419,6 +441,7 @@ problemize p =
 
 type Msg
     = ChangedQuery String
+    | ChangedKeywordPortal String
     | UrlChanged Url.Url -- this is the url actually changing
     | LinkClicked Browser.UrlRequest -- This is the user clicking something
     | ReceiveResults Json.Decode.Value
@@ -439,25 +462,14 @@ update msg model =
             ( model, Cmd.none )
 
         ChangedQuery q ->
-            case model.view of
-                KeywordsView (KeywordMainView sorting _) ->
-                    ( { model | query = q, view = KeywordsView (KeywordMainView sorting (Page 1)), searchPageSize = 20 }
-                    , Cmd.batch
-                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords q sorting Nothing))
-                        , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ q ++ "&sorting=" ++ RC.sortingToString sorting)
-                        ]
-                    )
+            updateKeywordView q Nothing model
 
-                KeywordsView (KeywordSearch _ sorting _) ->
-                    ( { model | query = q, view = KeywordsView (KeywordMainView sorting (Page 1)) }
-                    , Cmd.batch
-                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords q sorting Nothing))
-                        , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ q ++ "&sorting=" ++ RC.sortingToString sorting)
-                        ]
-                    )
-
-                _ ->
-                    ( { model | query = q }, Cmd.none )
+        ChangedKeywordPortal str ->
+            -- let
+            --     _ =
+            --         Debug.log "portal decode" (RC.decodePortalIdString model.allPortals str)
+            -- in
+            updateKeywordView "" (RC.decodePortalIdString model.allPortals str) model
 
         UrlChanged url ->
             let
@@ -519,16 +531,20 @@ update msg model =
                 KeywordsView (KeywordMainView sorting _) ->
                     ( { model | view = KeywordsView (KeywordMainView sorting (Page 1)), searchPageSize = 20 }
                     , Cmd.batch
-                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting Nothing))
-                        , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)
+                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.keywordForm sorting Nothing))
+                        , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.keywordForm ++ "&sorting=" ++ RC.sortingToString sorting)
                         ]
                     )
 
-                KeywordsView (KeywordSearch _ sorting _) ->
-                    ( { model | view = KeywordsView (KeywordMainView sorting (Page 1)) }
+                KeywordsView (KeywordSearch _ sorting _ mPortal v) ->
+                    let
+                        newView =
+                            KeywordSearch model.keywordForm sorting (Page 1) mPortal v
+                    in
+                    ( { model | view = KeywordsView newView }
                     , Cmd.batch
-                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.query sorting Nothing))
-                        , Nav.pushUrl model.key ("/#/keywords/search?q=" ++ model.query ++ "&sorting=" ++ RC.sortingToString sorting)
+                        [ sendQuery (Queries.encodeSearchQuery (FindKeywords model.keywordForm sorting (Maybe.map .id mPortal)))
+                        , Nav.pushUrl model.key (appUrlFromKeywordViewState newView)
                         ]
                     )
 
@@ -622,6 +638,37 @@ updateViewWithSearch srch v =
             ExpositionView s
 
 
+getSortingFromKeywordView kwview =
+    case kwview of
+        KeywordMainView sorting _ ->
+            sorting
+
+        KeywordSearch _ sorting _ _ _ ->
+            sorting
+
+
+updateKeywordView : String -> Maybe Portal -> Model -> ( Model, Cmd Msg )
+updateKeywordView q mPortal model =
+    case model.view of
+        KeywordsView kwview ->
+            let
+                sorting =
+                    getSortingFromKeywordView kwview
+
+                newView =
+                    KeywordSearch q sorting (Page 1) mPortal Show
+            in
+            ( { model | keywordForm = q, view = KeywordsView newView, searchPageSize = 20 }
+            , Cmd.batch
+                [ sendQuery (Queries.encodeSearchQuery (FindKeywords q sorting (mPortal |> Maybe.map .id)))
+                , Nav.pushUrl model.key (appUrlFromKeywordViewState newView)
+                ]
+            )
+
+        _ ->
+            ( model, Cmd.none )
+
+
 urlWhereFragmentIsPath : Url -> AppUrl.AppUrl
 urlWhereFragmentIsPath url =
     let
@@ -696,22 +743,26 @@ handleUrl url model =
                 page =
                     url.queryParameters |> Dict.get "page" |> Maybe.andThen List.head |> Maybe.andThen String.toInt |> Maybe.withDefault 1 |> pageFromInt
 
-                portal : Maybe Portal
-                portal =
+                mportal : Maybe Portal
+                mportal =
                     url.queryParameters |> Dict.get "portal" |> Maybe.andThen List.head |> Maybe.andThen (RC.decodePortalIdString model.allPortals)
+
+                kwinterface : Visibility
+                kwinterface =
+                    interfaceFromUrl url
 
                 cmd : Cmd msg
                 cmd =
                     case q of
                         "" ->
-                            sendQuery (Queries.encodeSearchQuery (FindKeywords "" sorting portal))
+                            sendQuery (Queries.encodeSearchQuery (FindKeywords "" sorting (mportal |> Maybe.map .id)))
 
                         someQ ->
-                            sendQuery (Queries.encodeSearchQuery (FindKeywords someQ sorting portal))
+                            sendQuery (Queries.encodeSearchQuery (FindKeywords someQ sorting (mportal |> Maybe.map .id)))
             in
             ( { model
-                | query = q
-                , view = KeywordsView (KeywordSearch q sorting page)
+                | keywordForm = q
+                , view = KeywordsView (KeywordSearch q sorting page mportal kwinterface)
                 , search = Searching
               }
             , cmd
@@ -1265,6 +1316,14 @@ interface v =
         SearchView sv ->
             Just sv.interface
 
+        KeywordsView kwv ->
+            case kwv of
+                KeywordSearch _ _ _ _ vis ->
+                    Just vis
+
+                _ ->
+                    Nothing
+
         _ ->
             Nothing
 
@@ -1784,8 +1843,18 @@ toggleTitleSorting sorting sortingToUrl =
         ]
 
 
-viewKeywordAsButton : Int -> RC.Keyword -> ( String, Element Msg )
-viewKeywordAsButton fontsize kw =
+prependMaybe : Maybe a -> List a -> List a
+prependMaybe ma lst =
+    case ma of
+        Nothing ->
+            lst
+
+        Just a ->
+            a :: lst
+
+
+viewKeywordAsButton : Maybe Portal -> Int -> RC.Keyword -> ( String, Element Msg )
+viewKeywordAsButton mportal fontsize kw =
     let
         name : String
         name =
@@ -1794,6 +1863,18 @@ viewKeywordAsButton fontsize kw =
         count : Int
         count =
             RC.getCount kw
+
+        portalPar =
+            mportal |> Maybe.map (\p -> ( "portal", RC.encodePortalIdString p ))
+
+        parameters =
+            prependMaybe portalPar [ ( "keyword", name ) ]
+
+        keywordUrl =
+            AppUrl.fromPath [ "research", "search", "list" ]
+                |> withParameters parameters
+                |> AppUrl.toString
+                |> prefixHash
 
         body =
             Element.paragraph
@@ -1807,7 +1888,7 @@ viewKeywordAsButton fontsize kw =
                 , width fill
                 , height (px 35)
                 ]
-                [ Element.link [ width fill ] { url = AppUrl.fromPath [ "research", "search", "list" ] |> withParameter ( "keyword", name ) |> AppUrl.toString |> prefixHash, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
+                [ Element.link [ width fill ] { url = keywordUrl, label = Element.paragraph [ Element.centerX, Font.size fontsize ] <| [ Element.el [ width fill ] <| Element.text name ] }
                 , Element.el [ width fill, Element.alignRight, Font.size fontsize ] (Element.text (count |> String.fromInt))
                 ]
     in
@@ -1952,12 +2033,13 @@ appUrlFromKeywordViewState kwview =
                             , ( "page", p |> String.fromInt )
                             ]
 
-                KeywordSearch q sorting (Page p) ->
+                KeywordSearch q sorting (Page p) mPortal visibility ->
                     AppUrl.fromPath [ "keywords", "search" ]
                         |> withParameters
                             [ ( "q", q )
                             , ( "sorting", RC.sortingToString sorting )
                             , ( "page", p |> String.fromInt )
+                            , ( "portal", mPortal |> Maybe.map RC.encodePortalIdString |> Maybe.withDefault "" )
                             ]
     in
     AppUrl.toString url |> prefixHash
@@ -1965,32 +2047,43 @@ appUrlFromKeywordViewState kwview =
 
 keywordPageSize : number
 keywordPageSize =
-    1024 -- Note this may be made smaller if there is a query, see viewKeywords
+    1024
+
+
+
+-- Note this may be made smaller if there is a query, see viewKeywords
 
 
 viewKeywords : Model -> KeywordsViewState -> Element Msg
 viewKeywords model keywordview =
     let
-        dynamicPageSize = 
-            case model.query of
-                "" -> keywordPageSize
+        dynamicPageSize : number
+        dynamicPageSize =
+            case model.keywordForm of
+                "" ->
+                    keywordPageSize
 
-                any -> 256
+                any ->
+                    256
 
+        page : Page
         page =
             case keywordview of
                 KeywordMainView _ p ->
                     p
 
-                KeywordSearch _ _ p ->
+                KeywordSearch _ _ p mPortal _ ->
+                    -- TODO implement mportal view selector
                     p
 
+        sorting : RC.KeywordSorting
         sorting =
             case keywordview of
                 KeywordMainView s _ ->
                     s
 
-                KeywordSearch _ s _ ->
+                KeywordSearch _ s _ mPortal _ ->
+                    -- TODO implement mportal view S
                     s
 
         viewCount : List RC.Keyword -> Element msg
@@ -2029,26 +2122,28 @@ viewKeywords model keywordview =
             let
                 shouldEnable : Bool
                 shouldEnable =
-                    case model.query of
+                    case model.keywordForm of
                         "" ->
                             True
 
                         _ ->
                             False
 
-                url : String
-                url =
-                    case model.query of
-                        "" ->
-                            KeywordMainView RC.ByUse (Page 1) |> appUrlFromKeywordViewState
+                mportal =
+                    getKeywordViewPortal keywordview
 
-                        nonEmpty ->
-                            KeywordSearch nonEmpty RC.ByUse (Page 1) |> appUrlFromKeywordViewState
+                -- url : String
+                -- url =
+                --     case model.keywordForm of
+                --         "" ->
+                --             KeywordMainView RC.ByUse (Page 1) |> appUrlFromKeywordViewState
+                --         nonEmpty ->
+                --             KeywordSearch nonEmpty RC.ByUse (Page 1) mportal  |> appUrlFromKeywordViewState
             in
             Element.row [ Element.spacingXY 15 0 ]
                 [ Element.Input.search [ Border.rounded 0, width (px 200), onEnter HitEnter ]
                     { onChange = ChangedQuery
-                    , text = model.query
+                    , text = model.keywordForm
                     , placeholder = Just (Element.Input.placeholder [ Font.size 16 ] (Element.text "search for keyword"))
                     , label = Element.Input.labelAbove [ Font.size 16, paddingXY 0 5 ] (Element.text "filter")
                     }
@@ -2058,6 +2153,9 @@ viewKeywords model keywordview =
                 --     , label = Element.text "search"
                 --     }
                 ]
+
+        portalFilter =
+            simplePortalDropdown model.allPortals (getKeywordViewPortal keywordview)
 
         pageNavigation : List a -> Page -> Element Msg
         pageNavigation lst (Page p) =
@@ -2105,6 +2203,7 @@ viewKeywords model keywordview =
         lazyf result searchbox =
             Element.column [ width fill, spacingXY 0 15 ]
                 [ searchbox
+                , portalFilter
                 , case result of
                     FoundKeywords results ->
                         let
@@ -2114,7 +2213,7 @@ viewKeywords model keywordview =
                         column [ width fill, Element.spacing 15 ]
                             [ Element.el [ width shrink, Element.paddingXY 0 5 ] (toggleSorting sorting)
                             , viewCount results
-                            , currentPage |> List.map (viewKeywordAsButton 16) |> makeColumns numCollumns [ width fill, spacingXY 25 25 ]
+                            , currentPage |> List.map (viewKeywordAsButton (getKeywordViewPortal keywordview) 16) |> makeColumns numCollumns [ width fill, spacingXY 25 25 ]
                             , pageNavigation results page
                             ]
 
@@ -2921,3 +3020,33 @@ viewSearch device svs portals keywords submitting searchFormState =
                     }
                 , toggleView
                 ]
+
+
+isNothing : Maybe a -> Bool
+isNothing ma =
+    case ma of
+        Nothing ->
+            True
+
+        _ ->
+            False
+
+
+simplePortalDropdown : List Portal -> Maybe Portal -> Element Msg
+simplePortalDropdown portals mselect =
+    let
+        isPortal portalOption =
+            mselect |> Maybe.map (\p -> p.id == portalOption.id) |> Maybe.withDefault False
+
+        optionFromPortal portal =
+            Html.option [ Attr.value (RC.encodePortalIdString portal), Attr.selected (isPortal portal) ] [ Html.text portal.name ]
+
+        noPortalOption =
+            -- this option is selected if mselected is nothing
+            Html.option [ Attr.value "-1", Attr.selected (isNothing mselect) ] [ Html.text "any portals" ]
+    in
+    Element.el [ Element.paddingXY 0 15 ]
+        (Element.html <|
+            Html.select [ Html.Events.onInput ChangedKeywordPortal ]
+                (noPortalOption :: List.map optionFromPortal portals)
+        )

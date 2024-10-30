@@ -106,7 +106,7 @@ update msg model =
                                             ( Loaded lmodel, findKeywords str kwSorting lmodel.keywords |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults )
 
                                         Just portal ->
-                                            ( Loaded lmodel, findKeywordsPortal portal lmodel.research kwSorting |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults )
+                                            ( Loaded lmodel, findKeywordsPortal str portal lmodel.research kwSorting |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults )
 
                                 -- This is actual search form query
                                 Queries.FindResearch search ->
@@ -178,7 +178,7 @@ update msg model =
                                                     findKeywords str kwsorting kws |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults
 
                                                 Just portal ->
-                                                    findKeywordsPortal portal data kwsorting |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults
+                                                    findKeywordsPortal str portal data kwsorting |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults
 
                                         --findKeywords str kwsorting kws |> Queries.Keywords |> Queries.encodeSearchResult |> returnResults
                                         FindResearch search ->
@@ -264,9 +264,9 @@ findKeywords query sorting keywords =
             shuffleWithSeed 42 filtered
 
 
-findKeywordsPortal : Int -> List (RC.Research a) -> RC.KeywordSorting -> List Keyword
-findKeywordsPortal portal lst sorting =
-    lst |> Queries.filterResearchWithPortalID portal |> RC.keywordSet |> findKeywords "" sorting
+findKeywordsPortal : String -> Int -> List (RC.Research a) -> RC.KeywordSorting -> List Keyword
+findKeywordsPortal q portal lst sorting =
+    lst |> Queries.filterResearchWithPortalID portal |> RC.keywordSet |> findKeywords q sorting
 
 
 problemize : Problem -> Model -> Model

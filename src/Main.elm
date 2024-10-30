@@ -463,7 +463,16 @@ update msg model =
             ( model, Cmd.none )
 
         ChangedQuery q ->
-            updateKeywordView q Nothing model
+            let
+                mportal =
+                    case model.view of
+                        KeywordsView kwv ->
+                            getKeywordViewPortal kwv
+
+                        _ ->
+                            Nothing
+            in
+            updateKeywordView q mportal model
 
         ChangedKeywordPortal str ->
             -- let

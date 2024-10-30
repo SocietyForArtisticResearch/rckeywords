@@ -75,7 +75,7 @@ type Search
         , abstract : String
         , after : Maybe Date
         , before : Maybe Date
-        , portal : String
+        , portal : Maybe Int
         , publicationStatus : Maybe PublicationStatus
         }
 
@@ -234,7 +234,7 @@ withAbstract abstract (Search s) =
         { s | abstract = abstract }
 
 
-withPortal : String -> Search -> Search
+withPortal : Maybe Int -> Search -> Search
 withPortal portal (Search s) =
     Search
         { s | portal = portal }
@@ -265,7 +265,7 @@ emptySearch =
         , abstract = ""
         , after = Nothing
         , before = Nothing
-        , portal = ""
+        , portal = Nothing
         , publicationStatus = Nothing
         }
 
@@ -288,7 +288,7 @@ searchWithKeywords kws (Search s) =
         }
 
 
-search : String -> String -> Set String -> String -> Maybe Date -> Maybe Date -> String -> Maybe PublicationStatus -> Search
+search : String -> String -> Set String -> String -> Maybe Date -> Maybe Date -> Maybe Int -> Maybe PublicationStatus -> Search
 search title author keywords abstract after before portal publicationStatus =
     Search
         { title = title
@@ -311,7 +311,7 @@ decodeSearch =
         (field "abstract" string)
         (maybe (field "after" int |> map Date.fromRataDie))
         (maybe (field "before" int |> map Date.fromRataDie))
-        (field "portal" string)
+        (maybe (field "portal" int))
         (maybe (field "status" (string |> D.map (RC.publicationStatusFromString >> Maybe.withDefault Undecided))))
 
 
@@ -369,17 +369,20 @@ encodeSearch (Search data) =
 
         status =
             data.publicationStatus |> Maybe.map (\st -> ( "status", RC.publicationstatus st ))
+
+        portal = 
+            data.portal |> Maybe.map (\p -> ( "portal", E.int p))
     in
     E.object
         ([ ( "title", E.string data.title )
          , ( "author", E.string data.author )
          , ( "keywords", E.list E.string (data.keywords |> Set.toList) )
          , ( "abstract", E.string data.abstract )
-         , ( "portal", E.string data.portal )
          ]
             |> appendMaybe mafter
             |> appendMaybe mbefore
             |> appendMaybe status
+            |> appendMaybe portal
         )
 
 
@@ -806,31 +809,25 @@ findResearchBefore date lst =
     filterRanked test lst
 
 
-findResearchWithPortal : String -> RankedResult (Research r) -> RankedResult (Research r)
-findResearchWithPortal portalq lst =
+findResearchWithPortal : Maybe Int -> RankedResult (Research r) -> RankedResult (Research r)
+findResearchWithPortal mportal lst =
     -- let
     --     _ =
     --         Debug.log portalq "portalq"
     -- in
-    case portalq of
-        "" ->
+    case mportal of
+        Nothing -> 
             lst
 
-        "All Portals" ->
-            lst
-
-        "Any portal" ->
-            lst
-
-        nonemptyq ->
+        Just portalq ->
             let
                 f : Research r -> Bool
                 f research =
                     let
-                        names =
-                            (research.portals ++ research.connectedTo) |> List.map (.name >> String.toLower)
+                        ids =
+                            (research.portals ++ research.connectedTo) |> List.map (.id)
                     in
-                    names |> List.any (\p -> p == (nonemptyq |> String.toLower))
+                    ids |> List.any (\p -> p == portalq)
             in
             filterRanked f lst
 

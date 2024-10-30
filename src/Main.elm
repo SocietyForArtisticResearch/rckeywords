@@ -28,6 +28,7 @@ import Json.Decode
 import Json.Encode
 import KeywordString exposing (KeywordString)
 import List
+import List.Extra
 import Page exposing (Scale(..), ScreenDimensions, makeNumColumns, transpose)
 import Queries exposing (ExpositionSearch(..), SearchQuery(..))
 import RCStyles exposing (withStandardPadding)
@@ -924,12 +925,12 @@ searchViewFromUrlAdvanced url layout =
                 |> Maybe.andThen List.head
                 |> Maybe.withDefault ""
 
-        portal : String
+        portal : Maybe Int
         portal =
             url.queryParameters
                 |> Dict.get "portal"
                 |> Maybe.andThen List.head
-                |> Maybe.withDefault "Any portal"
+                |> Maybe.andThen String.toInt
 
         after : Maybe Date
         after =
@@ -1975,7 +1976,7 @@ appUrlFromSearchViewState svs =
                             , ( "sorting", [ RC.titleSortingToString svs.sorting ] )
                             , ( "abstract", [ form.abstract ] )
                             , ( "page", [ pageAsString svs.page ] )
-                            , ( "portal", [ form.portal ] )
+                            , ( "portal", [ form.portal |> Maybe.map String.fromInt |> Maybe.withDefault "" ] )
                             , ( "after", maybeToList (form.after |> Maybe.map dateToString) ) -- in absence just url encode empty list
                             , ( "before", maybeToList (form.before |> Maybe.map dateToString) )
                             , ( "status", (form.status |> Maybe.map RC.publicationStatusAsString |> Maybe.withDefault "") |> (\x -> [ x ]) )
@@ -2468,7 +2469,7 @@ type alias SearchForm =
     , author : String
     , keywords : List String
     , abstract : String
-    , portal : String
+    , portal : Maybe Int
     , after : Maybe Date
     , before : Maybe Date
     , status : Maybe PublicationStatus
@@ -2480,9 +2481,26 @@ formToString form =
     [ form.title
     , form.author
     , form.keywords |> String.join "\n"
-    , form.portal
+    , form.portal |> Maybe.map String.fromInt |> Maybe.withDefault "-1"
     ]
         |> String.join "\n"
+
+
+viewMaybePortalID : Maybe Int -> String
+viewMaybePortalID mid =
+    case mid of
+        Nothing ->
+            "nono"
+
+        Just id ->
+            id |> String.fromInt
+
+
+viewMaybePortalName : List Portal -> Maybe Int -> String
+viewMaybePortalName allPortals mportalId =
+    mportalId
+        |> Maybe.map (\portalId -> allPortals |> List.Extra.find (\portal -> portal.id == portalId) |> Maybe.map .name |> Maybe.withDefault (String.fromInt portalId))
+        |> Maybe.withDefault "All portals"
 
 
 viewPublicationStatus : Maybe PublicationStatus -> String
@@ -2518,7 +2536,7 @@ emptyForm =
     { title = ""
     , author = ""
     , keywords = []
-    , portal = "Any portal"
+    , portal = Nothing
     , after = Nothing
     , before = Nothing
     , abstract = ""
@@ -2526,7 +2544,7 @@ emptyForm =
     }
 
 
-formWith : String -> String -> List String -> String -> String -> Maybe Date -> Maybe Date -> Maybe PublicationStatus -> SearchForm
+formWith : String -> String -> List String -> String -> Maybe Int -> Maybe Date -> Maybe Date -> Maybe PublicationStatus -> SearchForm
 formWith title author keywords abstract portal after before status =
     { title = title
     , author = author
@@ -2539,7 +2557,7 @@ formWith title author keywords abstract portal after before status =
     }
 
 
-searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Date -> Maybe Date -> Maybe (Maybe PublicationStatus) -> SearchForm
+searchForm : Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe (Maybe Int) -> Maybe Date -> Maybe Date -> Maybe (Maybe PublicationStatus) -> SearchForm
 searchForm title author keyword1 keyword2 abstract portal after before status =
     let
         nothingIsJustEmpty =
@@ -2547,13 +2565,15 @@ searchForm title author keyword1 keyword2 abstract portal after before status =
 
         -- _ =
         --     Debug.log "status" status
+        parsedPortal =
+            portal |> Maybe.withDefault Nothing
     in
     SearchForm
         (nothingIsJustEmpty title)
         (nothingIsJustEmpty author)
         (List.filterMap identity [ keyword1, keyword2 ])
         (nothingIsJustEmpty abstract)
-        (nothingIsJustEmpty portal)
+        parsedPortal
         after
         before
         (status
@@ -2700,10 +2720,11 @@ searchGUI hidePortal device portals keywords =
                     else
                         Err "unknown keyword"
 
-        portalsAsOptions : List ( String, String )
+        portalsAsOptions : List ( String, Maybe Int )
         portalsAsOptions =
-            ( "Any portal", "Any portal" ) :: (portals |> List.map (\p -> ( p.name, p.name )))
+            ( "Any portal", Nothing ) :: (portals |> List.map (\p -> ( p.name, Just p.id )))
 
+        statusAsOptions : List ( String, Maybe PublicationStatus )
         statusAsOptions =
             [ Nothing
             , Just Published
@@ -2767,7 +2788,7 @@ searchGUI hidePortal device portals keywords =
                                             div [] []
 
                                           else
-                                            div [] [ selectFieldWidth 406 identity info "portal" portal ]
+                                            div [] [ selectFieldWidth 406 (viewMaybePortalName portals) info "portal" portal ]
                                         , selectFieldWidth 406 viewPublicationStatus info "status" status
                                         ]
                                     ]
@@ -2787,7 +2808,7 @@ searchGUI hidePortal device portals keywords =
                                             div [] []
 
                                           else
-                                            div [] [ selectFieldWidth 406 identity info "portal" portal ]
+                                            div [] [ selectFieldWidth 406 (viewMaybePortalName portals) info "portal" portal ]
                                         , selectFieldWidth 406 viewPublicationStatus info "status" status
                                         ]
                                     , rowdiv
@@ -2808,7 +2829,7 @@ searchGUI hidePortal device portals keywords =
                                         div [] []
 
                                       else
-                                        div [] [ selectField identity info "portal" portal ]
+                                        div [] [ selectField (viewMaybePortalName portals) info "portal" portal ]
                                     , selectField viewPublicationStatus info "status" status
                                     , fieldView info "after" after
                                     , fieldView info "before" before

@@ -374,9 +374,27 @@ viewLayoutSwitch layout makeurl =
         ]
 
 
+
+-- These are the keyword views
+
+
 type KeywordsViewState
-    = KeywordMainView RC.KeywordSorting Page -- query, sorting, page
-    | KeywordSearch String RC.KeywordSorting Page (Maybe RC.Portal) Visibility -- could be opaque type?
+    = KeywordMainView RC.KeywordSorting Page -- without query, just listing all
+    | KeywordSearch String RC.KeywordSorting Page (Maybe RC.Portal) Visibility -- With the search,
+
+
+
+-- TODOLATER make record type
+
+
+getVisibility : KeywordsViewState -> Visibility
+getVisibility kwvs =
+    case kwvs of
+        KeywordSearch _ _ _ _ v ->
+            v
+
+        _ ->
+            Show
 
 
 getKeywordViewPortal : KeywordsViewState -> Maybe Portal
@@ -874,6 +892,19 @@ searchViewFromUrl url layout =
           , interface = currentInterface
           }
         )
+
+
+stringFromInterface : Visibility -> String
+stringFromInterface visibility =
+    case visibility of
+        Hide ->
+            "hide"
+
+        Show ->
+            "show"
+
+        HidePortal ->
+            "hideportal"
 
 
 interfaceFromUrl : AppUrl.AppUrl -> Visibility
@@ -1863,8 +1894,8 @@ prependMaybe ma lst =
             a :: lst
 
 
-viewKeywordAsButton : Maybe Portal -> Int -> RC.Keyword -> ( String, Element Msg )
-viewKeywordAsButton mportal fontsize kw =
+viewKeywordAsButton : Visibility -> Maybe Portal -> Int -> RC.Keyword -> ( String, Element Msg )
+viewKeywordAsButton visibility mportal fontsize kw =
     let
         name : String
         name =
@@ -1874,17 +1905,15 @@ viewKeywordAsButton mportal fontsize kw =
         count =
             RC.getCount kw
 
-        portalPar =
-            mportal |> Maybe.map (\p -> ( "portal", RC.encodePortalIdString p ))
-
-        parameters =
-            prependMaybe portalPar [ ( "keyword", name ) ]
+        search =
+            let
+                form =
+                    AdvancedSearch { emptyForm | keywords = [ name ], portal = mportal |> Maybe.map .id }
+            in
+            SearchView { layout = ListLayout, form = form, sorting = RC.Rank, page = Page 1, interface = visibility }
 
         keywordUrl =
-            AppUrl.fromPath [ "research", "search", "list" ]
-                |> withParameters parameters
-                |> AppUrl.toString
-                |> prefixHash
+            appUrlFromView search
 
         body =
             Element.paragraph
@@ -1996,12 +2025,12 @@ appUrlFromSearchViewState svs =
                         ListLayout ->
                             AppUrl.fromPath [ "research", "search", "list" ]
                                 |> withParametersList
-                                    parametersList
+                                    (( "interface", [ stringFromInterface svs.interface ] ) :: parametersList)
 
                         ScreenLayout scale ->
                             let
                                 parListWithScale =
-                                    ( "scale", [ scaleToString scale ] ) :: parametersList
+                                    ( "interface", [ stringFromInterface svs.interface ] ) :: ( "scale", [ scaleToString scale ] ) :: parametersList
                             in
                             AppUrl.fromPath [ "research", "search", "screen" ]
                                 |> withParametersList
@@ -2082,8 +2111,7 @@ viewKeywords model keywordview =
                 KeywordMainView _ p ->
                     p
 
-                KeywordSearch _ _ p mPortal _ ->
-                    -- TODO implement mportal view selector
+                KeywordSearch _ _ p _ _ ->
                     p
 
         sorting : RC.KeywordSorting
@@ -2092,8 +2120,7 @@ viewKeywords model keywordview =
                 KeywordMainView s _ ->
                     s
 
-                KeywordSearch _ s _ mPortal _ ->
-                    -- TODO implement mportal view S
+                KeywordSearch _ s _ _ _ ->
                     s
 
         viewCount : List RC.Keyword -> Element msg
@@ -2108,7 +2135,7 @@ viewKeywords model keywordview =
 
                 showing =
                     [ "results "
-                    , (p - 1) * dynamicPageSize |> String.fromInt
+                    , (p - 1) * dynamicPageSize * -1 |> String.fromInt
                     , "-"
                     , min (p * dynamicPageSize) count |> String.fromInt
                     , " (total: "
@@ -2129,27 +2156,6 @@ viewKeywords model keywordview =
         --     Element.el [ Font.size 12 ] (Element.text ("last updated: " ++ dateStr))
         keywordSearch : Element Msg
         keywordSearch =
-            let
-                shouldEnable : Bool
-                shouldEnable =
-                    case model.keywordForm of
-                        "" ->
-                            True
-
-                        _ ->
-                            False
-
-                mportal =
-                    getKeywordViewPortal keywordview
-
-                -- url : String
-                -- url =
-                --     case model.keywordForm of
-                --         "" ->
-                --             KeywordMainView RC.ByUse (Page 1) |> appUrlFromKeywordViewState
-                --         nonEmpty ->
-                --             KeywordSearch nonEmpty RC.ByUse (Page 1) mportal  |> appUrlFromKeywordViewState
-            in
             Element.row [ Element.spacingXY 15 0 ]
                 [ Element.Input.search [ Border.rounded 0, width (px 200), onEnter HitEnter ]
                     { onChange = ChangedQuery
@@ -2209,42 +2215,42 @@ viewKeywords model keywordview =
                 Desktop ->
                     4
 
-        lazyf : SearchAction -> Element Msg -> Element Msg
-        lazyf result searchbox =
-            Element.column [ width fill, spacingXY 0 15 ]
-                [ searchbox
-                , portalFilter
-                , case result of
-                    FoundKeywords results ->
-                        let
-                            currentPage =
-                                pageOfList dynamicPageSize page results
-                        in
-                        column [ width fill, Element.spacing 15 ]
-                            [ Element.el [ width shrink, Element.paddingXY 0 5 ] (toggleSorting sorting)
-                            , viewCount results
-                            , currentPage |> List.map (viewKeywordAsButton (getKeywordViewPortal keywordview) 16) |> makeColumns numCollumns [ width fill, spacingXY 25 25 ]
-                            , pageNavigation results page
-                            ]
+        searchInterface =
+            case getVisibility keywordview of
+                Hide ->
+                    Element.none
 
-                    Idle ->
-                        Element.text "idle"
-
-                    Searching ->
-                        Element.column []
-                            [ Element.text "working..."
-                            ]
-
-                    -- FoundResearch _ ->
-                    --     Element.text "found something else"
-                    FoundRankedResearch _ ->
-                        Element.text "found something else"
-                ]
+                _ ->
+                    Element.row [ width fill, spacingXY 15 0 ] [ keywordSearch, Element.el [ Element.moveDown 17 ] portalFilter ]
     in
-    Element.Lazy.lazy2
-        lazyf
-        model.search
-        keywordSearch
+    Element.column [ width fill, spacingXY 0 15 ]
+        [ searchInterface
+        , case model.search of
+            FoundKeywords results ->
+                let
+                    currentPage =
+                        pageOfList dynamicPageSize page results
+                in
+                column [ width fill, Element.spacing 15 ]
+                    [ Element.el [ width shrink, Element.paddingXY 0 5 ] (toggleSorting sorting)
+                    , viewCount results
+                    , currentPage |> List.map (viewKeywordAsButton (getVisibility keywordview) (getKeywordViewPortal keywordview) 16) |> makeColumns numCollumns [ width fill, spacingXY 25 25 ]
+                    , pageNavigation results page
+                    ]
+
+            Idle ->
+                Element.text "idle"
+
+            Searching ->
+                Element.column []
+                    [ Element.text "working..."
+                    ]
+
+            -- FoundResearch _ ->
+            --     Element.text "found something else"
+            FoundRankedResearch _ ->
+                Element.text "found something else"
+        ]
 
 
 
@@ -3075,7 +3081,7 @@ simplePortalDropdown portals mselect =
             -- this option is selected if mselected is nothing
             Html.option [ Attr.value "-1", Attr.selected (isNothing mselect) ] [ Html.text "any portals" ]
     in
-    Element.el [ Element.paddingXY 0 15 ]
+    Element.el [ Element.paddingXY 0 15, width fill ]
         (Element.html <|
             Html.select [ Html.Events.onInput ChangedKeywordPortal ]
                 (noPortalOption :: List.map optionFromPortal portals)

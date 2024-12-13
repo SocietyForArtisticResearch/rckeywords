@@ -62,6 +62,8 @@ import Toc exposing (decode)
 --     | Portal String
 
 
+-- Advanced is a fully specified search. 
+-- Quicksearch takes a single search query and tries to match it with all fields (author, abstract and keywords).
 type ExpositionSearch
     = Advanced Search
     | QuickSearch String
@@ -104,6 +106,7 @@ type RankedResult a
     | Unranked (List a)
 
 
+-- filter dupplegangers
 uniqueRankedResult : (a -> comparable) -> RankedResult a -> RankedResult a
 uniqueRankedResult toComparable rr =
     case rr of

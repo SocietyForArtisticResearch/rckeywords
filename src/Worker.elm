@@ -17,9 +17,8 @@ import Research as RC exposing (Keyword, KeywordSet, KeywordSorting(..), Reverse
 import Set
 
 
-
--- to avoid blocking the main thread, we sort and search keywords in this separate worker.
--- We also keep the keyword state here (as a kind of semi-backend)
+-- to avoid blocking the main thread, we sort and search keywords in this separate elm worker.
+-- we also keep the keyword state here
 
 
 port searchQuery : (D.Value -> msg) -> Sub msg
@@ -93,7 +92,7 @@ update msg model =
                         Err e ->
                             ( problemize DecodeError model, debug (D.errorToString e) )
 
-        -- Easiest place for seeing how a search is processed:
+        -- Happy Path: data is there, so this is the easiest place for seeing how a search is processed:
         Loaded lmodel ->
             case msg of
                 SearchQuery json ->

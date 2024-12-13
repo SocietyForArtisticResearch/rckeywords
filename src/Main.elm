@@ -1094,6 +1094,7 @@ viewResearchMicro numCollums screen device research =
 
         -- abstract =
         --     Element.paragraph [ Font.size 12, width ((screen.w // 3) - 30  |> px ), padding 5 ] <| List.concat kwina
+        abstract : Element msg
         abstract =
             Element.el [] (EnrichedResearch.renderAbstract research.abstractWithKeywords)
 
@@ -1199,7 +1200,7 @@ viewResearchMicro numCollums screen device research =
                     ]
                   <|
                     Element.html <|
-                        Html.hr [ Attr.style "width" "100%" ] []
+                        thinLine
                 ]
     in
     ( research.id |> String.fromInt
@@ -1280,6 +1281,11 @@ gray =
     Element.rgb 0.5 0.5 0.5
 
 
+darkGray : Element.Color
+darkGray =
+    Element.rgb 0.25 0.25 0.25
+
+
 white : Element.Color
 white =
     Element.rgb 1.0 1.0 1.0
@@ -1336,6 +1342,57 @@ linkStyle active style =
 
     else
         Border.solid :: common
+
+
+{-|
+
+    -----------
+    | Button  |
+    -----------
+
+-}
+pageLinkStyle : Bool -> LinkStyle -> List (Element.Attribute msg)
+pageLinkStyle active style =
+    let
+        padding : number
+        padding =
+            case style of
+                SmallLink ->
+                    10
+
+                BigLink ->
+                    10
+
+        fontSize : number
+        fontSize =
+            case style of
+                SmallLink ->
+                    12
+
+                BigLink ->
+                    15
+
+        common : List (Element.Attr () msg)
+        common =
+            [ --Border.color gray
+              --Border.width 1
+              Element.padding padding
+            , Element.Background.color white
+            , Font.color black
+            , Element.mouseOver
+                [ Font.color (Element.rgb 0.5 0.5 0.5)
+                , Font.size 16
+                ]
+            , Font.size fontSize
+
+            -- , Element.htmlAttribute <| Attr.class "link"
+            ]
+    in
+    if active then
+        List.append [ Font.underline ] common
+
+    else
+        common
 
 
 viewNav : View -> Element Msg
@@ -1617,7 +1674,7 @@ viewResearchDetail dim scale research =
                     ]
                   <|
                     Element.html <|
-                        Html.hr [] []
+                        thinLine
                 ]
 
         screenshotMatrix : Element msg
@@ -1638,6 +1695,28 @@ viewResearchDetail dim scale research =
 
 
 -- these are functions to navigate to a different page within a view
+
+
+styles lst =
+    List.map (\( p, v ) -> Attr.style p v) lst
+
+
+thinLine : Html msg
+thinLine =
+    let
+        j =
+            Tuple.pair
+    in
+    Html.hr
+        (styles
+            [ j "border" "none"
+            , j "height" "1px"
+            , j "color" "#333"
+            , j "background-color" "#333"
+            , j "width" "100%"
+            ]
+        )
+        []
 
 
 gotoPageView : Page -> View -> View
@@ -1678,7 +1757,7 @@ pageNav : Int -> View -> ScreenDimensions -> Page -> Element Msg
 pageNav total v screen (Page p) =
     let
         pageLink n =
-            Element.link (linkStyle (n == p) SmallLink)
+            Element.link (pageLinkStyle (n == p) SmallLink)
                 { url = (v |> gotoPageView (Page n) |> appUrlFromView) ++ "#top"
                 , label = Element.text (n |> String.fromInt)
                 }
@@ -1696,7 +1775,7 @@ pageNav total v screen (Page p) =
                         }
                     )
         in
-        Element.paragraph [ width (px (screen.w * 90 // 100)), Element.spacing 25, Element.paddingXY 0 25 ]
+        Element.paragraph [ width (px (screen.w * 90 // 100)), Element.spacing 25, Element.paddingXY 18 25 ]
             (pageLinks ++ [ nextLink ])
 
     else
@@ -1905,6 +1984,7 @@ viewKeywordAsButton visibility mportal fontsize kw =
         count =
             RC.getCount kw
 
+        search : View
         search =
             let
                 form =
@@ -1912,9 +1992,11 @@ viewKeywordAsButton visibility mportal fontsize kw =
             in
             SearchView { layout = ListLayout, form = form, sorting = RC.Rank, page = Page 1, interface = visibility }
 
+        keywordUrl : String
         keywordUrl =
             appUrlFromView search
 
+        body : Element msg
         body =
             Element.paragraph
                 [ Element.spacing 5
@@ -1938,7 +2020,7 @@ viewKeywordAsButton visibility mportal fontsize kw =
 
 stringToKeyword : String -> Element Msg
 stringToKeyword str =
-    Element.link [ Font.size 12, Font.color gray, Font.underline ] <|
+    Element.link [ Font.size 12, Font.color darkGray, Font.underline ] <|
         { label = Element.text ("#" ++ str)
         , url = "/#/research/search/list?author&keyword=" ++ str ++ " "
         }
@@ -2032,7 +2114,7 @@ appUrlFromSearchViewState svs =
                                 parListWithScale =
                                     ( "interface", [ stringFromInterface svs.interface ] ) :: ( "scale", [ scaleToString scale ] ) :: parametersList
                             in
-                            AppUrl.fromPath [ "research", "search", "screen" ]
+                            AppUrl.fromPath [ "research", "search", "scree" ]
                                 |> withParametersList
                                     parListWithScale
 
@@ -2170,6 +2252,7 @@ viewKeywords model keywordview =
                 --     }
                 ]
 
+        portalFilter : Element Msg
         portalFilter =
             simplePortalDropdown model.allPortals (getKeywordViewPortal keywordview)
 
@@ -2605,6 +2688,10 @@ quote str =
     "\"" ++ str ++ "\""
 
 
+
+-- keyword with autocomplete using standard HTML properties (HTML.dataList)
+
+
 keywordField : List KeywordString -> { a | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Validation String (Maybe String) FieldView.Input { field : FieldView.Input } -> Html msg
 keywordField keywords formState label field =
     let
@@ -2669,7 +2756,7 @@ keywordField keywords formState label field =
 
 
 
---searchGUI : List { a | name : String } -> List KeywordString -> Form.Form String { combine : Validation.Validation String SearchForm Never constraints3, view : { b | submitAttempted : Bool, errors : Form.Errors String, submitting : Bool } -> List (Html msg) } parsedCombined SearchForm
+-- normal select field
 
 
 selectField : (a -> String) -> { b | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Field String parsed2 (FieldView.Options a) -> Html msg
@@ -2694,6 +2781,10 @@ selectField displayWith formState label field =
         ]
 
 
+
+-- custom width:
+
+
 selectFieldWidth : Int -> (a -> String) -> { b | submitAttempted : Bool, errors : Form.Errors String } -> String -> Validation.Field String parsed2 (FieldView.Options a) -> Html msg
 selectFieldWidth widthInPx displayWith formState label field =
     div [ Attr.style "width" (String.fromInt widthInPx ++ "px") ]
@@ -2714,6 +2805,10 @@ selectFieldWidth widthInPx displayWith formState label field =
           )
             |> Html.ul [ Attr.style "color" "red" ]
         ]
+
+
+
+-- Dillan's Form 3.0, defines the form view and validation in one go.
 
 
 searchGUI hidePortal device portals keywords =

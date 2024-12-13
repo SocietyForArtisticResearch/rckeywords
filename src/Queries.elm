@@ -232,6 +232,7 @@ withTitle title (Search s) =
         }
 
 
+withAbstract : String -> Search -> Search
 withAbstract abstract (Search s) =
     Search
         { s | abstract = abstract }
